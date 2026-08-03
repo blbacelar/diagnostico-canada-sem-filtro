@@ -214,7 +214,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .currency-input__code { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); padding-left: 11px; border-left: 1px solid var(--paper-edge); color: var(--ink-mute); font: 500 9px var(--font-mono), monospace; letter-spacing: .1em; pointer-events: none; }
 .question-select-content { z-index: 60; border: 1px solid var(--paper-edge); border-radius: 2px; background: white; color: var(--ink); box-shadow: 0 18px 45px rgba(23,34,43,.15); }
 .question-select-content [data-slot="select-item"] { min-height: 42px; padding: 10px 38px 10px 13px; border-radius: 1px; }
-.question-select-content [data-slot="select-item"]:focus { background: rgba(183,28,61,.08); color: var(--ink); }
+.question-select-content [data-slot="select-item"]:focus,
+.question-select-content [data-slot="select-item"][data-state="checked"] { background: rgba(183,28,61,.08); color: var(--ink); }
 .question-card [aria-invalid=true] { border-color: var(--accent); }
 .option-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .option-grid label { min-height: 50px; display: flex; align-items: center; padding: 14px 16px; border: 1px solid var(--paper-edge); background: white; cursor: pointer; }

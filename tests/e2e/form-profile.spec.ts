@@ -68,6 +68,14 @@ test("@regression @a11y select shadcn funciona por teclado e mantém semântica 
   await page.keyboard.press("Enter");
   await expect(maritalStatus).toHaveText("Solteiro(a)");
 
+  await maritalStatus.click();
+  const selectedOption = page.getByRole("option", { name: "Solteiro(a)" });
+  await expect(selectedOption).toHaveAttribute("data-state", "checked");
+  await expect(selectedOption.locator("span").last()).toHaveCSS("color", "rgb(23, 34, 43)");
+  await expect(selectedOption).toHaveCSS("background-color", "rgba(183, 28, 61, 0.08)");
+  await page.keyboard.press("Escape");
+  await expect(selectedOption).toBeHidden();
+
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations.filter((violation) => ["critical", "serious"].includes(violation.impact ?? ""))).toEqual([]);
 });
