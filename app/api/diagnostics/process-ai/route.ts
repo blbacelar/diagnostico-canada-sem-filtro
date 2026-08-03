@@ -1,0 +1,7 @@
+import { z } from "zod";
+import { ApiError, handleApiError, json, parseJson, requireConsultant } from "../../../../lib/api";
+import { getAdminSupabase } from "../../../../lib/supabase";
+import { processAssessment } from "../../../../lib/cases";
+import { constantTimeEqual } from "../../../../lib/tokens";
+const schema=z.object({caseId:z.string().uuid(),assessmentId:z.string().uuid().optional()});
+export async function POST(request:Request){try{const payload=await parseJson(request,schema,10_000);let admin;const secret=request.headers.get("x-cron-secret");if(secret&&process.env.CRON_SECRET&&constantTimeEqual(secret,process.env.CRON_SECRET)){admin=getAdminSupabase();}else{admin=(await requireConsultant(request)).admin;}const{data:assessment,error}=await admin.from("diagnostic_ai_assessments").select("id,submission_id,status").eq("case_id",payload.caseId).eq(payload.assessmentId?"id":"status",payload.assessmentId??"failed").order("version",{ascending:false}).limit(1).maybeSingle();if(error)throw error;if(!assessment)throw new ApiError(404,"Análise não encontrada.");if(assessment.status==="completed")return json({status:"completed"});await admin.from("diagnostic_ai_assessments").update({status:"processing",error_code:null,completed_at:null}).eq("id",assessment.id);await admin.from("diagnostic_cases").update({status:"ai_processing"}).eq("id",payload.caseId);await processAssessment(payload.caseId,assessment.submission_id,assessment.id);return json({status:"completed"});}catch(error){return handleApiError(error);}}

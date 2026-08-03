@@ -1,0 +1,59 @@
+"use client";
+/* eslint-disable @typescript-eslint/no-explicit-any -- API payloads are narrowed at their call sites. */
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { AlertTriangle, ArrowUpRight, Clock3, Search, SlidersHorizontal } from "lucide-react";
+import { getBrowserSupabase } from "../lib/supabase";
+import { DashboardHeader } from "./DashboardShell";
+
+type CaseRow = { id: string; case_number: string; status: string; objective: string | null; submitted_at: string | null; updated_at: string; diagnostic_clients: { full_name: string; email_display: string } | null; diagnostic_ai_assessments?: Array<{ structured_result: { overallScore?: number; readinessLevel?: string; technicalAlerts?: string[] } }> };
+type Summary = { counts: Record<string, number>; recent: CaseRow[]; averageHours: number | null };
+
+async function authorizedFetch<T = any>(path: string): Promise<T> {
+  const { data } = await getBrowserSupabase().auth.getSession();
+  const response = await fetch(path, { headers: { Authorization: `Bearer ${data.session?.access_token ?? ""}` } });
+  if (!response.ok) throw new Error(); return await response.json() as T;
+}
+
+const statusLabels: Record<string, string> = { client_draft: "Rascunho do cliente", submitted: "Formulário enviado", ai_processing: "Processando IA", awaiting_triage: "Aguardando triagem", in_review: "Em análise", awaiting_client: "Aguardando cliente", ready_for_approval: "Pronto para aprovação", approved: "Aprovado", sending: "Enviando", sent: "Enviado", processing_error: "Erro no processamento", archived: "Arquivado" };
+
+export function OverviewClient() {
+  const [data, setData] = useState<Summary | null>(null); const [error, setError] = useState(false);
+  useEffect(() => { authorizedFetch<Summary>("/api/dashboard/summary").then(setData).catch(() => setError(true)); }, []);
+  return <>
+    <DashboardHeader eyebrow="Segunda-feira · central de análise" title="Bom trabalho, consultora." description="Prioridades organizadas para começar pelos casos que mais precisam de atenção." action={<Link className="outline-action" href="/dashboard/diagnosticos">Ver todos os diagnósticos <ArrowUpRight /></Link>} />
+    {error ? <DashboardError /> : !data ? <DashboardLoading /> : <>
+      <section className="metric-grid">
+        <Metric number={data.counts.awaiting_triage ?? 0} label="Aguardando triagem" detail="Novos casos" accent />
+        <Metric number={data.counts.technical_attention ?? 0} label="Atenção técnica" detail="Revisão prioritária" warning />
+        <Metric number={data.counts.in_review ?? 0} label="Pareceres em elaboração" detail="Em andamento" />
+        <Metric number={data.counts.ready_for_approval ?? 0} label="Prontos para aprovação" detail="Revisão final" success />
+      </section>
+      <section className="dashboard-columns">
+        <div className="priority-list"><header><div><p className="eyebrow">Fila prioritária</p><h2>Casos para revisar agora</h2></div><Link href="/dashboard/diagnosticos">Lista completa</Link></header>{data.recent.length ? data.recent.map((item) => <CaseLine key={item.id} item={item} />) : <div className="empty-row">Nenhum caso aguardando revisão.</div>}</div>
+        <aside className="service-time"><Clock3 /><p className="eyebrow">Tempo de resposta</p><strong>{data.averageHours === null ? "—" : `${data.averageHours}h`}</strong><span>Média entre envio e primeira revisão</span><div><b style={{ width: data.averageHours ? `${Math.min(100, data.averageHours / 48 * 100)}%` : "0%" }} /></div><small>Meta interna · até 48h</small></aside>
+      </section>
+    </>}
+  </>;
+}
+
+function Metric({ number, label, detail, accent, warning, success }: { number: number; label: string; detail: string; accent?: boolean; warning?: boolean; success?: boolean }) { return <article className={`metric ${accent ? "accent" : warning ? "warning" : success ? "success" : ""}`}><span>{detail}</span><strong>{String(number).padStart(2, "0")}</strong><h2>{label}</h2></article>; }
+
+function CaseLine({ item }: { item: CaseRow }) {
+  const result = item.diagnostic_ai_assessments?.[0]?.structured_result;
+  return <Link className="case-line" href={`/dashboard/diagnosticos/${item.id}`}><div className="case-avatar">{item.diagnostic_clients?.full_name?.split(" ").map((part) => part[0]).slice(0,2).join("")}</div><div className="case-person"><strong>{item.diagnostic_clients?.full_name}</strong><small>{item.case_number} · {item.objective ?? "Objetivo não informado"}</small></div><span className={`status-pill status-${item.status}`}>{statusLabels[item.status] ?? item.status}</span>{result?.technicalAlerts?.length ? <span className="alert-count"><AlertTriangle />{result.technicalAlerts.length}</span> : <span className="score">{result?.overallScore ?? "—"}<small>/100</small></span>}<ArrowUpRight className="row-arrow" /></Link>;
+}
+
+export function DiagnosticsListClient() {
+  const [items, setItems] = useState<CaseRow[]>([]); const [loading, setLoading] = useState(true); const [search, setSearch] = useState(""); const [status, setStatus] = useState(""); const [error, setError] = useState(false);
+  useEffect(() => { const query = new URLSearchParams(); if (search) query.set("search", search); if (status) query.set("status", status); const timer = setTimeout(() => authorizedFetch<{items:CaseRow[]}>(`/api/dashboard/cases?${query}`).then((data) => { setItems(data.items); setError(false); }).catch(() => setError(true)).finally(() => setLoading(false)), 250); return () => clearTimeout(timer); }, [search, status]);
+  return <>
+    <DashboardHeader eyebrow="Casos" title="Diagnósticos" description="Busque, filtre e acompanhe cada etapa da análise profissional." />
+    <div className="list-toolbar"><label><Search /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nome, e-mail ou número" /></label><label><SlidersHorizontal /><select value={status} onChange={(event) => setStatus(event.target.value)}><option value="">Todos os status</option>{Object.entries(statusLabels).map(([value,label]) => <option value={value} key={value}>{label}</option>)}</select></label></div>
+    {error ? <DashboardError /> : loading ? <DashboardLoading /> : <div className="diagnostic-table"><div className="table-head"><span>Cliente / diagnóstico</span><span>Objetivo</span><span>Preparo</span><span>Status</span><span>Atualização</span><span /></div>{items.length ? items.map((item) => <CaseLine key={item.id} item={item} />) : <div className="empty-row">Nenhum diagnóstico encontrado.</div>}</div>}
+  </>;
+}
+
+export function DashboardLoading() { return <div className="dashboard-loading"><span /><span /><span /></div>; }
+export function DashboardError() { return <div className="dashboard-error"><AlertTriangle /><h2>Não foi possível carregar os dados</h2><p>Confirme a conexão e tente atualizar a página.</p></div>; }

@@ -1,0 +1,207 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { AlertTriangle, ArrowLeft, ArrowRight, Check, Cloud, CloudOff, LockKeyhole, Pencil, Send } from "lucide-react";
+import { diagnosticSections, missingRequiredQuestions, visibleQuestions } from "../lib/questions";
+import type { DiagnosticQuestion, FormAnswers } from "../lib/types";
+import { BrandMark } from "./BrandMark";
+
+type SessionData = { caseNumber: string; status: string; answers: FormAnswers; client: { fullName: string }; submittedAt: string | null };
+type SaveState = "idle" | "saving" | "saved" | "offline" | "error";
+
+export function FormApp({ initialToken }: { initialToken?: string }) {
+  const [session, setSession] = useState<SessionData | null>(null);
+  const [answers, setAnswers] = useState<FormAnswers>({});
+  const [step, setStep] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [fatalError, setFatalError] = useState("");
+  const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [submitError, setSubmitError] = useState("");
+  const [submitted, setSubmitted] = useState<{ caseNumber: string; expectedTime: string } | null>(null);
+  const initialized = useRef(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isReview = step === diagnosticSections.length;
+
+  useEffect(() => {
+    async function loadSession() {
+      try {
+        const response = await fetch("/api/diagnostics/form-session", {
+          headers: initialToken ? { Authorization: `Bearer ${initialToken}` } : {},
+          credentials: "same-origin",
+        });
+        const data = await response.json() as SessionData & { error?: string };
+        if (!response.ok) throw new Error(data.error ?? "Este link não é mais válido.");
+        setSession(data);
+        setAnswers(data.answers ?? {});
+        if (initialToken && window.location.search) window.history.replaceState({}, "", "/formulario");
+        initialized.current = true;
+      } catch (error) {
+        setFatalError(error instanceof Error ? error.message : "Este link não é mais válido.");
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadSession();
+  }, [initialToken]);
+
+  useEffect(() => {
+    if (!initialized.current || !session || session.status !== "client_draft") return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    setSaveState("saving");
+    saveTimer.current = setTimeout(async () => {
+      if (!navigator.onLine) { setSaveState("offline"); return; }
+      try {
+        const response = await fetch("/api/diagnostics/answers", {
+          method: "PUT",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ answers, schemaVersion: 1 }),
+        });
+        if (!response.ok) throw new Error();
+        setSaveState("saved");
+      } catch { setSaveState("error"); }
+    }, 850);
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+  }, [answers, session]);
+
+  const incompleteSections = useMemo(
+    () => diagnosticSections.map((section) => missingRequiredQuestions(section, answers).length),
+    [answers],
+  );
+  const completedSections = incompleteSections.filter((count) => count === 0).length;
+  const progress = isReview ? 100 : Math.round((completedSections / diagnosticSections.length) * 100);
+
+  function update(question: DiagnosticQuestion, value: unknown) {
+    setAnswers((current) => ({ ...current, [question.key]: value }));
+  }
+
+  function next() {
+    if (!isReview && incompleteSections[step] > 0) {
+      setSubmitError(`Complete ${incompleteSections[step]} ${incompleteSections[step] === 1 ? "campo obrigatório" : "campos obrigatórios"} antes de avançar.`);
+      document.querySelector("[aria-invalid=true]")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    setSubmitError("");
+    setStep((current) => Math.min(diagnosticSections.length, current + 1));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function submit() {
+    const totalMissing = incompleteSections.reduce((sum, count) => sum + count, 0);
+    if (totalMissing) { setSubmitError(`Ainda existem ${totalMissing} respostas obrigatórias pendentes.`); return; }
+    setSaveState("saving");
+    try {
+      const saveResponse = await fetch("/api/diagnostics/answers", { method: "PUT", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ answers, schemaVersion: 1 }) });
+      if (!saveResponse.ok) throw new Error("Não foi possível salvar a versão final.");
+      const response = await fetch("/api/diagnostics/submit", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() },
+        body: JSON.stringify({ consent: true, policyVersion: "2026-08-03", idempotencyKey: crypto.randomUUID() }),
+      });
+      const data = await response.json() as { error?: string; caseNumber: string; expectedTime: string };
+      if (!response.ok) throw new Error(data.error ?? "Não foi possível enviar.");
+      setSubmitted({ caseNumber: data.caseNumber, expectedTime: data.expectedTime });
+      setSaveState("saved");
+    } catch (error) { setSubmitError(error instanceof Error ? error.message : "Não foi possível enviar."); setSaveState("error"); }
+  }
+
+  if (loading) return <FormStatus title="Abrindo seu diagnóstico" detail="Validando o link pessoal com segurança…" />;
+  if (fatalError) return <FormStatus error title="Este link não pode ser usado" detail={fatalError} />;
+  if (submitted) return <FormStatus success title="Respostas recebidas" detail={`O diagnóstico ${submitted.caseNumber} foi enviado. Prazo estimado: ${submitted.expectedTime}. A análise automática ficará restrita às consultoras até a revisão profissional.`} />;
+  if (!session) return null;
+  if (session.status !== "client_draft") return <FormStatus success title="Diagnóstico já enviado" detail={`As respostas de ${session.caseNumber} estão protegidas e não podem mais ser alteradas. Se a equipe precisar de informações adicionais, você receberá uma nova comunicação.`} />;
+
+  const section = diagnosticSections[step];
+  return (
+    <div className="form-workspace">
+      <header className="form-topbar">
+        <BrandMark compact />
+        <div className={`save-state save-state--${saveState}`} role="status">
+          {saveState === "offline" ? <CloudOff /> : <Cloud />}
+          <span>{saveState === "saving" ? "Salvando…" : saveState === "saved" ? "Tudo salvo" : saveState === "offline" ? "Sem conexão" : saveState === "error" ? "Falha ao salvar" : "Salvamento automático"}</span>
+        </div>
+        <div className="case-tag"><small>Diagnóstico</small><strong>{session.caseNumber}</strong></div>
+      </header>
+      <div className="progress-strip">
+        <div><span style={{ width: `${progress}%` }} /></div>
+        <p><strong>{progress}%</strong> concluído</p>
+      </div>
+      <div className="form-layout">
+        <aside className="section-nav" aria-label="Seções do diagnóstico">
+          <p>Seu diagnóstico</p>
+          <ol>
+            {diagnosticSections.map((item, index) => (
+              <li key={item.key} className={index === step ? "active" : incompleteSections[index] === 0 ? "complete" : ""}>
+                <button type="button" onClick={() => setStep(index)} aria-current={index === step ? "step" : undefined}>
+                  <span>{incompleteSections[index] === 0 ? <Check /> : item.number}</span>{item.title}
+                </button>
+              </li>
+            ))}
+            <li className={isReview ? "active" : ""}><button type="button" onClick={() => setStep(diagnosticSections.length)}><span>12</span>Revisão e envio</button></li>
+          </ol>
+          <div className="privacy-note"><LockKeyhole /><p><strong>Seus dados são confidenciais.</strong> O diagnóstico é acessado apenas pela equipe autorizada.</p></div>
+        </aside>
+        <main className="form-main">
+          {isReview ? (
+            <ReviewAnswers answers={answers} incompleteSections={incompleteSections} onEdit={setStep} onSubmit={submit} submitting={saveState === "saving"} error={submitError} />
+          ) : (
+            <section className="question-section" aria-labelledby="section-title">
+              <p className="eyebrow">Seção {section.number} de 11</p>
+              <h1 id="section-title">{section.title}</h1>
+              <p className="section-intro">{section.intro}</p>
+              {section.sensitive && <div className="sensitive-notice"><LockKeyhole /><p><strong>Informação sensível</strong>Este conteúdo não aparece em URLs, listas resumidas ou registros técnicos.</p></div>}
+              <div className="questions-stack">
+                {visibleQuestions(section, answers).map((question, index) => (
+                  <QuestionField key={question.key} question={question} value={answers[question.key]} onChange={(value) => update(question, value)} invalid={Boolean(submitError) && missingRequiredQuestions(section, answers).some((item) => item.key === question.key)} index={index + 1} />
+                ))}
+                {section.key === "spouse" && visibleQuestions(section, answers).length === 0 && <div className="not-applicable"><Check /><h2>Esta seção não se aplica</h2><p>Com base no estado civil informado, você pode seguir para a próxima etapa.</p></div>}
+              </div>
+              {submitError && <p className="inline-alert" role="alert"><AlertTriangle />{submitError}</p>}
+              <div className="form-actions">
+                <button className="secondary-button" type="button" onClick={() => setStep((current) => Math.max(0, current - 1))} disabled={step === 0}><ArrowLeft /> Voltar</button>
+                <button className="primary-button" type="button" onClick={next}>Continuar <ArrowRight /></button>
+              </div>
+            </section>
+          )}
+        </main>
+      </div>
+    </div>
+  );
+}
+
+function QuestionField({ question, value, onChange, invalid, index }: { question: DiagnosticQuestion; value: unknown; onChange: (value: unknown) => void; invalid: boolean; index: number }) {
+  const id = `field-${question.key}`;
+  const common = { id, name: question.key, "aria-invalid": invalid, required: question.required };
+  const current = value === undefined || value === null ? "" : String(value);
+  return (
+    <fieldset className="question-card" aria-describedby={invalid ? `${id}-error` : undefined}>
+      <legend><small>{String(index).padStart(2, "0")}</small><span>{question.label} {question.required ? <b>*</b> : <em>{question.optionalLabel ?? "Opcional"}</em>}</span></legend>
+      {question.type === "textarea" && <textarea {...common} value={current} placeholder={question.placeholder} onChange={(event) => onChange(event.target.value)} />}
+      {(question.type === "text" || question.type === "email" || question.type === "number") && <input {...common} type={question.type} value={current} min={question.min} max={question.max} placeholder={question.placeholder} onChange={(event) => onChange(question.type === "number" && event.target.value !== "" ? Number(event.target.value) : event.target.value)} />}
+      {question.type === "select" && <select {...common} value={current} onChange={(event) => onChange(event.target.value)}><option value="">Selecione uma opção</option>{question.options?.map((option) => <option key={option}>{option}</option>)}</select>}
+      {question.type === "radio" && <div className="option-grid">{question.options?.map((option) => <label key={option} className={current === option ? "selected" : ""}><input type="radio" name={question.key} value={option} checked={current === option} onChange={() => onChange(option)} /><span>{option}</span></label>)}</div>}
+      {(question.type === "multi" || question.type === "checkbox") && <div className="option-grid option-grid--multi">{question.options?.map((option) => { const values = Array.isArray(value) ? value as string[] : []; const checked = values.includes(option); return <label key={option} className={checked ? "selected" : ""}><input type="checkbox" value={option} checked={checked} onChange={() => onChange(checked ? values.filter((item) => item !== option) : [...values, option])} /><span><Check />{option}</span></label>; })}</div>}
+      {invalid && <p id={`${id}-error`} className="field-error">Este campo é obrigatório.</p>}
+    </fieldset>
+  );
+}
+
+function ReviewAnswers({ answers, incompleteSections, onEdit, onSubmit, submitting, error }: { answers: FormAnswers; incompleteSections: number[]; onEdit: (index: number) => void; onSubmit: () => void; submitting: boolean; error: string }) {
+  return (
+    <section className="question-section review-section">
+      <p className="eyebrow">Revisão final</p><h1>Revise antes de enviar</h1><p className="section-intro">Depois do envio, suas respostas formarão um registro protegido e só poderão ser reabertas pela equipe.</p>
+      <div className="review-list">
+        {diagnosticSections.map((section, index) => <article key={section.key}><header><div><small>Seção {section.number}</small><h2>{section.title}</h2></div><button type="button" onClick={() => onEdit(index)}><Pencil /> Editar</button></header>{incompleteSections[index] > 0 && <p className="review-warning"><AlertTriangle /> {incompleteSections[index]} pendência(s)</p>}<dl>{visibleQuestions(section, answers).filter((question) => answers[question.key] !== undefined && answers[question.key] !== "").map((question) => <div key={question.key}><dt>{question.label}</dt><dd>{Array.isArray(answers[question.key]) ? (answers[question.key] as string[]).join(", ") : String(answers[question.key])}</dd></div>)}</dl></article>)}
+      </div>
+      <label className="final-consent"><input type="checkbox" defaultChecked readOnly /><span><Check />Confirmo que revisei as respostas e autorizo seu uso na elaboração do diagnóstico profissional.</span></label>
+      {error && <p className="inline-alert" role="alert"><AlertTriangle />{error}</p>}
+      <div className="form-actions"><button className="secondary-button" type="button" onClick={() => onEdit(diagnosticSections.length - 1)}><ArrowLeft /> Voltar</button><button className="primary-button" type="button" disabled={submitting} onClick={onSubmit}>{submitting ? "Enviando…" : "Enviar para análise"}<Send /></button></div>
+    </section>
+  );
+}
+
+function FormStatus({ title, detail, error = false, success = false }: { title: string; detail: string; error?: boolean; success?: boolean }) {
+  return <main className="status-page"><BrandMark /><section><span className={`status-orbit ${error ? "error" : success ? "success" : ""}`}>{error ? <AlertTriangle /> : success ? <Check /> : <Cloud />}</span><p className="eyebrow">Diagnóstico Canadá Sem Filtro</p><h1>{title}</h1><p>{detail}</p>{error && <Link className="primary-button" href="/">Solicitar um novo link</Link>}</section></main>;
+}

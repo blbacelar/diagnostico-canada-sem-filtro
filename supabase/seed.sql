@@ -1,0 +1,2 @@
+-- Dados fictícios mínimos são inseridos idempotentemente pela migration inicial.
+-- Este arquivo fica intencionalmente sem operações adicionais.

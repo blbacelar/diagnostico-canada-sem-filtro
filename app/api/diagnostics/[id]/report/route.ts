@@ -1,0 +1,3 @@
+import { handleApiError, requireConsultant } from "../../../../../lib/api";
+import { generateReportPdf, getReportData } from "../../../../../lib/report";
+export async function GET(request:Request,{params}:{params:Promise<{id:string}>}){try{const{id}=await params;const{admin}=await requireConsultant(request);const report=await getReportData(admin,id);const pdf=await generateReportPdf(report);return new Response(pdf as BodyInit,{headers:{"Content-Type":"application/pdf","Content-Disposition":`inline; filename="${report.caseNumber}.pdf"`,"Cache-Control":"private, no-store"}});}catch(error){return handleApiError(error);}}
