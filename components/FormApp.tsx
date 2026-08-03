@@ -5,7 +5,14 @@ import Link from "next/link";
 import { AlertTriangle, ArrowLeft, ArrowRight, Check, Cloud, CloudOff, LockKeyhole, Pencil, Send } from "lucide-react";
 import { diagnosticSections, missingRequiredQuestions, visibleQuestions } from "../lib/questions";
 import type { DiagnosticQuestion, FormAnswers } from "../lib/types";
+import { cn } from "../lib/utils";
 import { BrandMark } from "./BrandMark";
+import { Checkbox } from "./ui/checkbox";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { Textarea } from "./ui/textarea";
 
 type SessionData = { caseNumber: string; status: string; answers: FormAnswers; client: { fullName: string }; submittedAt: string | null };
 type SaveState = "idle" | "saving" | "saved" | "offline" | "error";
@@ -73,7 +80,14 @@ export function FormApp({ initialToken }: { initialToken?: string }) {
   const progress = isReview ? 100 : Math.round((completedSections / diagnosticSections.length) * 100);
 
   function update(question: DiagnosticQuestion, value: unknown) {
-    setAnswers((current) => ({ ...current, [question.key]: value }));
+    setAnswers((current) => {
+      const next = { ...current, [question.key]: value };
+      if (question.key === "has_children" && value !== true) {
+        next.children_count = null;
+        next.children_ages = null;
+      }
+      return next;
+    });
   }
 
   function next() {
@@ -173,16 +187,51 @@ export function FormApp({ initialToken }: { initialToken?: string }) {
 
 function QuestionField({ question, value, onChange, invalid, index }: { question: DiagnosticQuestion; value: unknown; onChange: (value: unknown) => void; invalid: boolean; index: number }) {
   const id = `field-${question.key}`;
-  const common = { id, name: question.key, "aria-invalid": invalid, required: question.required };
+  const labelId = `${id}-label`;
+  const describedBy = invalid ? `${id}-error` : undefined;
+  const common = { id, name: question.key, "aria-invalid": invalid, "aria-labelledby": labelId, "aria-describedby": describedBy, required: question.required };
   const current = value === undefined || value === null ? "" : String(value);
+  const layout = question.layout ?? "full";
   return (
-    <fieldset className="question-card" aria-describedby={invalid ? `${id}-error` : undefined}>
-      <legend><small>{String(index).padStart(2, "0")}</small><span>{question.label} {question.required ? <b>*</b> : <em>{question.optionalLabel ?? "Opcional"}</em>}</span></legend>
-      {question.type === "textarea" && <textarea {...common} value={current} placeholder={question.placeholder} onChange={(event) => onChange(event.target.value)} />}
-      {(question.type === "text" || question.type === "email" || question.type === "number") && <input {...common} type={question.type} value={current} min={question.min} max={question.max} placeholder={question.placeholder} onChange={(event) => onChange(question.type === "number" && event.target.value !== "" ? Number(event.target.value) : event.target.value)} />}
-      {question.type === "select" && <select {...common} value={current} onChange={(event) => onChange(event.target.value)}><option value="">Selecione uma opção</option>{question.options?.map((option) => <option key={option}>{option}</option>)}</select>}
-      {question.type === "radio" && <div className="option-grid">{question.options?.map((option) => <label key={option} className={current === option ? "selected" : ""}><input type="radio" name={question.key} value={option} checked={current === option} onChange={() => onChange(option)} /><span>{option}</span></label>)}</div>}
-      {(question.type === "multi" || question.type === "checkbox") && <div className="option-grid option-grid--multi">{question.options?.map((option) => { const values = Array.isArray(value) ? value as string[] : []; const checked = values.includes(option); return <label key={option} className={checked ? "selected" : ""}><input type="checkbox" value={option} checked={checked} onChange={() => onChange(checked ? values.filter((item) => item !== option) : [...values, option])} /><span><Check />{option}</span></label>; })}</div>}
+    <fieldset className={cn("question-card", `question-card--${layout}`, question.type === "boolean" && "question-card--boolean")} data-question-key={question.key} aria-describedby={describedBy}>
+      <legend><small>{String(index).padStart(2, "0")}</small><span id={labelId}>{question.label} {question.required ? <b>*</b> : <em>{question.optionalLabel ?? "Opcional"}</em>}</span></legend>
+      {question.type === "textarea" && <Textarea {...common} className="question-control question-control--textarea" value={current} placeholder={question.placeholder} onChange={(event) => onChange(event.target.value)} />}
+      {(question.type === "text" || question.type === "email" || question.type === "number") && <Input {...common} className="question-control" type={question.type} value={current} min={question.min} max={question.max} placeholder={question.placeholder} onChange={(event) => onChange(question.type === "number" && event.target.value !== "" ? Number(event.target.value) : event.target.value)} />}
+      {question.type === "select" && (
+        <Select name={question.key} value={current} required={question.required} onValueChange={onChange}>
+          <SelectTrigger {...common} className="question-control" aria-describedby={describedBy}>
+            <SelectValue placeholder="Selecione uma opção" />
+          </SelectTrigger>
+          <SelectContent position="popper" align="start" className="question-select-content">
+            {question.options?.map((option) => <SelectItem key={option} value={option}>{option}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      )}
+      {question.type === "boolean" && (
+        <div className={cn("boolean-option", (value === true || value === "Sim") && "selected")}>
+          <Checkbox id={id} name={question.key} checked={value === true || value === "Sim"} aria-labelledby={`${id}-choice`} onCheckedChange={(checked) => onChange(checked === true)} />
+          <Label id={`${id}-choice`} htmlFor={id}>Tenho filhos</Label>
+          <p>Marque esta opção para informar quantidade e idades.</p>
+        </div>
+      )}
+      {question.type === "radio" && (
+        <RadioGroup className="option-grid" name={question.key} value={current} required={question.required} aria-labelledby={labelId} onValueChange={onChange}>
+          {question.options?.map((option, optionIndex) => {
+            const optionId = `${id}-${optionIndex}`;
+            return <Label key={option} htmlFor={optionId} className={current === option ? "selected" : ""}><span>{option}</span><RadioGroupItem id={optionId} value={option} /></Label>;
+          })}
+        </RadioGroup>
+      )}
+      {(question.type === "multi" || question.type === "checkbox") && (
+        <div className="option-grid option-grid--multi" role="group" aria-labelledby={labelId}>
+          {question.options?.map((option, optionIndex) => {
+            const values = Array.isArray(value) ? value as string[] : [];
+            const checked = values.includes(option);
+            const optionId = `${id}-${optionIndex}`;
+            return <div key={option} className={cn("multi-option", checked && "selected")}><Checkbox id={optionId} checked={checked} onCheckedChange={(nextChecked) => onChange(nextChecked === true ? [...values, option] : values.filter((item) => item !== option))} /><Label htmlFor={optionId}>{option}</Label></div>;
+          })}
+        </div>
+      )}
       {invalid && <p id={`${id}-error`} className="field-error">Este campo é obrigatório.</p>}
     </fieldset>
   );
@@ -193,7 +242,7 @@ function ReviewAnswers({ answers, incompleteSections, onEdit, onSubmit, submitti
     <section className="question-section review-section">
       <p className="eyebrow">Revisão final</p><h1>Revise antes de enviar</h1><p className="section-intro">Depois do envio, suas respostas formarão um registro protegido e só poderão ser reabertas pela equipe.</p>
       <div className="review-list">
-        {diagnosticSections.map((section, index) => <article key={section.key}><header><div><small>Seção {section.number}</small><h2>{section.title}</h2></div><button type="button" onClick={() => onEdit(index)}><Pencil /> Editar</button></header>{incompleteSections[index] > 0 && <p className="review-warning"><AlertTriangle /> {incompleteSections[index]} pendência(s)</p>}<dl>{visibleQuestions(section, answers).filter((question) => answers[question.key] !== undefined && answers[question.key] !== "").map((question) => <div key={question.key}><dt>{question.label}</dt><dd>{Array.isArray(answers[question.key]) ? (answers[question.key] as string[]).join(", ") : String(answers[question.key])}</dd></div>)}</dl></article>)}
+        {diagnosticSections.map((section, index) => <article key={section.key}><header><div><small>Seção {section.number}</small><h2>{section.title}</h2></div><button type="button" onClick={() => onEdit(index)}><Pencil /> Editar</button></header>{incompleteSections[index] > 0 && <p className="review-warning"><AlertTriangle /> {incompleteSections[index]} pendência(s)</p>}<dl>{visibleQuestions(section, answers).filter((question) => answers[question.key] !== undefined && answers[question.key] !== "").map((question) => { const answer = answers[question.key]; return <div key={question.key}><dt>{question.label}</dt><dd>{Array.isArray(answer) ? answer.join(", ") : typeof answer === "boolean" ? (answer ? "Sim" : "Não") : String(answer)}</dd></div>; })}</dl></article>)}
       </div>
       <label className="final-consent"><input type="checkbox" defaultChecked readOnly /><span><Check />Confirmo que revisei as respostas e autorizo seu uso na elaboração do diagnóstico profissional.</span></label>
       {error && <p className="inline-alert" role="alert"><AlertTriangle />{error}</p>}

@@ -3,7 +3,7 @@ import type { DiagnosticSection, FormAnswers } from "./types";
 const yesNo = ["Sim", "Não"];
 const spouseApplies = (answers: FormAnswers) =>
   ["Casado(a)", "União estável"].includes(String(answers.marital_status ?? ""));
-const hasChildren = (answers: FormAnswers) => answers.has_children === "Sim";
+const hasChildren = (answers: FormAnswers) => answers.has_children === true || answers.has_children === "Sim";
 const hasCanadianWork = (answers: FormAnswers) => answers.canadian_work_experience === "Sim";
 const hasEnglishTest = (answers: FormAnswers) => ![undefined, "", "Não"].includes(answers.english_test as string);
 const hasFrenchTest = (answers: FormAnswers) => ![undefined, "", "Não"].includes(answers.french_test as string);
@@ -16,13 +16,13 @@ export const diagnosticSections: DiagnosticSection[] = [
     title: "Perfil pessoal",
     intro: "O ponto de partida para entender sua realidade familiar e o contexto atual.",
     questions: [
-      { key: "age", label: "Qual é a sua idade?", type: "number", min: 16, max: 100, required: true },
-      { key: "nationality", label: "Qual é a sua nacionalidade?", type: "text", required: true },
-      { key: "country_of_residence", label: "Em qual país você mora atualmente?", type: "text", required: true },
-      { key: "marital_status", label: "Qual é o seu estado civil?", type: "select", required: true, options: ["Solteiro(a)", "Casado(a)", "União estável", "Separado(a)", "Divorciado(a)", "Viúvo(a)"] },
-      { key: "has_children", label: "Você tem filhos?", type: "radio", required: true, options: yesNo },
-      { key: "children_count", label: "Quantos filhos?", type: "number", min: 1, max: 20, required: true, showWhen: hasChildren },
-      { key: "children_ages", label: "Quais são as idades dos filhos?", type: "text", placeholder: "Ex.: 4 e 9 anos", required: true, showWhen: hasChildren },
+      { key: "age", label: "Qual é a sua idade?", type: "number", min: 16, max: 100, required: true, layout: "compact" },
+      { key: "nationality", label: "Qual é a sua nacionalidade?", type: "text", required: true, layout: "wide" },
+      { key: "country_of_residence", label: "Em qual país você mora atualmente?", type: "text", required: true, layout: "half" },
+      { key: "marital_status", label: "Qual é o seu estado civil?", type: "select", required: true, layout: "half", options: ["Solteiro(a)", "Casado(a)", "União estável", "Separado(a)", "Divorciado(a)", "Viúvo(a)"] },
+      { key: "has_children", label: "Filhos", type: "boolean", optionalLabel: "Marque se aplicável", layout: "third" },
+      { key: "children_count", label: "Quantos filhos?", type: "number", min: 1, max: 20, required: true, layout: "third", showWhen: hasChildren },
+      { key: "children_ages", label: "Idade dos filhos", type: "text", placeholder: "Ex.: 4 e 9 anos", required: true, layout: "third", showWhen: hasChildren },
       { key: "spouse_summary", label: "Conte brevemente sobre seu cônjuge ou parceiro", type: "textarea", optionalLabel: "Detalhes serão aprofundados na seção 7", showWhen: spouseApplies },
     ],
   },

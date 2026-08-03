@@ -19,8 +19,11 @@ export type FieldType =
   | "textarea"
   | "select"
   | "radio"
+  | "boolean"
   | "checkbox"
   | "multi";
+
+export type QuestionLayout = "compact" | "wide" | "half" | "third" | "full";
 
 export type FormAnswers = Record<string, unknown>;
 
@@ -35,6 +38,7 @@ export interface DiagnosticQuestion {
   min?: number;
   max?: number;
   sensitive?: boolean;
+  layout?: QuestionLayout;
   showWhen?: (answers: FormAnswers) => boolean;
 }
 

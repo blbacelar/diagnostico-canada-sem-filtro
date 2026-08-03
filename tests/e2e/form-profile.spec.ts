@@ -1,0 +1,112 @@
+import { expect, test, type Page } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
+
+async function openProfile(page: Page, answers: Record<string, unknown> = {}) {
+  await page.route("**/api/diagnostics/form-session", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      caseNumber: "CAN-E2E-001",
+      status: "client_draft",
+      answers,
+      client: { fullName: "Pessoa Teste" },
+      submittedAt: null,
+    }),
+  }));
+  await page.route("**/api/diagnostics/answers", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ savedAt: new Date().toISOString() }),
+  }));
+  await page.goto("/formulario?token=e2e-token");
+  await expect(page.getByRole("heading", { name: "Perfil pessoal" })).toBeVisible();
+}
+
+function question(page: Page, key: string) {
+  return page.locator(`[data-question-key="${key}"]`);
+}
+
+test("@regression perfil pessoal usa controles shadcn e limpa respostas condicionais", async ({ page }) => {
+  await openProfile(page);
+
+  const maritalStatus = page.getByRole("combobox", { name: "Qual é o seu estado civil?" });
+  await expect(maritalStatus).toBeVisible();
+  await expect(page.locator('select[name="marital_status"]')).toHaveCount(0);
+  await maritalStatus.click();
+  await expect(page.getByRole("option", { name: "Casado(a)" })).toBeVisible();
+  await page.getByRole("option", { name: "Casado(a)" }).click();
+  await expect(maritalStatus).toHaveText("Casado(a)");
+
+  const hasChildren = page.getByRole("checkbox", { name: "Tenho filhos" });
+  await expect(hasChildren).not.toBeChecked();
+  await expect(question(page, "children_count")).toHaveCount(0);
+  await expect(question(page, "children_ages")).toHaveCount(0);
+
+  await hasChildren.click();
+  await expect(hasChildren).toBeChecked();
+  await page.getByRole("spinbutton", { name: "Quantos filhos?" }).fill("2");
+  await page.getByRole("textbox", { name: "Idade dos filhos" }).fill("4 e 9 anos");
+
+  await hasChildren.click();
+  await expect(question(page, "children_count")).toHaveCount(0);
+  await expect(question(page, "children_ages")).toHaveCount(0);
+
+  await hasChildren.click();
+  await expect(page.getByRole("spinbutton", { name: "Quantos filhos?" })).toHaveValue("");
+  await expect(page.getByRole("textbox", { name: "Idade dos filhos" })).toHaveValue("");
+});
+
+test("@regression @a11y select shadcn funciona por teclado e mantém semântica acessível", async ({ page }) => {
+  await openProfile(page);
+
+  const maritalStatus = page.getByRole("combobox", { name: "Qual é o seu estado civil?" });
+  await maritalStatus.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("option", { name: "Solteiro(a)" })).toBeVisible();
+  await page.keyboard.press("Home");
+  await page.keyboard.press("Enter");
+  await expect(maritalStatus).toHaveText("Solteiro(a)");
+
+  const results = await new AxeBuilder({ page }).analyze();
+  expect(results.violations.filter((violation) => ["critical", "serious"].includes(violation.impact ?? ""))).toEqual([]);
+});
+
+test("@regression grade desktop mantém idade compacta e agrupa campos relacionados", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "Validação específica do breakpoint desktop.");
+  await openProfile(page);
+
+  const age = await question(page, "age").boundingBox();
+  const nationality = await question(page, "nationality").boundingBox();
+  const country = await question(page, "country_of_residence").boundingBox();
+  const marital = await question(page, "marital_status").boundingBox();
+  expect(age).not.toBeNull();
+  expect(nationality).not.toBeNull();
+  expect(country).not.toBeNull();
+  expect(marital).not.toBeNull();
+  expect(age!.width).toBeLessThan(nationality!.width);
+  expect(Math.abs(age!.y - nationality!.y)).toBeLessThan(2);
+  expect(Math.abs(country!.y - marital!.y)).toBeLessThan(2);
+
+  await page.getByRole("checkbox", { name: "Tenho filhos" }).click();
+  const childrenToggle = await question(page, "has_children").boundingBox();
+  const childrenCount = await question(page, "children_count").boundingBox();
+  const childrenAges = await question(page, "children_ages").boundingBox();
+  expect(childrenToggle).not.toBeNull();
+  expect(childrenCount).not.toBeNull();
+  expect(childrenAges).not.toBeNull();
+  expect(Math.abs(childrenToggle!.y - childrenCount!.y)).toBeLessThan(2);
+  expect(Math.abs(childrenCount!.y - childrenAges!.y)).toBeLessThan(2);
+});
+
+test("@regression grade mobile empilha os campos sem overflow horizontal", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "mobile", "Validação específica do breakpoint mobile.");
+  await openProfile(page);
+
+  const age = await question(page, "age").boundingBox();
+  const nationality = await question(page, "nationality").boundingBox();
+  expect(age).not.toBeNull();
+  expect(nationality).not.toBeNull();
+  expect(Math.abs(age!.x - nationality!.x)).toBeLessThan(2);
+  expect(nationality!.y).toBeGreaterThan(age!.y + age!.height);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(await page.evaluate(() => document.documentElement.clientWidth));
+});
