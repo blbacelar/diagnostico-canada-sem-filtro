@@ -38,7 +38,6 @@ export function LandingClient() {
       if (!response.ok) throw new Error(data.error ?? "Não foi possível enviar o link.");
       setMessage(data.message);
       setStatus("sent");
-      event.currentTarget.reset();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Não foi possível concluir agora.");
       setStatus("error");
