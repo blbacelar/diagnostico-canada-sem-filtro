@@ -38,6 +38,7 @@ export interface DiagnosticQuestion {
   min?: number;
   max?: number;
   sensitive?: boolean;
+  format?: "currency";
   layout?: QuestionLayout;
   layoutRow?: string;
   showWhen?: (answers: FormAnswers) => boolean;

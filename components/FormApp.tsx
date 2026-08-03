@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, ArrowLeft, ArrowRight, Check, Cloud, CloudOff, LockKeyhole, Pencil, Send } from "lucide-react";
+import { formatCurrencyAmount, formatCurrencyEditingAmount, normalizeCurrencyInput } from "../lib/currency";
 import { diagnosticSections, layoutQuestionRows, missingRequiredQuestions, visibleQuestions } from "../lib/questions";
 import type { DiagnosticQuestion, FormAnswers } from "../lib/types";
 import { cn } from "../lib/utils";
@@ -172,7 +173,7 @@ export function FormApp({ initialToken }: { initialToken?: string }) {
                 {sectionRows.map((row) => (
                   <div className="question-row" data-layout-row={row.key} key={row.key}>
                     {row.questions.map((question) => (
-                      <QuestionField key={question.key} question={question} value={answers[question.key]} onChange={(value) => update(question, value)} invalid={Boolean(submitError) && missingRequiredQuestions(section, answers).some((item) => item.key === question.key)} index={sectionQuestions.findIndex((item) => item.key === question.key) + 1} />
+                      <QuestionField key={question.key} question={question} value={answers[question.key]} currencyCode={question.format === "currency" ? String(answers.funds_currency ?? "") : undefined} onChange={(value) => update(question, value)} invalid={Boolean(submitError) && missingRequiredQuestions(section, answers).some((item) => item.key === question.key)} index={sectionQuestions.findIndex((item) => item.key === question.key) + 1} />
                     ))}
                   </div>
                 ))}
@@ -191,7 +192,7 @@ export function FormApp({ initialToken }: { initialToken?: string }) {
   );
 }
 
-function QuestionField({ question, value, onChange, invalid, index }: { question: DiagnosticQuestion; value: unknown; onChange: (value: unknown) => void; invalid: boolean; index: number }) {
+function QuestionField({ question, value, currencyCode, onChange, invalid, index }: { question: DiagnosticQuestion; value: unknown; currencyCode?: string; onChange: (value: unknown) => void; invalid: boolean; index: number }) {
   const id = `field-${question.key}`;
   const labelId = `${id}-label`;
   const describedBy = invalid ? `${id}-error` : undefined;
@@ -202,7 +203,8 @@ function QuestionField({ question, value, onChange, invalid, index }: { question
     <fieldset className={cn("question-card", `question-card--${layout}`, question.type === "boolean" && "question-card--boolean")} data-question-key={question.key} aria-describedby={describedBy}>
       <legend><small>{String(index).padStart(2, "0")}</small><span id={labelId}>{question.label}{question.required ? <b>{"\u00a0*"}</b> : <em>{question.optionalLabel ?? "Opcional"}</em>}</span></legend>
       {question.type === "textarea" && <Textarea {...common} className="question-control question-control--textarea" value={current} placeholder={question.placeholder} onChange={(event) => onChange(event.target.value)} />}
-      {(question.type === "text" || question.type === "email" || question.type === "number") && <Input {...common} className="question-control" type={question.type} value={current} min={question.min} max={question.max} placeholder={question.placeholder} onChange={(event) => onChange(question.type === "number" && event.target.value !== "" ? Number(event.target.value) : event.target.value)} />}
+      {question.format === "currency" && <CurrencyInput {...common} value={value} currencyCode={currencyCode} placeholder={question.placeholder} onChange={onChange} />}
+      {question.format !== "currency" && (question.type === "text" || question.type === "email" || question.type === "number") && <Input {...common} className="question-control" type={question.type} value={current} min={question.min} max={question.max} placeholder={question.placeholder} onChange={(event) => onChange(question.type === "number" && event.target.value !== "" ? Number(event.target.value) : event.target.value)} />}
       {question.type === "select" && (
         <Select name={question.key} value={current} required={question.required} onValueChange={onChange}>
           <SelectTrigger {...common} className="question-control" aria-describedby={describedBy}>
@@ -243,12 +245,45 @@ function QuestionField({ question, value, onChange, invalid, index }: { question
   );
 }
 
+function CurrencyInput({ id, name, value, currencyCode, placeholder, required, "aria-invalid": ariaInvalid, "aria-labelledby": ariaLabelledBy, "aria-describedby": ariaDescribedBy, onChange }: { id: string; name: string; value: unknown; currencyCode?: string; placeholder?: string; required?: boolean; "aria-invalid": boolean; "aria-labelledby": string; "aria-describedby"?: string; onChange: (value: unknown) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const code = String(currencyCode ?? "").toUpperCase();
+
+  return (
+    <div className="currency-input">
+      <Input
+        id={id}
+        name={name}
+        className="question-control question-control--currency"
+        type="text"
+        inputMode="decimal"
+        autoComplete="off"
+        value={editing ? draft : formatCurrencyAmount(value, code)}
+        placeholder={placeholder}
+        required={required}
+        aria-invalid={ariaInvalid}
+        aria-labelledby={ariaLabelledBy}
+        aria-describedby={ariaDescribedBy}
+        onFocus={() => { setDraft(formatCurrencyEditingAmount(value)); setEditing(true); }}
+        onChange={(event) => {
+          const normalized = normalizeCurrencyInput(event.target.value);
+          setDraft(normalized.display);
+          onChange(normalized.value);
+        }}
+        onBlur={() => setEditing(false)}
+      />
+      {code && <span className="currency-input__code" aria-hidden="true">{code}</span>}
+    </div>
+  );
+}
+
 function ReviewAnswers({ answers, incompleteSections, onEdit, onSubmit, submitting, error }: { answers: FormAnswers; incompleteSections: number[]; onEdit: (index: number) => void; onSubmit: () => void; submitting: boolean; error: string }) {
   return (
     <section className="question-section review-section">
       <p className="eyebrow">Revisão final</p><h1>Revise antes de enviar</h1><p className="section-intro">Depois do envio, suas respostas formarão um registro protegido e só poderão ser reabertas pela equipe.</p>
       <div className="review-list">
-        {diagnosticSections.map((section, index) => <article key={section.key}><header><div><small>Seção {section.number}</small><h2>{section.title}</h2></div><button type="button" onClick={() => onEdit(index)}><Pencil /> Editar</button></header>{incompleteSections[index] > 0 && <p className="review-warning"><AlertTriangle /> {incompleteSections[index]} pendência(s)</p>}<dl>{visibleQuestions(section, answers).filter((question) => answers[question.key] !== undefined && answers[question.key] !== "").map((question) => { const answer = answers[question.key]; return <div key={question.key}><dt>{question.label}</dt><dd>{Array.isArray(answer) ? answer.join(", ") : typeof answer === "boolean" ? (answer ? "Sim" : "Não") : String(answer)}</dd></div>; })}</dl></article>)}
+        {diagnosticSections.map((section, index) => <article key={section.key}><header><div><small>Seção {section.number}</small><h2>{section.title}</h2></div><button type="button" onClick={() => onEdit(index)}><Pencil /> Editar</button></header>{incompleteSections[index] > 0 && <p className="review-warning"><AlertTriangle /> {incompleteSections[index]} pendência(s)</p>}<dl>{visibleQuestions(section, answers).filter((question) => answers[question.key] !== undefined && answers[question.key] !== "").map((question) => { const answer = answers[question.key]; const formatted = question.format === "currency" ? formatCurrencyAmount(answer, String(answers.funds_currency ?? "")) : Array.isArray(answer) ? answer.join(", ") : typeof answer === "boolean" ? (answer ? "Sim" : "Não") : String(answer); return <div key={question.key}><dt>{question.label}</dt><dd>{formatted}</dd></div>; })}</dl></article>)}
       </div>
       <label className="final-consent"><input type="checkbox" defaultChecked readOnly /><span><Check />Confirmo que revisei as respostas e autorizo seu uso na elaboração do diagnóstico profissional.</span></label>
       {error && <p className="inline-alert" role="alert"><AlertTriangle />{error}</p>}

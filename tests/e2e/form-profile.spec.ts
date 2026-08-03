@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { formatCurrencyAmount } from "../../lib/currency";
 
 async function openProfile(page: Page, answers: Record<string, unknown> = {}) {
   await page.route("**/api/diagnostics/form-session", (route) => route.fulfill({
@@ -158,4 +159,31 @@ test("@regression grade mobile empilha os campos sem overflow horizontal", async
   expect(marital!.y).toBeGreaterThan(age!.y + age!.height);
   expect(nationality!.y).toBeGreaterThan(marital!.y + marital!.height);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(await page.evaluate(() => document.documentElement.clientWidth));
+});
+
+test("@regression valor disponível é formatado como moeda e salvo como número", async ({ page }) => {
+  await openProfile(page, { available_funds: 300000, funds_currency: "BRL" });
+  await page.getByRole("button", { name: /Recursos financeiros$/ }).click();
+
+  const amount = page.getByRole("textbox", { name: "Quanto possui disponível para investir no projeto Canadá?" });
+  await expect(amount).toHaveValue(formatCurrencyAmount(300000, "BRL"));
+  await expect(question(page, "available_funds").getByText("BRL")).toBeVisible();
+
+  const numericSave = page.waitForRequest((request) => {
+    if (!request.url().includes("/api/diagnostics/answers") || request.method() !== "PUT") return false;
+    return request.postDataJSON().answers.available_funds === 125000.5;
+  });
+  await amount.focus();
+  await expect(amount).toHaveValue("300.000");
+  await amount.fill("125000,50");
+  await expect(amount).toHaveValue("125.000,50");
+  await page.getByRole("heading", { name: "Recursos financeiros" }).click();
+  await expect(amount).toHaveValue(formatCurrencyAmount(125000.5, "BRL"));
+  await numericSave;
+
+  const currency = page.getByRole("combobox", { name: "Em qual moeda?" });
+  await currency.click();
+  await page.getByRole("option", { name: "CAD" }).click();
+  await expect(amount).toHaveValue(formatCurrencyAmount(125000.5, "CAD"));
+  await expect(question(page, "available_funds").getByText("CAD")).toBeVisible();
 });

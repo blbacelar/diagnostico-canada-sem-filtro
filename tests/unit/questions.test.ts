@@ -81,4 +81,9 @@ describe("contrato de layout das 11 seções", () => {
       ["spouse_summary"],
     ]);
   });
+
+  it("marca o valor disponível como entrada monetária", () => {
+    const availableFunds = diagnosticSections[5].questions.find(question => question.key === "available_funds");
+    expect(availableFunds?.format).toBe("currency");
+  });
 });

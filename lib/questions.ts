@@ -86,7 +86,7 @@ export const diagnosticSections: DiagnosticSection[] = [
     intro: "Esses dados são sensíveis e servem apenas para calibrar um plano responsável.",
     sensitive: true,
     questions: [
-      { key: "available_funds", label: "Quanto possui disponível para investir no projeto Canadá?", type: "number", min: 0, required: true, sensitive: true, layout: "two-thirds", layoutRow: "available-funds" },
+      { key: "available_funds", label: "Quanto possui disponível para investir no projeto Canadá?", type: "number", min: 0, required: true, sensitive: true, format: "currency", layout: "two-thirds", layoutRow: "available-funds" },
       { key: "funds_currency", label: "Em qual moeda?", type: "select", required: true, layout: "third", layoutRow: "available-funds", options: ["CAD", "BRL", "USD", "EUR", "Outra"] },
       { key: "funds_scope", label: "Esse valor inclui passagens, taxas, estudos, moradia e reserva de emergência?", type: "radio", required: true, layout: "full", layoutRow: "funds-scope", options: ["Sim", "Parcialmente", "Não"] },
       { key: "sell_assets", label: "Pretende vender patrimônio para financiar o projeto?", type: "radio", required: true, layout: "half", layoutRow: "funding-options", options: yesNo },
