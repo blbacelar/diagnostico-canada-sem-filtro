@@ -120,12 +120,13 @@ A análise:
 npm run typecheck
 npm run lint
 npm test
-npm run test:e2e
-npm run build
+npm run test:e2e:smoke
+npm run test:e2e:regression
+npm run build:vercel
 npx @vercel/config compile vercel.ts
 ```
 
-O E2E cobre Chrome desktop e iPhone, teclado e auditoria básica de acessibilidade com axe. Para a primeira execução local, instale o navegador do Playwright se solicitado: `npx playwright install chromium`.
+O E2E cobre Chrome desktop e iPhone, validação acessível do formulário, prevenção de submissões duplicadas, recuperação de falhas, teclado e auditoria básica com axe. A matriz de riscos, camadas e gates está em [docs/QA.md](./docs/QA.md). Para a primeira execução local, instale o navegador do Playwright se solicitado: `npx playwright install chromium`.
 
 ## Deploy na Vercel
 

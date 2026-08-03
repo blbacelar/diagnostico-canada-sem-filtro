@@ -1,22 +1,64 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { ArrowRight, Check, Clock3, LockKeyhole, Mail, Save } from "lucide-react";
-import { sanitizedUtm } from "../lib/schemas";
+import { resumeLinkSchema, sanitizedUtm, startDiagnosticSchema } from "../lib/schemas";
 
 type Mode = "start" | "resume";
+type FormStatus = "idle" | "sending" | "sent" | "error";
+type FieldName = "fullName" | "email" | "emailConfirmation" | "consent";
+type FieldErrors = Partial<Record<FieldName, string>>;
+
+const fieldNames = new Set<FieldName>(["fullName", "email", "emailConfirmation", "consent"]);
+const genericSubmissionError = "Não foi possível enviar o link agora. Tente novamente.";
+
+class PublicSubmissionError extends Error {}
+
+function errorsByField(issues: ReadonlyArray<{ path: PropertyKey[]; message: string }>) {
+  return issues.reduce<FieldErrors>((errors, issue) => {
+    const field = String(issue.path[0] ?? "") as FieldName;
+    if (fieldNames.has(field) && !errors[field]) errors[field] = issue.message;
+    return errors;
+  }, {});
+}
+
+function FieldError({ field, errors }: { field: FieldName; errors: FieldErrors }) {
+  return errors[field] ? <p id={`${field}-error`} className="field-error" role="alert">{errors[field]}</p> : null;
+}
 
 export function LandingClient() {
   const [mode, setMode] = useState<Mode>("start");
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [status, setStatus] = useState<FormStatus>("idle");
   const [message, setMessage] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const submissionInFlight = useRef(false);
+
+  function focusFirstInvalid(form: HTMLFormElement, errors: FieldErrors) {
+    const firstInvalid = (["fullName", "email", "emailConfirmation", "consent"] as const).find((field) => errors[field]);
+    if (!firstInvalid) return;
+    requestAnimationFrame(() => {
+      const control = form.elements.namedItem(firstInvalid);
+      if (control instanceof HTMLElement) control.focus();
+    });
+  }
+
+  function clearFieldError(field: string) {
+    if (!fieldNames.has(field as FieldName)) return;
+    setFieldErrors((current) => {
+      if (!current[field as FieldName]) return current;
+      const next = { ...current };
+      delete next[field as FieldName];
+      return next;
+    });
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setStatus("sending");
-    setMessage("");
-    const form = new FormData(event.currentTarget);
-    const payload = mode === "start"
+    if (submissionInFlight.current) return;
+
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    const rawPayload = mode === "start"
       ? {
           fullName: form.get("fullName"),
           email: form.get("email"),
@@ -28,20 +70,46 @@ export function LandingClient() {
           utm: sanitizedUtm(new URLSearchParams(window.location.search)),
         }
       : { email: form.get("email"), website: form.get("website") };
+    const validation = mode === "start"
+      ? startDiagnosticSchema.safeParse(rawPayload)
+      : resumeLinkSchema.safeParse(rawPayload);
+
+    if (!validation.success) {
+      const errors = errorsByField(validation.error.issues);
+      setFieldErrors(errors);
+      setMessage(Object.keys(errors).length ? "" : "Confira os campos informados.");
+      setStatus(Object.keys(errors).length ? "idle" : "error");
+      focusFirstInvalid(formElement, errors);
+      return;
+    }
+
+    submissionInFlight.current = true;
+    setFieldErrors({});
+    setStatus("sending");
+    setMessage("");
     try {
       const response = await fetch(mode === "start" ? "/api/diagnostics/start" : "/api/diagnostics/resume-link", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(validation.data),
       });
       const data = await response.json() as { error?: string; message: string };
-      if (!response.ok) throw new Error(data.error ?? "Não foi possível enviar o link.");
+      if (!response.ok) throw new PublicSubmissionError(data.error ?? genericSubmissionError);
       setMessage(data.message);
       setStatus("sent");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Não foi possível concluir agora.");
+      setMessage(error instanceof PublicSubmissionError ? error.message : genericSubmissionError);
       setStatus("error");
+    } finally {
+      submissionInFlight.current = false;
     }
+  }
+
+  function switchMode() {
+    setMode((current) => current === "start" ? "resume" : "start");
+    setFieldErrors({});
+    setMessage("");
+    setStatus("idle");
   }
 
   return (
@@ -74,16 +142,32 @@ export function LandingClient() {
             <p className="eyebrow">Seu ponto de partida</p>
             <h2 id="form-title">{mode === "start" ? "Comece por aqui" : "Continue de onde parou"}</h2>
             <p className="panel-intro">{mode === "start" ? "Informe seus dados para criarmos um diagnóstico exclusivo e enviarmos o acesso pessoal." : "Informe o mesmo e-mail. Se houver um diagnóstico em andamento, enviaremos um novo link seguro."}</p>
-            <form onSubmit={submit} className="editorial-form" noValidate>
+            <form onSubmit={submit} onChange={(event) => { if (event.target instanceof HTMLInputElement) clearFieldError(event.target.name); }} className="editorial-form" noValidate>
               <input name="website" tabIndex={-1} autoComplete="off" className="honeypot" aria-hidden="true" />
               {mode === "start" && (
-                <label><span>Nome completo</span><input name="fullName" autoComplete="name" placeholder="Como devemos chamar você?" required minLength={3} /></label>
+                <label htmlFor="fullName">
+                  <span>Nome completo</span>
+                  <input id="fullName" name="fullName" autoComplete="name" placeholder="Como devemos chamar você?" required minLength={3} aria-invalid={Boolean(fieldErrors.fullName)} aria-describedby={fieldErrors.fullName ? "fullName-error" : undefined} />
+                  <FieldError field="fullName" errors={fieldErrors} />
+                </label>
               )}
-              <label><span>E-mail</span><input name="email" type="email" autoComplete="email" placeholder="voce@exemplo.com" required /></label>
+              <label htmlFor="email">
+                <span>E-mail</span>
+                <input id="email" name="email" type="email" autoComplete="email" placeholder="voce@exemplo.com" required aria-invalid={Boolean(fieldErrors.email)} aria-describedby={fieldErrors.email ? "email-error" : undefined} />
+                <FieldError field="email" errors={fieldErrors} />
+              </label>
               {mode === "start" && (
                 <>
-                  <label><span>Confirmar e-mail</span><input name="emailConfirmation" type="email" autoComplete="email" placeholder="Digite novamente" required /></label>
-                  <label className="consent-row"><input name="consent" type="checkbox" required /><span><Check aria-hidden="true" /> Autorizo o tratamento dos meus dados para elaboração deste diagnóstico e comunicações relacionadas, conforme a política de privacidade.</span></label>
+                  <label htmlFor="emailConfirmation">
+                    <span>Confirmar e-mail</span>
+                    <input id="emailConfirmation" name="emailConfirmation" type="email" autoComplete="email" placeholder="Digite novamente" required aria-invalid={Boolean(fieldErrors.emailConfirmation)} aria-describedby={fieldErrors.emailConfirmation ? "emailConfirmation-error" : undefined} />
+                    <FieldError field="emailConfirmation" errors={fieldErrors} />
+                  </label>
+                  <label className="consent-row" htmlFor="consent">
+                    <input id="consent" name="consent" type="checkbox" required aria-invalid={Boolean(fieldErrors.consent)} aria-describedby={fieldErrors.consent ? "consent-error" : undefined} />
+                    <span><Check aria-hidden="true" /> Autorizo o tratamento dos meus dados para elaboração deste diagnóstico e comunicações relacionadas, conforme a política de privacidade.</span>
+                  </label>
+                  <FieldError field="consent" errors={fieldErrors} />
                 </>
               )}
               {status === "error" && <p className="form-error" role="alert">{message}</p>}
@@ -91,7 +175,7 @@ export function LandingClient() {
                 {status === "sending" ? "Enviando…" : mode === "start" ? "Iniciar meu diagnóstico" : "Enviar link para continuar"}<ArrowRight aria-hidden="true" />
               </button>
             </form>
-            <button className="text-button" type="button" onClick={() => { setMode(mode === "start" ? "resume" : "start"); setMessage(""); setStatus("idle"); }}>
+            <button className="text-button" type="button" onClick={switchMode}>
               {mode === "start" ? "Já comecei meu diagnóstico" : "Quero iniciar um novo diagnóstico"}
             </button>
           </>

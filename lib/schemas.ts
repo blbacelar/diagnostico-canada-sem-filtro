@@ -1,13 +1,18 @@
 import { z } from "zod";
 
-const emailSchema = z.string().trim().email().max(254).transform((value) => value.toLowerCase());
+const emailSchema = z
+  .string()
+  .trim()
+  .email("Informe um e-mail válido.")
+  .max(254, "O e-mail deve ter no máximo 254 caracteres.")
+  .transform((value) => value.toLowerCase());
 
 export const startDiagnosticSchema = z
   .object({
-    fullName: z.string().trim().min(3).max(160),
+    fullName: z.string().trim().min(3, "Informe seu nome completo.").max(160, "O nome deve ter no máximo 160 caracteres."),
     email: emailSchema,
     emailConfirmation: emailSchema,
-    consent: z.literal(true),
+    consent: z.literal(true, { error: "Você precisa autorizar o tratamento dos dados." }),
     policyVersion: z.string().trim().min(1).max(40),
     source: z.literal("hotmart").default("hotmart"),
     utm: z.record(z.string(), z.string().max(120)).optional(),

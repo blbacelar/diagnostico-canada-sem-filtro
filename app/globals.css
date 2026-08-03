@@ -74,6 +74,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .primary-button svg { width: 16px; }
 .text-button { display: block; margin: 22px auto 0; padding: 7px; border: 0; border-bottom: 1px solid var(--rule-strong); background: none; color: var(--ink-soft); cursor: pointer; font-size: 12px; }
 .form-error { margin: 0; color: var(--accent); font-size: 13px; }
+.editorial-form .field-error { margin: 0; }
+.editorial-form [aria-invalid=true] { border-color: var(--accent); }
 .honeypot { position: absolute !important; left: -9999px !important; width: 1px !important; height: 1px !important; }
 .sent-state { position: relative; padding-top: 28px; text-align: center; }
 .sent-state .eyebrow { justify-content: center; }
