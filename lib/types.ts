@@ -23,7 +23,7 @@ export type FieldType =
   | "checkbox"
   | "multi";
 
-export type QuestionLayout = "compact" | "wide" | "half" | "third" | "full";
+export type QuestionLayout = "third" | "half" | "two-thirds" | "full";
 
 export type FormAnswers = Record<string, unknown>;
 
@@ -39,6 +39,7 @@ export interface DiagnosticQuestion {
   max?: number;
   sensitive?: boolean;
   layout?: QuestionLayout;
+  layoutRow?: string;
   showWhen?: (answers: FormAnswers) => boolean;
 }
 

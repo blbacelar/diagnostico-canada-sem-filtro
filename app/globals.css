@@ -196,14 +196,14 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .sensitive-notice svg { width: 18px; color: var(--warning); }
 .sensitive-notice p { margin: 0; font-size: 12px; }
 .sensitive-notice strong { display: block; color: var(--ink); margin-bottom: 3px; }
-.questions-stack { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 24px; align-items: start; }
-.question-card { grid-column: 1 / -1; min-width: 0; margin: 0; padding: 24px; border: 1px solid var(--paper-edge); background: rgba(246,250,251,.72); }
-.question-card--compact { grid-column: span 3; }
-.question-card--wide { grid-column: span 9; }
+.questions-stack { display: grid; gap: 24px; }
+.question-row { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 24px; align-items: stretch; }
+.question-card { grid-column: 1 / -1; min-width: 0; height: 100%; margin: 0; padding: 24px; border: 1px solid var(--paper-edge); background: rgba(246,250,251,.72); }
 .question-card--half { grid-column: span 6; }
 .question-card--third { grid-column: span 4; }
+.question-card--two-thirds { grid-column: span 8; }
 .question-card--full { grid-column: 1 / -1; }
-.question-card legend { width: 100%; display: grid; grid-template-columns: 34px 1fr; gap: 9px; padding: 0; margin-bottom: 19px; color: var(--ink); font: 500 15px/1.45 var(--font-sans), sans-serif; }
+.question-card legend { width: 100%; min-height: 44px; display: grid; grid-template-columns: 34px 1fr; gap: 9px; padding: 0; margin-bottom: 19px; color: var(--ink); font: 500 15px/1.45 var(--font-sans), sans-serif; }
 .question-card legend small { padding-top: 4px; color: var(--accent); font: 500 9px var(--font-mono), monospace; letter-spacing: .1em; }
 .question-card legend b { color: var(--accent); }
 .question-card legend em { margin-left: 8px; color: var(--ink-mute); font: 400 8px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .1em; }
@@ -280,7 +280,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .form-main { padding: 50px 20px 110px; }
 }
 @media (max-width: 700px) {
-  .question-card--compact, .question-card--wide, .question-card--half, .question-card--third { grid-column: 1 / -1; }
+  .question-card--half, .question-card--third, .question-card--two-thirds { grid-column: 1 / -1; }
+  .question-card legend { min-height: 0; }
 }
 @media (max-width: 560px) {
   .form-topbar { height: 74px; }

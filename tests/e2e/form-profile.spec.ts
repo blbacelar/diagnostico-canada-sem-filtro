@@ -71,7 +71,7 @@ test("@regression @a11y select shadcn funciona por teclado e mantém semântica 
   expect(results.violations.filter((violation) => ["critical", "serious"].includes(violation.impact ?? ""))).toEqual([]);
 });
 
-test("@regression grade desktop mantém idade compacta e agrupa campos relacionados", async ({ page }, testInfo) => {
+test("@regression grade desktop agrupa status pessoal, residência e filhos", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "chromium", "Validação específica do breakpoint desktop.");
   await openProfile(page);
 
@@ -83,9 +83,11 @@ test("@regression grade desktop mantém idade compacta e agrupa campos relaciona
   expect(nationality).not.toBeNull();
   expect(country).not.toBeNull();
   expect(marital).not.toBeNull();
-  expect(age!.width).toBeLessThan(nationality!.width);
-  expect(Math.abs(age!.y - nationality!.y)).toBeLessThan(2);
-  expect(Math.abs(country!.y - marital!.y)).toBeLessThan(2);
+  expect(age!.width).toBeLessThan(marital!.width);
+  expect(Math.abs(age!.y - marital!.y)).toBeLessThan(2);
+  expect(Math.abs(nationality!.width - country!.width)).toBeLessThan(2);
+  expect(Math.abs(nationality!.y - country!.y)).toBeLessThan(2);
+  expect(nationality!.y).toBeGreaterThan(age!.y + age!.height);
 
   await page.getByRole("checkbox", { name: "Tenho filhos" }).click();
   const childrenToggle = await question(page, "has_children").boundingBox();
@@ -98,15 +100,62 @@ test("@regression grade desktop mantém idade compacta e agrupa campos relaciona
   expect(Math.abs(childrenCount!.y - childrenAges!.y)).toBeLessThan(2);
 });
 
+test("@regression todas as seções preservam linhas semânticas e alinhamento visual", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "Validação visual da grade completa no breakpoint desktop.");
+  await openProfile(page, {
+    has_children: true,
+    marital_status: "Casado(a)",
+    canadian_work_experience: "Sim",
+    english_test: "IELTS",
+    french_test: "TEF",
+    has_refusal: "Sim",
+  });
+
+  const sectionRows = [
+    ["Perfil pessoal", ["personal-status", "residence", "children", "partner-context"]],
+    ["Objetivo principal", ["objective", "objective-context"]],
+    ["Formação acadêmica", ["education-background", "education-credentials", "education-institution"]],
+    ["Experiência profissional", ["career-summary", "career-profile", "canadian-experience"]],
+    ["Inglês e francês", ["english", "english-details", "french", "french-details", "language-investment"]],
+    ["Recursos financeiros", ["available-funds", "funds-scope", "funding-options", "financial-context"]],
+    ["Cônjuge ou parceiro", ["spouse-background", "spouse-career", "spouse-languages", "spouse-commitment", "spouse-context"]],
+    ["Histórico migratório", ["canada-history", "compliance-history", "refusal-details", "canada-family", "admissibility", "immigration-context"]],
+    ["Preferências de vida", ["life-priorities", "location-fit", "location-preference", "family-needs"]],
+    ["Prazo e flexibilidade", ["timeline-flexibility", "project-adaptations"]],
+    ["Obstáculos e dúvidas", ["biggest-challenge", "difficulty-factors", "main-question", "anything-else"]],
+  ] as const;
+
+  for (const [sectionTitle, rows] of sectionRows) {
+    if (sectionTitle !== "Perfil pessoal") await page.getByRole("button", { name: new RegExp(`${sectionTitle}$`) }).click();
+    await expect(page.getByRole("heading", { name: sectionTitle, exact: true })).toBeVisible();
+
+    for (const rowKey of rows) {
+      const row = page.locator(`[data-layout-row="${rowKey}"]`);
+      await expect(row).toBeVisible();
+      const boxes = await row.locator(":scope > .question-card").evaluateAll((cards) => cards.map((card) => {
+        const box = card.getBoundingClientRect();
+        return { y: box.y, height: box.height };
+      }));
+      expect(boxes.length).toBeGreaterThan(0);
+      expect(Math.max(...boxes.map(box => box.y)) - Math.min(...boxes.map(box => box.y))).toBeLessThan(2);
+      expect(Math.max(...boxes.map(box => box.height)) - Math.min(...boxes.map(box => box.height))).toBeLessThan(2);
+    }
+  }
+});
+
 test("@regression grade mobile empilha os campos sem overflow horizontal", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "mobile", "Validação específica do breakpoint mobile.");
   await openProfile(page);
 
   const age = await question(page, "age").boundingBox();
+  const marital = await question(page, "marital_status").boundingBox();
   const nationality = await question(page, "nationality").boundingBox();
   expect(age).not.toBeNull();
+  expect(marital).not.toBeNull();
   expect(nationality).not.toBeNull();
-  expect(Math.abs(age!.x - nationality!.x)).toBeLessThan(2);
-  expect(nationality!.y).toBeGreaterThan(age!.y + age!.height);
+  expect(Math.abs(age!.x - marital!.x)).toBeLessThan(2);
+  expect(Math.abs(marital!.x - nationality!.x)).toBeLessThan(2);
+  expect(marital!.y).toBeGreaterThan(age!.y + age!.height);
+  expect(nationality!.y).toBeGreaterThan(marital!.y + marital!.height);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(await page.evaluate(() => document.documentElement.clientWidth));
 });

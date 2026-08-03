@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, ArrowLeft, ArrowRight, Check, Cloud, CloudOff, LockKeyhole, Pencil, Send } from "lucide-react";
-import { diagnosticSections, missingRequiredQuestions, visibleQuestions } from "../lib/questions";
+import { diagnosticSections, layoutQuestionRows, missingRequiredQuestions, visibleQuestions } from "../lib/questions";
 import type { DiagnosticQuestion, FormAnswers } from "../lib/types";
 import { cn } from "../lib/utils";
 import { BrandMark } from "./BrandMark";
@@ -128,6 +128,8 @@ export function FormApp({ initialToken }: { initialToken?: string }) {
   if (session.status !== "client_draft") return <FormStatus success title="Diagnóstico já enviado" detail={`As respostas de ${session.caseNumber} estão protegidas e não podem mais ser alteradas. Se a equipe precisar de informações adicionais, você receberá uma nova comunicação.`} />;
 
   const section = diagnosticSections[step];
+  const sectionQuestions = isReview ? [] : visibleQuestions(section, answers);
+  const sectionRows = isReview ? [] : layoutQuestionRows(section, answers);
   return (
     <div className="form-workspace">
       <header className="form-topbar">
@@ -167,10 +169,14 @@ export function FormApp({ initialToken }: { initialToken?: string }) {
               <p className="section-intro">{section.intro}</p>
               {section.sensitive && <div className="sensitive-notice"><LockKeyhole /><p><strong>Informação sensível</strong>Este conteúdo não aparece em URLs, listas resumidas ou registros técnicos.</p></div>}
               <div className="questions-stack">
-                {visibleQuestions(section, answers).map((question, index) => (
-                  <QuestionField key={question.key} question={question} value={answers[question.key]} onChange={(value) => update(question, value)} invalid={Boolean(submitError) && missingRequiredQuestions(section, answers).some((item) => item.key === question.key)} index={index + 1} />
+                {sectionRows.map((row) => (
+                  <div className="question-row" data-layout-row={row.key} key={row.key}>
+                    {row.questions.map((question) => (
+                      <QuestionField key={question.key} question={question} value={answers[question.key]} onChange={(value) => update(question, value)} invalid={Boolean(submitError) && missingRequiredQuestions(section, answers).some((item) => item.key === question.key)} index={sectionQuestions.findIndex((item) => item.key === question.key) + 1} />
+                    ))}
+                  </div>
                 ))}
-                {section.key === "spouse" && visibleQuestions(section, answers).length === 0 && <div className="not-applicable"><Check /><h2>Esta seção não se aplica</h2><p>Com base no estado civil informado, você pode seguir para a próxima etapa.</p></div>}
+                {section.key === "spouse" && sectionQuestions.length === 0 && <div className="not-applicable"><Check /><h2>Esta seção não se aplica</h2><p>Com base no estado civil informado, você pode seguir para a próxima etapa.</p></div>}
               </div>
               {submitError && <p className="inline-alert" role="alert"><AlertTriangle />{submitError}</p>}
               <div className="form-actions">
@@ -194,7 +200,7 @@ function QuestionField({ question, value, onChange, invalid, index }: { question
   const layout = question.layout ?? "full";
   return (
     <fieldset className={cn("question-card", `question-card--${layout}`, question.type === "boolean" && "question-card--boolean")} data-question-key={question.key} aria-describedby={describedBy}>
-      <legend><small>{String(index).padStart(2, "0")}</small><span id={labelId}>{question.label} {question.required ? <b>*</b> : <em>{question.optionalLabel ?? "Opcional"}</em>}</span></legend>
+      <legend><small>{String(index).padStart(2, "0")}</small><span id={labelId}>{question.label}{question.required ? <b>{"\u00a0*"}</b> : <em>{question.optionalLabel ?? "Opcional"}</em>}</span></legend>
       {question.type === "textarea" && <Textarea {...common} className="question-control question-control--textarea" value={current} placeholder={question.placeholder} onChange={(event) => onChange(event.target.value)} />}
       {(question.type === "text" || question.type === "email" || question.type === "number") && <Input {...common} className="question-control" type={question.type} value={current} min={question.min} max={question.max} placeholder={question.placeholder} onChange={(event) => onChange(question.type === "number" && event.target.value !== "" ? Number(event.target.value) : event.target.value)} />}
       {question.type === "select" && (
