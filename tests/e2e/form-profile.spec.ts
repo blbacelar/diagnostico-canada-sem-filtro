@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { formatCurrencyAmount } from "../../lib/currency";
+import { diagnosticSections, visibleQuestions } from "../../lib/questions";
 
 async function openProfile(page: Page, answers: Record<string, unknown> = {}) {
   await page.route("**/api/diagnostics/form-session", (route) => route.fulfill({
@@ -25,6 +26,28 @@ async function openProfile(page: Page, answers: Record<string, unknown> = {}) {
 
 function question(page: Page, key: string) {
   return page.locator(`[data-question-key="${key}"]`);
+}
+
+function completeRequiredAnswers() {
+  const answers: Record<string, unknown> = {};
+  for (const section of diagnosticSections) {
+    for (const question of visibleQuestions(section, answers)) {
+      if (!question.required) continue;
+      if (question.type === "number") answers[question.key] = question.min ?? 1;
+      else if (question.type === "multi") answers[question.key] = [question.options?.[0] ?? "Teste"];
+      else if (question.type === "boolean") answers[question.key] = false;
+      else if (question.options?.length) answers[question.key] = question.options.at(-1);
+      else answers[question.key] = "Resposta de teste";
+    }
+  }
+  return answers;
+}
+
+async function openReview(page: Page) {
+  await page.goto("/formulario?token=e2e-submit-token");
+  await expect(page.getByRole("heading", { name: "Perfil pessoal" })).toBeVisible();
+  await page.getByRole("button", { name: /Revisão e envio$/ }).click();
+  await expect(page.getByRole("heading", { name: "Revise antes de enviar" })).toBeVisible();
 }
 
 test("@regression perfil pessoal usa controles shadcn e limpa respostas condicionais", async ({ page }) => {
@@ -194,4 +217,89 @@ test("@regression valor disponível é formatado como moeda e salvo como número
   await page.getByRole("option", { name: "CAD" }).click();
   await expect(amount).toHaveValue(formatCurrencyAmount(125000.5, "CAD"));
   await expect(question(page, "available_funds").getByText("CAD")).toBeVisible();
+});
+
+test("@critical @regression diagnóstico enviado não exibe novamente a ação de envio", async ({ page }) => {
+  await page.route("**/api/diagnostics/form-session", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      caseNumber: "CAN-E2E-SUBMITTED",
+      status: "ai_processing",
+      answers: completeRequiredAnswers(),
+      client: { fullName: "Pessoa Teste" },
+      submittedAt: new Date().toISOString(),
+    }),
+  }));
+
+  await page.goto("/formulario?token=e2e-submitted-token");
+  await expect(page.getByRole("heading", { name: "Diagnóstico já enviado" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Enviar para análise" })).toHaveCount(0);
+});
+
+test("@critical @regression aba desatualizada aceita o bloqueio final sem tentar reenviar", async ({ page }) => {
+  let submitRequests = 0;
+  await page.route("**/api/diagnostics/form-session", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ caseNumber: "CAN-E2E-LOCKED", status: "client_draft", answers: completeRequiredAnswers(), client: { fullName: "Pessoa Teste" }, submittedAt: null }),
+  }));
+  await page.route("**/api/diagnostics/answers", (route) => route.fulfill({
+    status: 409,
+    contentType: "application/json",
+    body: JSON.stringify({ error: "As respostas deste diagnóstico já foram enviadas.", code: "ANSWERS_LOCKED" }),
+  }));
+  await page.route("**/api/diagnostics/submit", (route) => {
+    submitRequests += 1;
+    return route.fulfill({ status: 500, body: "should not be called" });
+  });
+
+  await openReview(page);
+  await page.getByRole("button", { name: "Enviar para análise" }).click();
+  await expect(page.getByRole("heading", { name: "Diagnóstico já enviado" })).toBeVisible();
+  expect(submitRequests).toBe(0);
+});
+
+test("@critical @regression conflito de envio troca o formulário pelo estado bloqueado", async ({ page }) => {
+  let submitRequests = 0;
+  await page.route("**/api/diagnostics/form-session", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ caseNumber: "CAN-E2E-CONFLICT", status: "client_draft", answers: completeRequiredAnswers(), client: { fullName: "Pessoa Teste" }, submittedAt: null }),
+  }));
+  await page.route("**/api/diagnostics/answers", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ savedAt: new Date().toISOString() }) }));
+  await page.route("**/api/diagnostics/submit", (route) => {
+    submitRequests += 1;
+    return route.fulfill({ status: 409, contentType: "application/json", body: JSON.stringify({ error: "Este diagnóstico já foi enviado.", code: "ALREADY_SUBMITTED" }) });
+  });
+
+  await openReview(page);
+  await page.getByRole("button", { name: "Enviar para análise" }).click();
+  await expect(page.getByRole("heading", { name: "Diagnóstico já enviado" })).toBeVisible();
+  expect(submitRequests).toBe(1);
+});
+
+test("@critical @regression cliques rápidos produzem somente um envio idempotente", async ({ page }) => {
+  const submissions: Array<{ headerKey: string | null; bodyKey: string }> = [];
+  await page.route("**/api/diagnostics/form-session", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ caseNumber: "CAN-E2E-ONCE", status: "client_draft", answers: completeRequiredAnswers(), client: { fullName: "Pessoa Teste" }, submittedAt: null }),
+  }));
+  await page.route("**/api/diagnostics/answers", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ savedAt: new Date().toISOString() }) }));
+  await page.route("**/api/diagnostics/submit", async (route) => {
+    const body = route.request().postDataJSON() as { idempotencyKey: string };
+    submissions.push({ headerKey: route.request().headers()["idempotency-key"] ?? null, bodyKey: body.idempotencyKey });
+    await route.fulfill({ status: 202, contentType: "application/json", body: JSON.stringify({ caseNumber: "CAN-E2E-ONCE", expectedTime: "até 5 dias úteis" }) });
+  });
+
+  await openReview(page);
+  const submitButton = page.getByRole("button", { name: "Enviar para análise" });
+  await submitButton.evaluate((button) => {
+    button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+  await expect(page.getByRole("heading", { name: "Respostas recebidas" })).toBeVisible();
+  expect(submissions).toHaveLength(1);
+  expect(submissions[0].headerKey).toBe(submissions[0].bodyKey);
 });

@@ -25,9 +25,11 @@ export function FormApp({ initialToken }: { initialToken?: string }) {
   const [loading, setLoading] = useState(true);
   const [fatalError, setFatalError] = useState("");
   const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [submitted, setSubmitted] = useState<{ caseNumber: string; expectedTime: string } | null>(null);
   const initialized = useRef(false);
+  const submitInFlight = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isReview = step === diagnosticSections.length;
 
@@ -66,7 +68,15 @@ export function FormApp({ initialToken }: { initialToken?: string }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ answers, schemaVersion: 1 }),
         });
-        if (!response.ok) throw new Error();
+        if (!response.ok) {
+          const data = await response.json() as { code?: string };
+          if (data.code === "ANSWERS_LOCKED") {
+            setSession((current) => current ? { ...current, status: "submitted" } : current);
+            setSaveState("saved");
+            return;
+          }
+          throw new Error();
+        }
         setSaveState("saved");
       } catch { setSaveState("error"); }
     }, 850);
@@ -103,23 +113,50 @@ export function FormApp({ initialToken }: { initialToken?: string }) {
   }
 
   async function submit() {
+    if (submitInFlight.current || session?.status !== "client_draft") return;
     const totalMissing = incompleteSections.reduce((sum, count) => sum + count, 0);
     if (totalMissing) { setSubmitError(`Ainda existem ${totalMissing} respostas obrigatórias pendentes.`); return; }
+    submitInFlight.current = true;
+    setIsSubmitting(true);
+    setSubmitError("");
     setSaveState("saving");
     try {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
       const saveResponse = await fetch("/api/diagnostics/answers", { method: "PUT", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ answers, schemaVersion: 1 }) });
-      if (!saveResponse.ok) throw new Error("Não foi possível salvar a versão final.");
+      if (!saveResponse.ok) {
+        const saveData = await saveResponse.json() as { code?: string };
+        if (saveData.code === "ANSWERS_LOCKED") {
+          setSession((current) => current ? { ...current, status: "submitted" } : current);
+          setSaveState("saved");
+          return;
+        }
+        throw new Error("Não foi possível salvar a versão final.");
+      }
+      const idempotencyKey = crypto.randomUUID();
       const response = await fetch("/api/diagnostics/submit", {
         method: "POST",
         credentials: "same-origin",
-        headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() },
-        body: JSON.stringify({ consent: true, policyVersion: "2026-08-03", idempotencyKey: crypto.randomUUID() }),
+        headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
+        body: JSON.stringify({ consent: true, policyVersion: "2026-08-03", idempotencyKey }),
       });
-      const data = await response.json() as { error?: string; caseNumber: string; expectedTime: string };
-      if (!response.ok) throw new Error(data.error ?? "Não foi possível enviar.");
+      const data = await response.json() as { error?: string; code?: string; caseNumber: string; expectedTime: string };
+      if (!response.ok) {
+        if (data.code === "ALREADY_SUBMITTED") {
+          setSession((current) => current ? { ...current, status: "submitted" } : current);
+          setSaveState("saved");
+          return;
+        }
+        throw new Error(data.error ?? "Não foi possível enviar.");
+      }
       setSubmitted({ caseNumber: data.caseNumber, expectedTime: data.expectedTime });
       setSaveState("saved");
-    } catch (error) { setSubmitError(error instanceof Error ? error.message : "Não foi possível enviar."); setSaveState("error"); }
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Não foi possível enviar.");
+      setSaveState("error");
+    } finally {
+      submitInFlight.current = false;
+      setIsSubmitting(false);
+    }
   }
 
   if (loading) return <FormStatus title="Abrindo seu diagnóstico" detail="Validando o link pessoal com segurança…" />;
@@ -162,7 +199,7 @@ export function FormApp({ initialToken }: { initialToken?: string }) {
         </aside>
         <main className="form-main">
           {isReview ? (
-            <ReviewAnswers answers={answers} incompleteSections={incompleteSections} onEdit={setStep} onSubmit={submit} submitting={saveState === "saving"} error={submitError} />
+            <ReviewAnswers answers={answers} incompleteSections={incompleteSections} onEdit={setStep} onSubmit={submit} submitting={isSubmitting} error={submitError} />
           ) : (
             <section className="question-section" aria-labelledby="section-title">
               <p className="eyebrow">Seção {section.number} de 11</p>

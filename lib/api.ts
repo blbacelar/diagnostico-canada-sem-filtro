@@ -28,6 +28,10 @@ export function handleApiError(error: unknown) {
   return json({ error: "Não foi possível concluir esta operação agora.", code: "INTERNAL_ERROR" }, { status: 500 });
 }
 
+export function hasDatabaseErrorCode(error: unknown, code: string) {
+  return typeof error === "object" && error !== null && "code" in error && error.code === code;
+}
+
 export async function parseJson<T>(request: Request, schema: ZodType<T>, maxBytes = 120_000) {
   const contentLength = Number(request.headers.get("content-length") ?? 0);
   if (contentLength > maxBytes) throw new ApiError(413, "O conteúdo enviado é maior que o permitido.", "PAYLOAD_TOO_LARGE");
