@@ -22,7 +22,7 @@ O sistema foi desenhado para o mesmo projeto Supabase do Diário de Bordo, com i
 
 ## Stack
 
-React 19, TypeScript, App Router compilado com Vite/Vinext, Vercel Functions em Node.js/Fluid Compute, Supabase Auth/Postgres/Storage, AI SDK, OpenRouter, Zod, Resend e pdf-lib.
+React 19, TypeScript, Next.js App Router, Vercel Functions em Node.js/Fluid Compute, Supabase Auth/Postgres/Storage, AI SDK, OpenRouter, Zod, Resend e pdf-lib.
 
 ## Configuração local
 
