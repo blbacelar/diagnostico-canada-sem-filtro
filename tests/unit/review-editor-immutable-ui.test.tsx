@@ -29,4 +29,19 @@ describe("parecer concluído", () => {
     await waitFor(() => expect(detailFetch).toHaveBeenCalledTimes(1));
     expect(detailFetch).not.toHaveBeenCalledWith(expect.stringContaining("/api/diagnostics/reviews"));
   });
+
+  it("mantém as ações no cabeçalho fixo do editor", async () => {
+    detailFetch
+      .mockResolvedValueOnce({
+        case: { id: "case-review", case_number: "CSF-2026-0002", status: "in_review" },
+        client: { full_name: "Pessoa em análise", email_display: "cliente@example.com" },
+      })
+      .mockResolvedValueOnce({ review: null });
+
+    const { container } = render(<ReviewEditor caseId="case-review" />);
+
+    expect(await screen.findByRole("button", { name: "Pronto para aprovação" })).toBeVisible();
+    expect(container.querySelector(".review-editor-header")).toBeTruthy();
+    expect(container.querySelector(".review-editor-header .secondary-button")).toHaveTextContent("Pré-visualizar");
+  });
 });
