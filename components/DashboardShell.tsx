@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BookOpen, ChevronRight, CircleGauge, LayoutList, LogOut, Mail, Settings, ShieldCheck, Users } from "lucide-react";
+import { ChevronRight, CircleGauge, LayoutList, LogOut, Settings, ShieldCheck, Users } from "lucide-react";
 import { getBrowserSupabase } from "../lib/supabase";
 import { BrandMark } from "./BrandMark";
 

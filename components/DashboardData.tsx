@@ -5,12 +5,11 @@ import { useEffect, useState } from "react";
 import { AlertTriangle, ArrowUpRight, Clock3, Search, SlidersHorizontal, UsersRound } from "lucide-react";
 import type { ClientListItem } from "../lib/clients";
 import { authorizedFetch } from "../lib/dashboard-fetch";
+import { caseStatusLabels, getCaseStatusLabel } from "../lib/status-labels";
 import { DashboardHeader } from "./DashboardShell";
 
 type CaseRow = { id: string; case_number: string; status: string; objective: string | null; submitted_at: string | null; updated_at: string; diagnostic_clients: { full_name: string; email_display: string } | null; diagnostic_ai_assessments?: Array<{ structured_result: { overallScore?: number; readinessLevel?: string; technicalAlerts?: string[] } }> };
 type Summary = { counts: Record<string, number>; recent: CaseRow[]; averageHours: number | null; reviewSlaHours: number };
-
-const statusLabels: Record<string, string> = { client_draft: "Rascunho do cliente", submitted: "Formulário enviado", ai_processing: "Processando IA", awaiting_triage: "Aguardando triagem", in_review: "Em análise", awaiting_client: "Aguardando cliente", ready_for_approval: "Pronto para aprovação", approved: "Aprovado", sending: "Enviando", sent: "Enviado", processing_error: "Erro no processamento", archived: "Arquivado" };
 
 export function OverviewClient() {
   const [data, setData] = useState<Summary | null>(null); const [error, setError] = useState(false);
@@ -36,7 +35,7 @@ function Metric({ number, label, detail, accent, warning, success }: { number: n
 
 function CaseLine({ item }: { item: CaseRow }) {
   const result = item.diagnostic_ai_assessments?.[0]?.structured_result;
-  return <Link className="case-line" href={`/dashboard/diagnosticos/${item.id}`}><div className="case-avatar">{item.diagnostic_clients?.full_name?.split(" ").map((part) => part[0]).slice(0,2).join("")}</div><div className="case-person"><strong>{item.diagnostic_clients?.full_name}</strong><small>{item.case_number} · {item.objective ?? "Objetivo não informado"}</small></div><span className={`status-pill status-${item.status}`}>{statusLabels[item.status] ?? item.status}</span>{result?.technicalAlerts?.length ? <span className="alert-count"><AlertTriangle />{result.technicalAlerts.length}</span> : <span className="score">{result?.overallScore ?? "—"}<small>/100</small></span>}<ArrowUpRight className="row-arrow" /></Link>;
+  return <Link className="case-line" href={`/dashboard/diagnosticos/${item.id}`}><div className="case-avatar">{item.diagnostic_clients?.full_name?.split(" ").map((part) => part[0]).slice(0,2).join("")}</div><div className="case-person"><strong>{item.diagnostic_clients?.full_name}</strong><small>{item.case_number} · {item.objective ?? "Objetivo não informado"}</small></div><span className={`status-pill status-${item.status}`}>{getCaseStatusLabel(item.status)}</span>{result?.technicalAlerts?.length ? <span className="alert-count"><AlertTriangle />{result.technicalAlerts.length}</span> : <span className="score">{result?.overallScore ?? "—"}<small>/100</small></span>}<ArrowUpRight className="row-arrow" /></Link>;
 }
 
 export function DiagnosticsListClient() {
@@ -44,7 +43,7 @@ export function DiagnosticsListClient() {
   useEffect(() => { const query = new URLSearchParams(); if (search) query.set("search", search); if (status) query.set("status", status); const timer = setTimeout(() => authorizedFetch<{items:CaseRow[]}>(`/api/dashboard/cases?${query}`).then((data) => { setItems(data.items); setError(false); }).catch(() => setError(true)).finally(() => setLoading(false)), 250); return () => clearTimeout(timer); }, [search, status]);
   return <>
     <DashboardHeader eyebrow="Casos" title="Diagnósticos" description="Busque, filtre e acompanhe cada etapa da análise profissional." />
-    <div className="list-toolbar"><label><Search /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nome, e-mail ou número" /></label><label><SlidersHorizontal /><select value={status} onChange={(event) => setStatus(event.target.value)}><option value="">Todos os status</option>{Object.entries(statusLabels).map(([value,label]) => <option value={value} key={value}>{label}</option>)}</select></label></div>
+    <div className="list-toolbar"><label><Search /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nome, e-mail ou número" /></label><label><SlidersHorizontal /><select value={status} onChange={(event) => setStatus(event.target.value)}><option value="">Todos os status</option>{Object.entries(caseStatusLabels).map(([value,label]) => <option value={value} key={value}>{label}</option>)}</select></label></div>
     {error ? <DashboardError /> : loading ? <DashboardLoading /> : <div className="diagnostic-table"><div className="table-head"><span>Cliente / diagnóstico</span><span>Objetivo</span><span>Preparo</span><span>Status</span><span>Atualização</span><span /></div>{items.length ? items.map((item) => <CaseLine key={item.id} item={item} />) : <div className="empty-row">Nenhum diagnóstico encontrado.</div>}</div>}
   </>;
 }
@@ -91,7 +90,7 @@ function ClientLine({ item }: { item: ClientListItem }) {
     <div className="client-identity"><div className="case-avatar">{item.full_name.split(" ").filter(Boolean).map((part) => part[0]).slice(0, 2).join("")}</div><div><strong>{item.full_name}</strong><small>{item.email_display}</small></div></div>
     <span className="client-case-count"><strong>{item.case_count}</strong><small>{item.case_count === 1 ? "diagnóstico" : "diagnósticos"}</small></span>
     <div className="client-latest-case"><strong>{item.latest_case?.case_number ?? "Sem diagnóstico"}</strong><small>{item.latest_case?.objective ?? "Objetivo não informado"}</small></div>
-    {item.latest_case ? <span className={`status-pill status-${item.latest_case.status}`}>{statusLabels[item.latest_case.status] ?? item.latest_case.status}</span> : <span className="status-pill">Sem caso</span>}
+    {item.latest_case ? <span className={`status-pill status-${item.latest_case.status}`}>{getCaseStatusLabel(item.latest_case.status)}</span> : <span className="status-pill">Sem caso</span>}
     <time dateTime={item.last_activity_at}>{dateFormatter.format(new Date(item.last_activity_at))}</time>
     <ArrowUpRight className="row-arrow" />
   </>;
