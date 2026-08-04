@@ -5,7 +5,8 @@ import Link from "next/link";
 import { AlertTriangle, ArrowLeft, ArrowRight, Check, Cloud, CloudOff, LockKeyhole, Pencil, Send } from "lucide-react";
 import { formatCurrencyAmount, formatCurrencyEditingAmount, normalizeCurrencyInput } from "../lib/currency";
 import { operationalConfig } from "../lib/operational-config";
-import { diagnosticSections, layoutQuestionRows, missingRequiredQuestions, visibleQuestions } from "../lib/questions";
+import { diagnosticSections, layoutQuestionRows, visibleQuestions } from "../lib/questions";
+import { validateQuestionAnswer, validationErrorsForDiagnostic, validationErrorsForSection } from "../lib/diagnostic-validation";
 import type { DiagnosticQuestion, FormAnswers } from "../lib/types";
 import { cn } from "../lib/utils";
 import { BrandMark } from "./BrandMark";
@@ -28,6 +29,7 @@ export function FormApp({ initialToken }: { initialToken?: string }) {
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState<{ caseNumber: string; expectedTime: string } | null>(null);
   const initialized = useRef(false);
   const submitInFlight = useRef(false);
@@ -84,10 +86,11 @@ export function FormApp({ initialToken }: { initialToken?: string }) {
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
   }, [answers, session]);
 
-  const incompleteSections = useMemo(
-    () => diagnosticSections.map((section) => missingRequiredQuestions(section, answers).length),
+  const sectionValidationErrors = useMemo(
+    () => diagnosticSections.map((section) => validationErrorsForSection(section, answers)),
     [answers],
   );
+  const incompleteSections = sectionValidationErrors.map((errors) => Object.keys(errors).length);
   const completedSections = incompleteSections.filter((count) => count === 0).length;
   const progress = isReview ? 100 : Math.round((completedSections / diagnosticSections.length) * 100);
 
@@ -100,12 +103,35 @@ export function FormApp({ initialToken }: { initialToken?: string }) {
       }
       return next;
     });
+    setFieldErrors((current) => {
+      if (!(question.key in current)) return current;
+      const message = validateQuestionAnswer(question, value, true);
+      const next = { ...current };
+      if (message) next[question.key] = message;
+      else delete next[question.key];
+      if (question.key === "has_children" && value !== true) {
+        delete next.children_count;
+        delete next.children_ages;
+      }
+      return next;
+    });
+  }
+
+  function validateField(question: DiagnosticQuestion) {
+    const message = validateQuestionAnswer(question, answers[question.key], true);
+    setFieldErrors((current) => {
+      const next = { ...current };
+      if (message) next[question.key] = message;
+      else delete next[question.key];
+      return next;
+    });
   }
 
   function next() {
     if (!isReview && incompleteSections[step] > 0) {
-      setSubmitError(`Complete ${incompleteSections[step]} ${incompleteSections[step] === 1 ? "campo obrigatório" : "campos obrigatórios"} antes de avançar.`);
-      document.querySelector("[aria-invalid=true]")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      setFieldErrors((current) => ({ ...current, ...sectionValidationErrors[step] }));
+      setSubmitError(`Confira ${incompleteSections[step]} ${incompleteSections[step] === 1 ? "campo inválido ou obrigatório" : "campos inválidos ou obrigatórios"} antes de avançar.`);
+      window.requestAnimationFrame(() => document.querySelector("[aria-invalid=true]")?.scrollIntoView({ behavior: "smooth", block: "center" }));
       return;
     }
     setSubmitError("");
@@ -115,8 +141,16 @@ export function FormApp({ initialToken }: { initialToken?: string }) {
 
   async function submit() {
     if (submitInFlight.current || session?.status !== "client_draft") return;
-    const totalMissing = incompleteSections.reduce((sum, count) => sum + count, 0);
-    if (totalMissing) { setSubmitError(`Ainda existem ${totalMissing} respostas obrigatórias pendentes.`); return; }
+    const validationErrors = validationErrorsForDiagnostic(answers);
+    const totalInvalid = Object.keys(validationErrors).length;
+    if (totalInvalid) {
+      const firstInvalidSection = diagnosticSections.findIndex((item) => item.questions.some((question) => validationErrors[question.key]));
+      setFieldErrors(validationErrors);
+      setSubmitError(`Ainda existem ${totalInvalid} ${totalInvalid === 1 ? "resposta inválida ou pendente" : "respostas inválidas ou pendentes"}.`);
+      if (firstInvalidSection >= 0) setStep(firstInvalidSection);
+      window.requestAnimationFrame(() => document.querySelector("[aria-invalid=true]")?.scrollIntoView({ behavior: "smooth", block: "center" }));
+      return;
+    }
     submitInFlight.current = true;
     setIsSubmitting(true);
     setSubmitError("");
@@ -211,7 +245,7 @@ export function FormApp({ initialToken }: { initialToken?: string }) {
                 {sectionRows.map((row) => (
                   <div className="question-row" data-layout-row={row.key} key={row.key}>
                     {row.questions.map((question) => (
-                      <QuestionField key={question.key} question={question} value={answers[question.key]} currencyCode={question.format === "currency" ? String(answers.funds_currency ?? "") : undefined} onChange={(value) => update(question, value)} invalid={Boolean(submitError) && missingRequiredQuestions(section, answers).some((item) => item.key === question.key)} index={sectionQuestions.findIndex((item) => item.key === question.key) + 1} />
+                      <QuestionField key={question.key} question={question} value={answers[question.key]} currencyCode={question.format === "currency" ? String(answers.funds_currency ?? "") : undefined} onChange={(value) => update(question, value)} onBlur={() => validateField(question)} error={fieldErrors[question.key]} index={sectionQuestions.findIndex((item) => item.key === question.key) + 1} />
                     ))}
                   </div>
                 ))}
@@ -230,21 +264,23 @@ export function FormApp({ initialToken }: { initialToken?: string }) {
   );
 }
 
-function QuestionField({ question, value, currencyCode, onChange, invalid, index }: { question: DiagnosticQuestion; value: unknown; currencyCode?: string; onChange: (value: unknown) => void; invalid: boolean; index: number }) {
+function QuestionField({ question, value, currencyCode, onChange, onBlur, error, index }: { question: DiagnosticQuestion; value: unknown; currencyCode?: string; onChange: (value: unknown) => void; onBlur: () => void; error?: string; index: number }) {
   const id = `field-${question.key}`;
   const labelId = `${id}-label`;
-  const describedBy = invalid ? `${id}-error` : undefined;
+  const invalid = Boolean(error);
+  const describedBy = error ? `${id}-error` : undefined;
   const common = { id, name: question.key, "aria-invalid": invalid, "aria-labelledby": labelId, "aria-describedby": describedBy, required: question.required };
   const current = value === undefined || value === null ? "" : String(value);
   const layout = question.layout ?? "full";
   return (
-    <fieldset className={cn("question-card", `question-card--${layout}`, question.type === "boolean" && "question-card--boolean")} data-question-key={question.key} aria-describedby={describedBy}>
+    <fieldset className={cn("question-card", `question-card--${layout}`, question.type === "boolean" && "question-card--boolean", invalid && "question-card--invalid")} data-question-key={question.key} aria-describedby={describedBy}>
       <legend><small>{String(index).padStart(2, "0")}</small><span id={labelId}>{question.label}{question.required ? <b>{"\u00a0*"}</b> : <em>{question.optionalLabel ?? "Opcional"}</em>}</span></legend>
-      {question.type === "textarea" && <Textarea {...common} className="question-control question-control--textarea" value={current} placeholder={question.placeholder} onChange={(event) => onChange(event.target.value)} />}
-      {question.format === "currency" && <CurrencyInput {...common} value={value} currencyCode={currencyCode} placeholder={question.placeholder} onChange={onChange} />}
-      {question.format !== "currency" && (question.type === "text" || question.type === "email" || question.type === "number") && <Input {...common} className="question-control" type={question.type} value={current} min={question.min} max={question.max} placeholder={question.placeholder} onChange={(event) => onChange(question.type === "number" && event.target.value !== "" ? Number(event.target.value) : event.target.value)} />}
+      {question.type === "textarea" && <Textarea {...common} className="question-control question-control--textarea" value={current} maxLength={5000} placeholder={question.placeholder} onBlur={onBlur} onChange={(event) => onChange(event.target.value)} />}
+      {question.format === "currency" && <CurrencyInput {...common} value={value} currencyCode={currencyCode} placeholder={question.placeholder} onChange={onChange} onBlur={onBlur} />}
+      {question.format !== "currency" && (question.type === "text" || question.type === "email") && <Input {...common} className="question-control" type={question.type} value={current} maxLength={300} placeholder={question.placeholder} onBlur={onBlur} onChange={(event) => onChange(event.target.value)} />}
+      {question.format !== "currency" && question.type === "number" && <Input {...common} className="question-control" type="number" inputMode="numeric" step={1} value={current} min={question.min} max={question.max} placeholder={question.placeholder} onKeyDown={(event) => { if (["e", "E", "+", "-", ".", ","].includes(event.key)) event.preventDefault(); }} onBlur={onBlur} onChange={(event) => onChange(event.target.value === "" ? "" : Number(event.target.value))} />}
       {question.type === "select" && (
-        <Select name={question.key} value={current} required={question.required} onValueChange={onChange}>
+        <Select name={question.key} value={current} required={question.required} onValueChange={(nextValue) => { onChange(nextValue); }}>
           <SelectTrigger {...common} className="question-control" aria-describedby={describedBy}>
             <SelectValue placeholder="Selecione uma opção" />
           </SelectTrigger>
@@ -255,13 +291,13 @@ function QuestionField({ question, value, currencyCode, onChange, invalid, index
       )}
       {question.type === "boolean" && (
         <div className={cn("boolean-option", (value === true || value === "Sim") && "selected")}>
-          <Checkbox id={id} name={question.key} checked={value === true || value === "Sim"} aria-labelledby={`${id}-choice`} onCheckedChange={(checked) => onChange(checked === true)} />
+          <Checkbox id={id} name={question.key} checked={value === true || value === "Sim"} aria-invalid={invalid} aria-describedby={describedBy} aria-labelledby={`${id}-choice`} onBlur={onBlur} onCheckedChange={(checked) => onChange(checked === true)} />
           <Label id={`${id}-choice`} htmlFor={id}>Tenho filhos</Label>
           <p>Marque esta opção para informar quantidade e idades.</p>
         </div>
       )}
       {question.type === "radio" && (
-        <RadioGroup className="option-grid" name={question.key} value={current} required={question.required} aria-labelledby={labelId} onValueChange={onChange}>
+        <RadioGroup className="option-grid" name={question.key} value={current} required={question.required} aria-invalid={invalid} aria-describedby={describedBy} aria-labelledby={labelId} onBlur={onBlur} onValueChange={onChange}>
           {question.options?.map((option, optionIndex) => {
             const optionId = `${id}-${optionIndex}`;
             return <Label key={option} htmlFor={optionId} className={current === option ? "selected" : ""}><span>{option}</span><RadioGroupItem id={optionId} value={option} /></Label>;
@@ -269,21 +305,21 @@ function QuestionField({ question, value, currencyCode, onChange, invalid, index
         </RadioGroup>
       )}
       {(question.type === "multi" || question.type === "checkbox") && (
-        <div className="option-grid option-grid--multi" role="group" aria-labelledby={labelId}>
+        <div className="option-grid option-grid--multi" role="group" aria-describedby={describedBy} aria-labelledby={labelId} onBlur={onBlur}>
           {question.options?.map((option, optionIndex) => {
             const values = Array.isArray(value) ? value as string[] : [];
             const checked = values.includes(option);
             const optionId = `${id}-${optionIndex}`;
-            return <div key={option} className={cn("multi-option", checked && "selected")}><Checkbox id={optionId} checked={checked} onCheckedChange={(nextChecked) => onChange(nextChecked === true ? [...values, option] : values.filter((item) => item !== option))} /><Label htmlFor={optionId}>{option}</Label></div>;
+            return <div key={option} className={cn("multi-option", checked && "selected")}><Checkbox id={optionId} checked={checked} aria-invalid={invalid} aria-describedby={describedBy} onCheckedChange={(nextChecked) => onChange(nextChecked === true ? [...values, option] : values.filter((item) => item !== option))} /><Label htmlFor={optionId}>{option}</Label></div>;
           })}
         </div>
       )}
-      {invalid && <p id={`${id}-error`} className="field-error">Este campo é obrigatório.</p>}
+      {error && <p id={`${id}-error`} className="field-error" role="alert">{error}</p>}
     </fieldset>
   );
 }
 
-function CurrencyInput({ id, name, value, currencyCode, placeholder, required, "aria-invalid": ariaInvalid, "aria-labelledby": ariaLabelledBy, "aria-describedby": ariaDescribedBy, onChange }: { id: string; name: string; value: unknown; currencyCode?: string; placeholder?: string; required?: boolean; "aria-invalid": boolean; "aria-labelledby": string; "aria-describedby"?: string; onChange: (value: unknown) => void }) {
+function CurrencyInput({ id, name, value, currencyCode, placeholder, required, "aria-invalid": ariaInvalid, "aria-labelledby": ariaLabelledBy, "aria-describedby": ariaDescribedBy, onChange, onBlur }: { id: string; name: string; value: unknown; currencyCode?: string; placeholder?: string; required?: boolean; "aria-invalid": boolean; "aria-labelledby": string; "aria-describedby"?: string; onChange: (value: unknown) => void; onBlur: () => void }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const code = String(currencyCode ?? "").toUpperCase();
@@ -309,7 +345,7 @@ function CurrencyInput({ id, name, value, currencyCode, placeholder, required, "
           setDraft(normalized.display);
           onChange(normalized.value);
         }}
-        onBlur={() => setEditing(false)}
+        onBlur={() => { setEditing(false); onBlur(); }}
       />
       {code && <span className="currency-input__code" aria-hidden="true">{code}</span>}
     </div>

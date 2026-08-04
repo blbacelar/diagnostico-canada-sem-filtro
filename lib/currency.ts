@@ -3,10 +3,11 @@ const supportedCurrencies = new Set(["BRL", "CAD", "USD", "EUR"]);
 function numericValue(value: unknown) {
   if (value === "" || value === null || value === undefined) return null;
   const number = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(number) ? Math.max(0, number) : null;
+  return Number.isFinite(number) ? number : null;
 }
 
 function analyzeCurrencyInput(input: string) {
+  const isNegative = /^\s*-/.test(input);
   const cleaned = input.replace(/[^\d.,]/g, "");
   if (!/\d/.test(cleaned)) return null;
 
@@ -18,10 +19,10 @@ function analyzeCurrencyInput(input: string) {
   const hasDecimalSeparator = separator >= 0 && (hasBothSeparators || digitsAfterSeparator <= 2);
   const integerPart = (hasDecimalSeparator ? cleaned.slice(0, separator) : cleaned).replace(/\D/g, "") || "0";
   const fractionPart = hasDecimalSeparator ? cleaned.slice(separator + 1).replace(/\D/g, "").slice(0, 2) : "";
-  const value = Number(`${integerPart}.${fractionPart}`);
+  const value = Number(`${isNegative ? "-" : ""}${integerPart}.${fractionPart}`);
 
   return {
-    value: Number.isFinite(value) ? Math.max(0, value) : 0,
+    value: Number.isFinite(value) ? value : 0,
     fractionDigits: fractionPart.length,
     trailingDecimal: hasDecimalSeparator && fractionPart.length === 0,
   };

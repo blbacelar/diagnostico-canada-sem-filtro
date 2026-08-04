@@ -15,6 +15,7 @@ import { diagnosticSections, missingRequiredQuestions } from "../../../../lib/qu
 import { processAssessment } from "../../../../lib/cases";
 import { sendSubmissionConfirmation } from "../../../../lib/email";
 import { operationalConfig } from "../../../../lib/operational-config";
+import { diagnosticSubmissionAnswersSchema } from "../../../../lib/diagnostic-validation";
 
 const expectedTime = "até 5 dias úteis";
 
@@ -39,6 +40,7 @@ export async function POST(request: Request) {
     const answers = Object.fromEntries((rows ?? []).map((row) => [row.question_key, row.answer]));
     const missing = diagnosticSections.flatMap((section) => missingRequiredQuestions(section, answers));
     if (missing.length) throw new ApiError(422, `Existem ${missing.length} respostas obrigatórias pendentes.`, "INCOMPLETE_FORM");
+    diagnosticSubmissionAnswersSchema.parse(answers);
 
     const now = new Date().toISOString();
     const { data: submission, error: submissionError } = await admin

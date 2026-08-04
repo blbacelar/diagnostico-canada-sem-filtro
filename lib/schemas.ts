@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { diagnosticDraftAnswersSchema } from "./diagnostic-validation";
 
 const emailSchema = z
   .string()
@@ -47,7 +48,7 @@ export const passwordResetSchema = z
   });
 
 export const answersPayloadSchema = z.object({
-  answers: z.record(z.string().min(1).max(80), z.unknown()).refine((value) => JSON.stringify(value).length <= 100_000),
+  answers: diagnosticDraftAnswersSchema.refine((value) => JSON.stringify(value).length <= 100_000, "O conjunto de respostas ultrapassa o limite permitido."),
   schemaVersion: z.literal(1).default(1),
 });
 

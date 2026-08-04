@@ -219,6 +219,51 @@ test("@regression valor disponível é formatado como moeda e salvo como número
   await expect(question(page, "available_funds").getByText("CAD")).toBeVisible();
 });
 
+test("@critical @regression valida números, texto livre e exibe erros acessíveis na UI", async ({ page }) => {
+  await openProfile(page);
+
+  const age = page.getByRole("spinbutton", { name: "Qual é a sua idade?" });
+  await age.fill("15");
+  await age.blur();
+  await expect(question(page, "age").getByRole("alert")).toHaveText("Informe um número inteiro entre 16 e 100.");
+  await expect(age).toHaveAttribute("aria-invalid", "true");
+
+  await age.fill("35");
+  await age.blur();
+  await expect(question(page, "age").getByRole("alert")).toHaveCount(0);
+  await expect(age).toHaveAttribute("aria-invalid", "false");
+
+  const nationality = page.getByRole("textbox", { name: "Qual é a sua nacionalidade?" });
+  await nationality.fill("Brasileira — luso-canadense, 2ª geração!");
+  await nationality.blur();
+  await expect(nationality).toHaveValue("Brasileira — luso-canadense, 2ª geração!");
+  await expect(question(page, "nationality").getByRole("alert")).toHaveCount(0);
+
+  await age.focus();
+  await age.pressSequentially("e-.,abc");
+  await expect(age).toHaveValue("35");
+});
+
+test("@critical @regression entrada monetária descarta caracteres não monetários", async ({ page }) => {
+  await openProfile(page, { funds_currency: "BRL" });
+  await page.getByRole("button", { name: /Recursos financeiros$/ }).click();
+
+  const amount = page.getByRole("textbox", { name: "Quanto possui disponível para investir no projeto Canadá?" });
+  await amount.fill("R$ abc 1.234,567");
+  await expect(amount).toHaveValue("1.234,56");
+  await amount.blur();
+  await expect(amount).toHaveValue(formatCurrencyAmount(1234.56, "BRL"));
+  await expect(question(page, "available_funds").getByRole("alert")).toHaveCount(0);
+
+  await amount.focus();
+  await expect(amount).toHaveValue("1.234,56");
+  await amount.fill("-100");
+  await expect(amount).toHaveValue("-100");
+  await amount.blur();
+  await expect(amount).toHaveValue(formatCurrencyAmount(-100, "BRL"));
+  await expect(question(page, "available_funds").getByRole("alert")).toHaveText("O valor deve ser maior ou igual a 0.");
+});
+
 test("@critical @regression diagnóstico enviado não exibe novamente a ação de envio", async ({ page }) => {
   await page.route("**/api/diagnostics/form-session", (route) => route.fulfill({
     status: 200,

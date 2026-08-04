@@ -28,7 +28,8 @@ describe("formatação monetária", () => {
     expect(normalizeCurrencyInput(input)).toEqual({ value, display });
   });
 
-  it("não permite valores negativos", () => {
-    expect(normalizeCurrencyInput("-100")).toEqual({ value: 100, display: "100" });
+  it("preserva o sinal negativo para a validação exibir o erro sem alterar o valor silenciosamente", () => {
+    expect(normalizeCurrencyInput("-100")).toEqual({ value: -100, display: "-100" });
+    expect(formatCurrencyAmount(-100, "BRL")).toBe("-R$\u00a0100,00");
   });
 });
