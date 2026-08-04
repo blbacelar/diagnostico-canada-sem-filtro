@@ -1,5 +1,5 @@
 import { sendDiagnosticSchema } from "../../../../lib/schemas";
-import { ApiError, getIdempotencyKey, handleApiError, json, parseJson, requireConsultant, writeAudit } from "../../../../lib/api";
+import { ApiError, enforceRateLimit, getIdempotencyKey, handleApiError, json, parseJson, requireConsultant, writeAudit } from "../../../../lib/api";
 import { caseClient } from "../../../../lib/cases";
 import { createFormToken, hashFormToken } from "../../../../lib/tokens";
 import { generateReportPdf, getReportData } from "../../../../lib/report";
@@ -9,6 +9,7 @@ import { claimCaseForReview } from "../../../../lib/case-lock";
 
 export async function POST(request: Request) {
   try {
+    await enforceRateLimit(request, "diagnostic_send_final", 20, 15);
     const payload = await parseJson(request, sendDiagnosticSchema, 40_000);
     const { admin, user } = await requireConsultant(request);
     const key = getIdempotencyKey(request, payload.idempotencyKey);

@@ -44,6 +44,21 @@ export function requestIp(request: Request) {
   return request.headers.get("x-vercel-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
 }
 
+async function emitSecurityAlert(event: string, metadata: Record<string, unknown>) {
+  console.warn("security_event", { event, ...metadata });
+  const webhook = process.env.SECURITY_ALERT_WEBHOOK_URL;
+  if (!webhook) return;
+  try {
+    await fetch(webhook, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event, ...metadata, at: new Date().toISOString() }),
+    });
+  } catch {
+    // Intentionally swallow alert transport failures to keep API stable.
+  }
+}
+
 export async function enforceRateLimit(request: Request, action: string, limit: number, windowMinutes: number) {
   const admin = getAdminSupabase();
   const identifierHash = hashIp(`${action}:${requestIp(request)}`);
@@ -57,7 +72,10 @@ export async function enforceRateLimit(request: Request, action: string, limit: 
     .eq("window_started_at", windowStart)
     .maybeSingle();
   if (readError) throw readError;
-  if (existing && existing.request_count >= limit) throw new ApiError(429, "Muitas tentativas. Aguarde alguns minutos e tente novamente.", "RATE_LIMITED");
+  if (existing && existing.request_count >= limit) {
+    await emitSecurityAlert("rate_limited", { action, identifierHash, limit, windowMinutes });
+    throw new ApiError(429, "Muitas tentativas. Aguarde alguns minutos e tente novamente.", "RATE_LIMITED");
+  }
   if (existing) {
     const { error } = await admin.from("diagnostic_rate_limits").update({ request_count: existing.request_count + 1 }).eq("id", existing.id);
     if (error) throw error;
@@ -85,18 +103,27 @@ export async function requireFormCase(request: Request) {
 
 export async function requireConsultant(request: Request, role?: "admin") {
   const authorization = request.headers.get("authorization");
-  if (!authorization?.startsWith("Bearer ")) throw new ApiError(401, "Faça login para continuar.", "AUTH_REQUIRED");
+  if (!authorization?.startsWith("Bearer ")) {
+    await emitSecurityAlert("auth_missing_bearer", { ip: requestIp(request) });
+    throw new ApiError(401, "Faça login para continuar.", "AUTH_REQUIRED");
+  }
   const accessToken = authorization.slice(7).trim();
   const userClient = getSupabaseForAccessToken(accessToken);
   const { data: authData, error: authError } = await userClient.auth.getUser();
-  if (authError || !authData.user) throw new ApiError(401, "Sua sessão expirou. Entre novamente.", "AUTH_REQUIRED");
+  if (authError || !authData.user) {
+    await emitSecurityAlert("auth_invalid_session", { ip: requestIp(request), error: authError?.name ?? "unknown" });
+    throw new ApiError(401, "Sua sessão expirou. Entre novamente.", "AUTH_REQUIRED");
+  }
   const { data: consultant, error } = await userClient
     .from("diagnostic_consultants")
     .select("user_id, role, active, display_name")
     .eq("user_id", authData.user.id)
     .eq("active", true)
     .maybeSingle();
-  if (error || !consultant) throw new ApiError(403, "Esta conta não possui acesso ao dashboard.", "ACCESS_DENIED");
+  if (error || !consultant) {
+    await emitSecurityAlert("auth_access_denied", { ip: requestIp(request), userId: authData.user.id });
+    throw new ApiError(403, "Esta conta não possui acesso ao dashboard.", "ACCESS_DENIED");
+  }
   if (role === "admin" && consultant.role !== "admin") throw new ApiError(403, "Esta ação exige uma conta administradora.", "ADMIN_REQUIRED");
   return { user: authData.user, consultant, userClient, admin: getAdminSupabase(), accessToken };
 }

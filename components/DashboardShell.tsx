@@ -39,13 +39,17 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       const supabase = getBrowserSupabase();
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session) { router.replace("/login"); return; }
+      await fetch("/api/auth/session", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${sessionData.session.access_token}` },
+      });
       const { data } = await supabase.from("diagnostic_consultants").select("display_name, role, active").eq("user_id", sessionData.session.user.id).eq("active", true).maybeSingle();
       if (!data) { await supabase.auth.signOut(); router.replace("/login?denied=1"); return; }
       if (mounted) { setConsultant(data); setChecking(false); }
     }
     verify(); return () => { mounted = false; };
   }, [router]);
-  async function signOut() { await getBrowserSupabase().auth.signOut(); router.replace("/login"); }
+  async function signOut() { await fetch("/api/auth/session", { method: "DELETE" }); await getBrowserSupabase().auth.signOut(); router.replace("/login"); }
   if (checking || !consultant) return <div className="dashboard-check"><span /><p>Confirmando acesso profissional…</p></div>;
   return <DashboardConsultantProvider consultant={consultant}>
     <div className="dashboard-shell">

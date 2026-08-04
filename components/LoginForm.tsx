@@ -37,11 +37,18 @@ export function LoginForm({
         setMessage("Se a conta estiver ativa, enviaremos as instruções de recuperação.");
       } else {
         const password = String(form.get("password") ?? "");
-        const { error: signInError } = await getBrowserSupabase().auth.signInWithPassword({
+        const { data: signInData, error: signInError } = await getBrowserSupabase().auth.signInWithPassword({
           email,
           password,
         });
         if (signInError) throw signInError;
+        const accessToken = signInData.session?.access_token;
+        if (!accessToken) throw new Error("missing_access_token");
+        const sessionResponse = await fetch("/api/auth/session", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (!sessionResponse.ok) throw new Error("dashboard_session_sync_failed");
         router.replace("/dashboard");
         router.refresh();
       }
