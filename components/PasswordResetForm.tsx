@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, Check, KeyRound, LoaderCircle } from "lucide-react";
+import { AlertTriangle, ArrowRight, Check, Eye, EyeOff, KeyRound, LoaderCircle } from "lucide-react";
 import { getBrowserSupabase } from "../lib/supabase";
 import { passwordResetSchema } from "../lib/schemas";
 import { Button } from "./ui/button";
@@ -12,6 +12,8 @@ type RecoveryState = "checking" | "ready" | "invalid" | "success";
 export function PasswordResetForm() {
   const [state, setState] = useState<RecoveryState>("checking");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordConfirmation, setShowPasswordConfirmation] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -163,29 +165,49 @@ export function PasswordResetForm() {
         <span>
           <KeyRound /> Nova senha
         </span>
-        <input
-          name="password"
-          type="password"
-          autoComplete="new-password"
-          minLength={12}
-          maxLength={72}
-          required
-          aria-invalid={Boolean(error)}
-        />
+        <div className="password-field">
+          <input
+            name="password"
+            type={showPassword ? "text" : "password"}
+            autoComplete="new-password"
+            minLength={12}
+            maxLength={72}
+            required
+            aria-invalid={Boolean(error)}
+          />
+          <button
+            type="button"
+            className="password-toggle"
+            aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+            onClick={() => setShowPassword((current) => !current)}
+          >
+            {showPassword ? <EyeOff /> : <Eye />}
+          </button>
+        </div>
       </label>
       <label>
         <span>
           <KeyRound /> Confirme a nova senha
         </span>
-        <input
-          name="passwordConfirmation"
-          type="password"
-          autoComplete="new-password"
-          minLength={12}
-          maxLength={72}
-          required
-          aria-invalid={Boolean(error)}
-        />
+        <div className="password-field">
+          <input
+            name="passwordConfirmation"
+            type={showPasswordConfirmation ? "text" : "password"}
+            autoComplete="new-password"
+            minLength={12}
+            maxLength={72}
+            required
+            aria-invalid={Boolean(error)}
+          />
+          <button
+            type="button"
+            className="password-toggle"
+            aria-label={showPasswordConfirmation ? "Ocultar senha" : "Mostrar senha"}
+            onClick={() => setShowPasswordConfirmation((current) => !current)}
+          >
+            {showPasswordConfirmation ? <EyeOff /> : <Eye />}
+          </button>
+        </div>
       </label>
       <p className="password-requirements">
         Use de 12 a 72 caracteres, com letra maiúscula, minúscula e número.

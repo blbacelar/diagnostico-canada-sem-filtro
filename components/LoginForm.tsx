@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { ArrowRight, KeyRound, Mail } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, KeyRound, Mail } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { getBrowserSupabase } from "../lib/supabase";
 import { Button } from "./ui/button";
@@ -12,6 +12,7 @@ export function LoginForm({
 }: { recovery?: boolean; passwordReset?: boolean }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState(
     passwordReset ? "Senha atualizada. Entre com sua nova senha." : "",
   );
@@ -82,13 +83,23 @@ export function LoginForm({
           <span>
             <KeyRound /> Senha
           </span>
-          <input
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-            placeholder="Sua senha"
-          />
+          <div className="password-field">
+            <input
+              name="password"
+              type={showPassword ? "text" : "password"}
+              autoComplete="current-password"
+              required
+              placeholder="Sua senha"
+            />
+            <button
+              type="button"
+              className="password-toggle"
+              aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+              onClick={() => setShowPassword((current) => !current)}
+            >
+              {showPassword ? <EyeOff /> : <Eye />}
+            </button>
+          </div>
         </label>
       )}
       {error && (

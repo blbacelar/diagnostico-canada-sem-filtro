@@ -318,6 +318,11 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .login-form label > span { display: flex; gap: 8px; align-items: center; color: var(--ink-soft); font: 500 9px var(--font-mono), monospace; letter-spacing: .1em; text-transform: uppercase; }
 .login-form label svg { width: 14px; }
 .login-form input { min-height: 55px; padding: 14px 16px; border: 1px solid var(--paper-edge); background: white; }
+.password-field { position: relative; display: grid; }
+.password-field input { padding-right: 48px; }
+.password-toggle { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); width: 36px; height: 36px; border: 0; background: transparent; color: var(--ink-mute); display: grid; place-items: center; cursor: pointer; }
+.password-toggle:hover { color: var(--ink); }
+.password-toggle svg { width: 17px; height: 17px; }
 .login-panel > div > a { display: block; width: max-content; margin: 23px auto; border-bottom: 1px solid var(--rule-strong); font-size: 12px; color: var(--ink-soft); }
 .password-reset-form { margin-top: 30px; }
 .password-requirements { margin: -8px 0 0; color: var(--ink-mute); font-size: 11px; line-height: 1.55; }
