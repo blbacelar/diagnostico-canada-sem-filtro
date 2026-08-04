@@ -1,12 +1,14 @@
 import { ArrowDown } from "lucide-react";
 import { BrandMark } from "../components/BrandMark";
 import { LandingClient } from "../components/LandingClient";
+import { getOperationalConfigWithFallback } from "../lib/operational-config.server";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const config = await getOperationalConfigWithFallback();
   return (
     <main className="public-page">
       <header className="public-header"><BrandMark /><a href="#como-funciona" className="header-link">Como funciona <ArrowDown aria-hidden="true" /></a></header>
-      <LandingClient />
+      <LandingClient policyVersion={config.policyVersion} />
       <section id="como-funciona" className="how-it-works">
         <p className="eyebrow"><span /> O que acontece depois</p>
         <div className="process-grid">

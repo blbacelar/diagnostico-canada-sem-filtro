@@ -17,7 +17,7 @@ import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Textarea } from "./ui/textarea";
 
-type SessionData = { caseNumber: string; status: string; answers: FormAnswers; client: { fullName: string }; submittedAt: string | null };
+type SessionData = { caseNumber: string; status: string; answers: FormAnswers; client: { fullName: string }; submittedAt: string | null; policyVersion?: string };
 type SaveState = "idle" | "saving" | "saved" | "offline" | "error";
 
 export function FormApp({ initialToken }: { initialToken?: string }) {
@@ -172,7 +172,7 @@ export function FormApp({ initialToken }: { initialToken?: string }) {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
-        body: JSON.stringify({ consent: true, policyVersion: operationalConfig.policyVersion, idempotencyKey }),
+        body: JSON.stringify({ consent: true, policyVersion: session.policyVersion ?? operationalConfig.policyVersion, idempotencyKey }),
       });
       const data = await response.json() as { error?: string; code?: string; caseNumber: string; expectedTime: string };
       if (!response.ok) {

@@ -1,3 +1,29 @@
-import { handleApiError, json, requireFormCase } from "../../../../lib/api";
+import { ApiError, handleApiError, json, requireFormCase } from "../../../../lib/api";
+import { operationalConfig } from "../../../../lib/operational-config";
 import { tokenCookie } from "../../../../lib/tokens";
-export async function GET(request: Request) { try { const {admin,token,caseRow}=await requireFormCase(request); const {data:client,error:clientError}=await admin.from("diagnostic_clients").select("full_name").eq("id",caseRow.client_id).single(); if(clientError)throw clientError; const {data:rows,error}=await admin.from("diagnostic_answers").select("question_key,answer").eq("case_id",caseRow.id); if(error)throw error; const answers=Object.fromEntries((rows??[]).map(row=>[row.question_key,row.answer])); const response=json({caseNumber:caseRow.case_number,status:caseRow.status,submittedAt:caseRow.submitted_at,client:{fullName:client.full_name},answers}); response.headers.append("Set-Cookie",tokenCookie(token)); return response; }catch(error){return handleApiError(error);} }
+
+export async function GET(request: Request) {
+  try {
+    const { admin, token, caseRow } = await requireFormCase(request);
+    const [clientResult, answersResult, consentResult] = await Promise.all([
+      admin.from("diagnostic_clients").select("full_name").eq("id", caseRow.client_id).single(),
+      admin.from("diagnostic_answers").select("question_key,answer").eq("case_id", caseRow.id),
+      admin.from("diagnostic_consents").select("policy_version").eq("case_id", caseRow.id).eq("granted", true).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    ]);
+    for (const result of [clientResult, answersResult, consentResult]) if (result.error) throw result.error;
+    if (!clientResult.data) throw new ApiError(404, "Cliente não encontrado.", "CLIENT_NOT_FOUND");
+    const answers = Object.fromEntries((answersResult.data ?? []).map((row) => [row.question_key, row.answer]));
+    const response = json({
+      caseNumber: caseRow.case_number,
+      status: caseRow.status,
+      submittedAt: caseRow.submitted_at,
+      client: { fullName: clientResult.data.full_name },
+      answers,
+      policyVersion: consentResult.data?.policy_version ?? operationalConfig.policyVersion,
+    });
+    response.headers.append("Set-Cookie", tokenCookie(token));
+    return response;
+  } catch (error) {
+    return handleApiError(error);
+  }
+}

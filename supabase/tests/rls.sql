@@ -3,7 +3,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
-select plan(6);
+select plan(8);
 
 select is(
   (
@@ -75,6 +75,32 @@ select is(
   ),
   0,
   'funções privilegiadas não ficam expostas no schema public'
+);
+
+select is(
+  (
+    select count(*)::integer
+    from information_schema.table_privileges
+    where grantee = 'authenticated'
+      and table_schema = 'public'
+      and table_name = 'diagnostic_operational_settings'
+      and privilege_type in ('INSERT', 'UPDATE', 'DELETE')
+  ),
+  0,
+  'parâmetros operacionais não podem ser alterados diretamente pelo cliente autenticado'
+);
+
+select is(
+  (
+    select count(*)::integer
+    from information_schema.table_privileges
+    where grantee = 'service_role'
+      and table_schema = 'public'
+      and table_name = 'diagnostic_operational_settings'
+      and privilege_type in ('SELECT', 'UPDATE')
+  ),
+  2,
+  'backend possui somente o acesso necessário para consultar e atualizar parâmetros'
 );
 
 select * from finish();

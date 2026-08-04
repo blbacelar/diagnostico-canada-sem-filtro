@@ -482,6 +482,25 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .settings-account dl div:last-child, .settings-operation dl div:last-child { border-bottom: 0; }
 .settings-account dt, .settings-operation dt { color: var(--ink-mute); font: 500 7px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .08em; }
 .settings-account dd, .settings-operation dd { margin: 0; overflow-wrap: anywhere; font-size: 11px; }
+.settings-operation { grid-column: 1/-1; }
+.settings-operation > header > div:nth-child(2) { min-width: 0; }
+.settings-operation-actions { margin-left: auto; display: flex; gap: 10px; }
+.settings-operation-actions .primary-button, .settings-operation-actions .secondary-button { min-height: 42px; padding: 11px 17px; }
+.settings-operation-form { padding: 24px; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 18px; }
+.settings-operation-form label { min-width: 0; display: grid; align-content: start; grid-template-rows: auto minmax(28px,auto) auto auto; gap: 6px; }
+.settings-operation-form label > span { color: var(--ink); font-size: 11px; font-weight: 600; }
+.settings-operation-form label > small { color: var(--ink-mute); font-size: 9px; line-height: 1.45; }
+.settings-operation-form input { min-height: 48px; border: 1px solid var(--paper-edge); border-radius: 2px; background: white; color: var(--ink); padding: 12px 14px; font-size: 12px; }
+.settings-operation-form input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(183,28,61,.08); }
+.settings-operation-form input[aria-invalid=true] { border-color: var(--accent); }
+.settings-operation-form label > em { color: var(--accent); font-size: 9px; font-style: normal; }
+.settings-operation-field--wide { grid-column: span 3; }
+.settings-readonly, .settings-save-message { margin: 0 24px 22px; padding: 13px 15px; display: flex; align-items: center; gap: 9px; font-size: 10px; }
+.settings-readonly { background: var(--paper-shade); color: var(--ink-mute); }
+.settings-readonly svg { width: 15px; color: var(--ink-soft); }
+.settings-save-message--saved { background: rgba(47,102,85,.09); color: var(--success); }
+.settings-save-message--error { background: rgba(183,28,61,.07); color: var(--accent); }
+.settings-operation > footer { padding: 13px 24px; border-top: 1px solid var(--rule); color: var(--ink-mute); font: 500 7px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .07em; }
 .settings-counts { grid-column: 1/-1; display: grid; grid-template-columns: repeat(3,1fr); }
 .settings-counts article { min-height: 120px; padding: 22px; display: grid; align-content: center; border-right: 1px solid var(--paper-edge); }
 .settings-counts article:last-child { border-right: 0; }
@@ -534,6 +553,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .consultant-card { margin: 0 0 0 20px; padding: 0; border: 0; grid-template-columns: 34px; }
   .consultant-card div, .consultant-card button { display: none; }
   .dashboard-main { padding: 36px 20px 90px; }
+  .settings-operation > header { align-items: flex-start; flex-wrap: wrap; }
+  .settings-operation-actions { width: 100%; margin-left: 39px; }
+  .settings-operation-form { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .settings-operation-field--wide { grid-column: span 2; }
 }
 @media (max-width: 600px) {
   .dashboard-header { align-items: start; flex-direction: column; }
@@ -573,6 +596,11 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .settings-integrations article { border-right: 0; border-bottom: 1px solid var(--paper-edge); }
   .settings-integrations article:last-child { border-bottom: 0; }
   .settings-account dl div, .settings-operation dl div { grid-template-columns: 1fr; gap: 5px; }
+  .settings-operation-actions { margin-left: 0; display: grid; grid-template-columns: 1fr; }
+  .settings-operation-actions .primary-button, .settings-operation-actions .secondary-button { width: 100%; }
+  .settings-operation-form { padding: 20px; grid-template-columns: 1fr; }
+  .settings-operation-field--wide { grid-column: auto; }
+  .settings-readonly, .settings-save-message { margin-inline: 20px; }
 }
 
 /* Caso, análise e parecer */

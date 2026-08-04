@@ -2,7 +2,6 @@
 
 import { useRef, useState, type FormEvent } from "react";
 import { ArrowRight, Check, Clock3, LockKeyhole, Mail, Save } from "lucide-react";
-import { operationalConfig } from "../lib/operational-config";
 import { resumeLinkSchema, sanitizedUtm, startDiagnosticSchema } from "../lib/schemas";
 
 type Mode = "start" | "resume";
@@ -27,7 +26,7 @@ function FieldError({ field, errors }: { field: FieldName; errors: FieldErrors }
   return errors[field] ? <p id={`${field}-error`} className="field-error" role="alert">{errors[field]}</p> : null;
 }
 
-export function LandingClient() {
+export function LandingClient({ policyVersion }: { policyVersion: string }) {
   const [mode, setMode] = useState<Mode>("start");
   const [status, setStatus] = useState<FormStatus>("idle");
   const [message, setMessage] = useState("");
@@ -65,7 +64,7 @@ export function LandingClient() {
           email: form.get("email"),
           emailConfirmation: form.get("emailConfirmation"),
           consent: form.get("consent") === "on",
-          policyVersion: operationalConfig.policyVersion,
+          policyVersion,
           source: "hotmart",
           website: form.get("website"),
           utm: sanitizedUtm(new URLSearchParams(window.location.search)),

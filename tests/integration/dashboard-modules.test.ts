@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { GET as getAudit } from "../../app/api/dashboard/audit/route";
 import { GET as getContent } from "../../app/api/dashboard/content/route";
-import { GET as getSettings } from "../../app/api/dashboard/settings/route";
+import { GET as getSettings, PATCH as patchSettings } from "../../app/api/dashboard/settings/route";
 import { GET as getTemplates } from "../../app/api/dashboard/templates/route";
 
 const routes = [
@@ -19,5 +19,17 @@ describe("APIs dos módulos internos", () => {
     expect(response.status).toBe(401);
     expect(body.code).toBe("AUTH_REQUIRED");
     expect(response.headers.get("cache-control")).toBe("no-store");
+  });
+
+  it("protege a atualização dos parâmetros antes mesmo de validar o corpo", async () => {
+    const response = await patchSettings(new Request("http://localhost/api/dashboard/settings", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ form_link_days: 0 }),
+    }));
+    const body = await response.json() as { code: string };
+
+    expect(response.status).toBe(401);
+    expect(body.code).toBe("AUTH_REQUIRED");
   });
 });

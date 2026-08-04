@@ -4,7 +4,7 @@ import { getAdminSupabase } from "../../../../lib/supabase";
 import { createFormToken, hashFormToken, tokenCookie } from "../../../../lib/tokens";
 import { sendContinuationEmail } from "../../../../lib/email";
 import { newCaseNumber } from "../../../../lib/cases";
-import { operationalConfig } from "../../../../lib/operational-config";
+import { getOperationalConfig } from "../../../../lib/operational-config.server";
 
 const neutralMessage = "Se os dados puderem ser processados, você receberá um link pessoal para continuar. Confira também a pasta de spam.";
 
@@ -14,6 +14,7 @@ export async function POST(request: Request) {
     const payload = await parseJson(request, startDiagnosticSchema, 20_000);
     if (payload.website) return json({ message: neutralMessage });
     const admin = getAdminSupabase();
+    const operationalConfig = await getOperationalConfig(admin);
     const now = new Date().toISOString();
     const { data: existingClient, error: clientReadError } = await admin.from("diagnostic_clients").select("id, full_name, email_normalized, email_display").eq("email_normalized", payload.email).maybeSingle();
     let client = existingClient;

@@ -14,7 +14,7 @@ import {
 import { diagnosticSections, missingRequiredQuestions } from "../../../../lib/questions";
 import { processAssessment } from "../../../../lib/cases";
 import { sendSubmissionConfirmation } from "../../../../lib/email";
-import { operationalConfig } from "../../../../lib/operational-config";
+import { getOperationalConfig } from "../../../../lib/operational-config.server";
 import { diagnosticSubmissionAnswersSchema } from "../../../../lib/diagnostic-validation";
 
 const expectedTime = "até 5 dias úteis";
@@ -24,6 +24,7 @@ export async function POST(request: Request) {
     await enforceRateLimit(request, "diagnostic_submit", 5, 60);
     const payload = await parseJson(request, submitPayloadSchema, 20_000);
     const { admin, caseRow } = await requireFormCase(request);
+    const operationalConfig = await getOperationalConfig(admin);
     const idempotencyKey = getIdempotencyKey(request, payload.idempotencyKey);
 
     const { data: existing } = await admin
@@ -87,7 +88,8 @@ export async function POST(request: Request) {
         version: (previous?.version ?? 0) + 1,
         status: "processing",
         methodology_version: operationalConfig.methodologyVersion,
-        model: process.env.OPEN_ROUTER_MODEL ?? "openai/gpt-5.6-terra",
+        prompt_version: operationalConfig.promptVersion,
+        model: operationalConfig.model,
         structured_result: {},
       })
       .select("id")

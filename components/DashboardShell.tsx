@@ -11,8 +11,8 @@ const nav = [
   { href: "/dashboard", label: "Visão geral", icon: CircleGauge },
   { href: "/dashboard/diagnosticos", label: "Diagnósticos", icon: LayoutList },
   { href: "/dashboard/clientes", label: "Clientes", icon: Users },
-  { href: "/dashboard/conteudos", label: "Conteúdos", icon: BookOpen },
-  { href: "/dashboard/modelos", label: "Modelos de e-mail", icon: Mail },
+  // { href: "/dashboard/conteudos", label: "Conteúdos", icon: BookOpen },
+  // { href: "/dashboard/modelos", label: "Modelos de e-mail", icon: Mail },
   { href: "/dashboard/configuracoes", label: "Configurações", icon: Settings },
   { href: "/dashboard/auditoria", label: "Auditoria", icon: ShieldCheck },
 ];
