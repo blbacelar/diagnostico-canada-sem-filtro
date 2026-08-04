@@ -16,6 +16,7 @@ import { processAssessment } from "../../../../lib/cases";
 import { sendSubmissionConfirmation } from "../../../../lib/email";
 import { getOperationalConfig } from "../../../../lib/operational-config.server";
 import { diagnosticSubmissionAnswersSchema } from "../../../../lib/diagnostic-validation";
+import { notifyDashboardUsersOfSubmission } from "../../../../lib/dashboard-notifications";
 
 const expectedTime = "até 5 dias úteis";
 
@@ -126,6 +127,17 @@ export async function POST(request: Request) {
         });
       }));
     }
+
+    waitUntil(notifyDashboardUsersOfSubmission(admin, {
+      caseId: caseRow.id,
+      caseNumber: caseRow.case_number,
+      clientName: client?.full_name ?? "Cliente",
+    }).catch((notificationError) => {
+      console.error("dashboard_submission_notification_failed", {
+        caseId: caseRow.id,
+        error: notificationError instanceof Error ? notificationError.name : "UNKNOWN_ERROR",
+      });
+    }));
 
     waitUntil(processAssessment(caseRow.id, submission.id, assessment.id));
     await writeAudit(admin, {

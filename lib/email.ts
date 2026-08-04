@@ -44,6 +44,27 @@ export async function sendSubmissionConfirmation(input: { to: string; fullName: 
   });
 }
 
+export async function sendDashboardSubmissionNotification(input: {
+  to: string;
+  displayName: string;
+  clientName: string;
+  caseId: string;
+  caseNumber: string;
+  idempotencyKey: string;
+}) {
+  const appUrl = process.env.APP_URL ?? "http://localhost:3000";
+  const caseUrl = new URL(`/dashboard/diagnosticos/${encodeURIComponent(input.caseId)}`, appUrl).toString();
+  return emailClient().emails.send({
+    from: fromAddress(),
+    to: input.to,
+    subject: `Novo diagnóstico recebido — ${input.caseNumber}`,
+    html: shell(
+      "Novo diagnóstico recebido",
+      `<p style="font:17px/1.7 Georgia,serif">Olá, ${escapeHtml(input.displayName)}.</p><p style="font:17px/1.7 Georgia,serif"><strong>${escapeHtml(input.clientName)}</strong> concluiu o diagnóstico <strong>${escapeHtml(input.caseNumber)}</strong>. As respostas já estão disponíveis para análise no dashboard.</p><p style="margin:28px 0"><a href="${escapeHtml(caseUrl)}" style="display:inline-block;padding:15px 26px;border-radius:999px;background:#b71c3d;color:#fff;text-decoration:none;font:700 12px monospace;letter-spacing:.1em;text-transform:uppercase">Abrir no dashboard</a></p>`,
+    ),
+  }, { idempotencyKey: input.idempotencyKey });
+}
+
 export async function sendFinalDiagnostic(input: { to: string; subject: string; body: string; reportUrl: string }) {
   return emailClient().emails.send({
     from: fromAddress(),
