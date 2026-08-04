@@ -5,10 +5,10 @@ import { ArrowRight, KeyRound, Mail } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { getBrowserSupabase } from "../lib/supabase";
 
-export function LoginForm({ recovery = false }: { recovery?: boolean }) {
+export function LoginForm({ recovery = false, passwordReset = false }: { recovery?: boolean; passwordReset?: boolean }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(passwordReset ? "Senha atualizada. Entre com sua nova senha." : "");
   const [error, setError] = useState("");
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -17,8 +17,12 @@ export function LoginForm({ recovery = false }: { recovery?: boolean }) {
     const email = String(form.get("email") ?? "").trim().toLowerCase();
     try {
       if (recovery) {
-        const { error: resetError } = await getBrowserSupabase().auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/login` });
-        if (resetError) throw resetError;
+        const response = await fetch("/api/auth/password-recovery", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+        if (!response.ok) throw new Error("password_recovery_request_failed");
         setMessage("Se a conta estiver ativa, enviaremos as instruções de recuperação.");
       } else {
         const password = String(form.get("password") ?? "");

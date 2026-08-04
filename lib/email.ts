@@ -22,6 +22,19 @@ export async function sendContinuationEmail(input: { to: string; fullName: strin
   return emailClient().emails.send({ from: fromAddress(), to: input.to, subject: "Seu link pessoal — Diagnóstico Canadá Sem Filtro", html });
 }
 
+export async function sendPasswordRecoveryEmail(input: { to: string; resetUrl: string }) {
+  const safeResetUrl = escapeHtml(input.resetUrl);
+  return emailClient().emails.send({
+    from: fromAddress(),
+    to: input.to,
+    subject: "Redefina sua senha — Diagnóstico Canadá Sem Filtro",
+    html: shell(
+      "Crie uma nova senha",
+      `<p style="font:17px/1.7 Georgia,serif">Recebemos uma solicitação para redefinir a senha da sua conta.</p><p style="margin:28px 0"><a href="${safeResetUrl}" style="display:inline-block;padding:15px 26px;border-radius:999px;background:#b71c3d;color:#fff;text-decoration:none;font:700 12px monospace;letter-spacing:.1em;text-transform:uppercase">Criar nova senha</a></p><p style="font:14px/1.6 Arial,sans-serif;color:#586c7a">Este link é pessoal, tem uso único e expira. Se você não solicitou a alteração, ignore este e-mail e sua senha continuará a mesma.</p>`,
+    ),
+  });
+}
+
 export async function sendSubmissionConfirmation(input: { to: string; fullName: string; caseNumber: string }) {
   return emailClient().emails.send({
     from: fromAddress(),

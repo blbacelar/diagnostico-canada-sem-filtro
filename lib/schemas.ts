@@ -25,6 +25,27 @@ export const startDiagnosticSchema = z
 
 export const resumeLinkSchema = z.object({ email: emailSchema, website: z.string().max(0).optional() });
 
+export const passwordRecoveryRequestSchema = z.object({
+  email: emailSchema,
+  website: z.string().max(0).optional(),
+});
+
+export const passwordResetSchema = z
+  .object({
+    password: z
+      .string()
+      .min(12, "A senha precisa ter pelo menos 12 caracteres.")
+      .max(72, "A senha deve ter no máximo 72 caracteres.")
+      .regex(/[a-z]/, "Inclua pelo menos uma letra minúscula.")
+      .regex(/[A-Z]/, "Inclua pelo menos uma letra maiúscula.")
+      .regex(/[0-9]/, "Inclua pelo menos um número."),
+    passwordConfirmation: z.string(),
+  })
+  .refine((data) => data.password === data.passwordConfirmation, {
+    path: ["passwordConfirmation"],
+    message: "As senhas precisam ser iguais.",
+  });
+
 export const answersPayloadSchema = z.object({
   answers: z.record(z.string().min(1).max(80), z.unknown()).refine((value) => JSON.stringify(value).length <= 100_000),
   schemaVersion: z.literal(1).default(1),
