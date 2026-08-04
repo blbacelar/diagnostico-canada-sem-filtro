@@ -8,11 +8,20 @@ const { authorizedFetch } = vi.hoisted(() => ({ authorizedFetch: vi.fn() }));
 vi.mock("../../lib/dashboard-fetch", () => ({ authorizedFetch }));
 
 import { OverviewClient } from "../../components/DashboardData";
+import { DashboardConsultantProvider } from "../../components/DashboardShell";
 
 const summary = {
   counts: { new_cases: 0, in_review: 0, ready_to_send: 1, delivered: 1 },
   recent: [], averageHours: null, reviewSlaHours: 48,
 };
+
+function renderOverview() {
+  return render(
+    <DashboardConsultantProvider consultant={{ display_name: "Lopes Bacelar", role: "admin" }}>
+      <OverviewClient />
+    </DashboardConsultantProvider>,
+  );
+}
 
 afterEach(() => {
   cleanup();
@@ -22,8 +31,10 @@ afterEach(() => {
 describe("visão geral do dashboard", () => {
   it("mostra diagnósticos prontos para envio e já entregues", async () => {
     authorizedFetch.mockResolvedValue(summary);
-    render(<OverviewClient />);
+    renderOverview();
 
+    expect(screen.getByRole("heading", { name: "Bom trabalho, Lopes Bacelar." })).toBeVisible();
+    expect(screen.queryByText("Bom trabalho, consultora.")).toBeNull();
     expect(await screen.findByText("Diagnósticos enviados")).toBeVisible();
     expect(screen.getByText("Prontos para envio")).toBeVisible();
     expect(screen.getAllByText("01")).toHaveLength(2);
@@ -32,7 +43,7 @@ describe("visão geral do dashboard", () => {
 
   it("atualiza os indicadores quando a pessoa volta para a aba", async () => {
     authorizedFetch.mockResolvedValue(summary);
-    render(<OverviewClient />);
+    renderOverview();
     await screen.findByText("Diagnósticos enviados");
 
     window.dispatchEvent(new Event("focus"));

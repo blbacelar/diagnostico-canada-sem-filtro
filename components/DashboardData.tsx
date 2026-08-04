@@ -6,12 +6,14 @@ import { AlertTriangle, ArrowUpRight, Clock3, LockKeyhole, Search, SlidersHorizo
 import type { ClientListItem } from "../lib/clients";
 import { authorizedFetch } from "../lib/dashboard-fetch";
 import { caseStatusLabels, getCaseStatusLabel } from "../lib/status-labels";
-import { DashboardHeader } from "./DashboardShell";
+import { DashboardHeader, useDashboardConsultant } from "./DashboardShell";
 
 type CaseRow = { id: string; case_number: string; status: string; objective: string | null; submitted_at: string | null; updated_at: string; assigned_consultant_id?: string | null; locked_by_other?: boolean; locked_by_name?: string | null; diagnostic_clients: { full_name: string; email_display: string } | null; diagnostic_ai_assessments?: Array<{ structured_result: { overallScore?: number; readinessLevel?: string; technicalAlerts?: string[] } }> };
 type Summary = { counts: Record<string, number>; recent: CaseRow[]; averageHours: number | null; reviewSlaHours: number };
 
 export function OverviewClient() {
+  const consultant = useDashboardConsultant();
+  const displayName = consultant?.display_name.trim();
   const [data, setData] = useState<Summary | null>(null); const [error, setError] = useState(false);
   useEffect(() => {
     let active = true;
@@ -22,7 +24,7 @@ export function OverviewClient() {
     return () => { active = false; window.clearInterval(interval); window.removeEventListener("focus", load); };
   }, []);
   return <>
-    <DashboardHeader eyebrow="Segunda-feira · central de análise" title="Bom trabalho, consultora." description="Prioridades organizadas para começar pelos casos que mais precisam de atenção." action={<Link className="outline-action" href="/dashboard/diagnosticos">Ver todos os diagnósticos <ArrowUpRight /></Link>} />
+    <DashboardHeader eyebrow="Segunda-feira · central de análise" title={displayName ? `Bom trabalho, ${displayName}.` : "Bom trabalho."} description="Prioridades organizadas para começar pelos casos que mais precisam de atenção." action={<Link className="outline-action" href="/dashboard/diagnosticos">Ver todos os diagnósticos <ArrowUpRight /></Link>} />
     {error ? <DashboardError /> : !data ? <DashboardLoading /> : <>
       <section className="metric-grid">
         <Metric number={data.counts.new_cases ?? 0} label="Aguardando análise" detail="Recebidos" accent />
