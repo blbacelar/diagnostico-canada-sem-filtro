@@ -14,6 +14,7 @@ import {
 import { diagnosticSections, missingRequiredQuestions } from "../../../../lib/questions";
 import { processAssessment } from "../../../../lib/cases";
 import { sendSubmissionConfirmation } from "../../../../lib/email";
+import { operationalConfig } from "../../../../lib/operational-config";
 
 const expectedTime = "até 5 dias úteis";
 
@@ -83,7 +84,7 @@ export async function POST(request: Request) {
         submission_id: submission.id,
         version: (previous?.version ?? 0) + 1,
         status: "processing",
-        methodology_version: "1.0.0",
+        methodology_version: operationalConfig.methodologyVersion,
         model: process.env.OPEN_ROUTER_MODEL ?? "openai/gpt-5.6-terra",
         structured_result: {},
       })

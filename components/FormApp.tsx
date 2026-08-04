@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, ArrowLeft, ArrowRight, Check, Cloud, CloudOff, LockKeyhole, Pencil, Send } from "lucide-react";
 import { formatCurrencyAmount, formatCurrencyEditingAmount, normalizeCurrencyInput } from "../lib/currency";
+import { operationalConfig } from "../lib/operational-config";
 import { diagnosticSections, layoutQuestionRows, missingRequiredQuestions, visibleQuestions } from "../lib/questions";
 import type { DiagnosticQuestion, FormAnswers } from "../lib/types";
 import { cn } from "../lib/utils";
@@ -137,7 +138,7 @@ export function FormApp({ initialToken }: { initialToken?: string }) {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
-        body: JSON.stringify({ consent: true, policyVersion: "2026-08-03", idempotencyKey }),
+        body: JSON.stringify({ consent: true, policyVersion: operationalConfig.policyVersion, idempotencyKey }),
       });
       const data = await response.json() as { error?: string; code?: string; caseNumber: string; expectedTime: string };
       if (!response.ok) {

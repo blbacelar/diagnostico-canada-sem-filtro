@@ -2,6 +2,7 @@
 
 import { useRef, useState, type FormEvent } from "react";
 import { ArrowRight, Check, Clock3, LockKeyhole, Mail, Save } from "lucide-react";
+import { operationalConfig } from "../lib/operational-config";
 import { resumeLinkSchema, sanitizedUtm, startDiagnosticSchema } from "../lib/schemas";
 
 type Mode = "start" | "resume";
@@ -64,7 +65,7 @@ export function LandingClient() {
           email: form.get("email"),
           emailConfirmation: form.get("emailConfirmation"),
           consent: form.get("consent") === "on",
-          policyVersion: "2026-08-03",
+          policyVersion: operationalConfig.policyVersion,
           source: "hotmart",
           website: form.get("website"),
           utm: sanitizedUtm(new URLSearchParams(window.location.search)),

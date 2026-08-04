@@ -4,6 +4,7 @@ import { getAdminSupabase } from "../../../../lib/supabase";
 import { createFormToken, hashFormToken, tokenCookie } from "../../../../lib/tokens";
 import { sendContinuationEmail } from "../../../../lib/email";
 import { newCaseNumber } from "../../../../lib/cases";
+import { operationalConfig } from "../../../../lib/operational-config";
 
 const neutralMessage = "Se os dados puderem ser processados, você receberá um link pessoal para continuar. Confira também a pasta de spam.";
 
@@ -34,7 +35,7 @@ export async function POST(request: Request) {
     }
     const token = createFormToken();
     await admin.from("diagnostic_access_tokens").update({ revoked_at: now }).eq("case_id", diagnosticCase.id).is("revoked_at", null);
-    const { error: tokenError } = await admin.from("diagnostic_access_tokens").insert({ case_id: diagnosticCase.id, token_hash: hashFormToken(token), expires_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() });
+    const { error: tokenError } = await admin.from("diagnostic_access_tokens").insert({ case_id: diagnosticCase.id, token_hash: hashFormToken(token), expires_at: new Date(Date.now() + operationalConfig.formLinkDays * 24 * 60 * 60 * 1000).toISOString() });
     if (tokenError) throw tokenError;
     await admin.from("diagnostic_consents").insert({ case_id: diagnosticCase.id, consent_type: "diagnostic_processing", policy_version: payload.policyVersion, granted: true, source: "hotmart" });
     const emailResult = await sendContinuationEmail({ to: client.email_normalized, fullName: client.full_name, caseNumber: diagnosticCase.case_number, token });

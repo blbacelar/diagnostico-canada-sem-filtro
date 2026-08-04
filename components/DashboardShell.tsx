@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BookOpen, ChevronRight, CircleGauge, FileText, LayoutList, LogOut, Mail, Settings, ShieldCheck, Users } from "lucide-react";
+import { BookOpen, ChevronRight, CircleGauge, LayoutList, LogOut, Mail, Settings, ShieldCheck, Users } from "lucide-react";
 import { getBrowserSupabase } from "../lib/supabase";
 import { BrandMark } from "./BrandMark";
 
@@ -47,8 +47,4 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
 export function DashboardHeader({ eyebrow, title, description, action }: { eyebrow: string; title: string; description?: string; action?: React.ReactNode }) {
   return <header className="dashboard-header"><div><p className="eyebrow">{eyebrow}</p><h1>{title}</h1>{description && <p>{description}</p>}</div>{action}</header>;
-}
-
-export function ModulePlaceholder({ number, title, description, children }: { number: string; title: string; description: string; children?: React.ReactNode }) {
-  return <><DashboardHeader eyebrow={`Módulo ${number}`} title={title} description={description} />{children ?? <section className="module-empty"><FileText /><h2>Pronto para dados reais</h2><p>Este módulo é alimentado pelas tabelas isoladas do diagnóstico assim que a migration for revisada e aplicada.</p></section>}</>;
 }

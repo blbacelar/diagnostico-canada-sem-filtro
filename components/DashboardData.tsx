@@ -1,21 +1,15 @@
 "use client";
-/* eslint-disable @typescript-eslint/no-explicit-any -- API payloads are narrowed at their call sites. */
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AlertTriangle, ArrowUpRight, Clock3, Search, SlidersHorizontal, UsersRound } from "lucide-react";
-import { getBrowserSupabase } from "../lib/supabase";
 import type { ClientListItem } from "../lib/clients";
+import { authorizedFetch } from "../lib/dashboard-fetch";
+import { operationalConfig } from "../lib/operational-config";
 import { DashboardHeader } from "./DashboardShell";
 
 type CaseRow = { id: string; case_number: string; status: string; objective: string | null; submitted_at: string | null; updated_at: string; diagnostic_clients: { full_name: string; email_display: string } | null; diagnostic_ai_assessments?: Array<{ structured_result: { overallScore?: number; readinessLevel?: string; technicalAlerts?: string[] } }> };
 type Summary = { counts: Record<string, number>; recent: CaseRow[]; averageHours: number | null };
-
-async function authorizedFetch<T = any>(path: string, signal?: AbortSignal): Promise<T> {
-  const { data } = await getBrowserSupabase().auth.getSession();
-  const response = await fetch(path, { headers: { Authorization: `Bearer ${data.session?.access_token ?? ""}` }, signal });
-  if (!response.ok) throw new Error(); return await response.json() as T;
-}
 
 const statusLabels: Record<string, string> = { client_draft: "Rascunho do cliente", submitted: "Formulário enviado", ai_processing: "Processando IA", awaiting_triage: "Aguardando triagem", in_review: "Em análise", awaiting_client: "Aguardando cliente", ready_for_approval: "Pronto para aprovação", approved: "Aprovado", sending: "Enviando", sent: "Enviado", processing_error: "Erro no processamento", archived: "Arquivado" };
 
@@ -33,7 +27,7 @@ export function OverviewClient() {
       </section>
       <section className="dashboard-columns">
         <div className="priority-list"><header><div><p className="eyebrow">Fila prioritária</p><h2>Casos para revisar agora</h2></div><Link href="/dashboard/diagnosticos">Lista completa</Link></header>{data.recent.length ? data.recent.map((item) => <CaseLine key={item.id} item={item} />) : <div className="empty-row">Nenhum caso aguardando revisão.</div>}</div>
-        <aside className="service-time"><Clock3 /><p className="eyebrow">Tempo de resposta</p><strong>{data.averageHours === null ? "—" : `${data.averageHours}h`}</strong><span>Média entre envio e primeira revisão</span><div><b style={{ width: data.averageHours ? `${Math.min(100, data.averageHours / 48 * 100)}%` : "0%" }} /></div><small>Meta interna · até 48h</small></aside>
+        <aside className="service-time"><Clock3 /><p className="eyebrow">Tempo de resposta</p><strong>{data.averageHours === null ? "—" : `${data.averageHours}h`}</strong><span>Média entre envio e primeira revisão</span><div><b style={{ width: data.averageHours ? `${Math.min(100, data.averageHours / operationalConfig.reviewSlaHours * 100)}%` : "0%" }} /></div><small>Meta interna · até {operationalConfig.reviewSlaHours}h</small></aside>
       </section>
     </>}
   </>;

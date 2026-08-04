@@ -1,6 +1,7 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { generateText, Output } from "ai";
 import { z } from "zod";
+import { operationalConfig } from "./operational-config";
 import type { FormAnswers } from "./types";
 
 export const assessmentSchema = z.object({
@@ -22,8 +23,8 @@ export const assessmentSchema = z.object({
   followUpQuestions: z.array(z.string()).max(15),
   executiveSummary: z.string().max(3_000),
   confidence: z.number().min(0).max(1),
-  methodologyVersion: z.literal("1.0.0"),
-  promptVersion: z.literal("2026-08-03"),
+  methodologyVersion: z.literal(operationalConfig.methodologyVersion),
+  promptVersion: z.literal(operationalConfig.promptVersion),
   model: z.string(),
 });
 
@@ -41,5 +42,5 @@ export async function generateAssessment(answers: FormAnswers) {
     system: `Você apoia duas consultoras na triagem educacional de projetos Canadá. Sua saída é um rascunho interno. Não afirme elegibilidade ou inelegibilidade, não garanta visto, permissão, residência ou aprovação, não escolha programa migratório conclusivamente e não dê aconselhamento jurídico definitivo. Não invente regras, critérios, valores ou programas. Diferencie fatos informados de inferências, marque ausências e recomende validação profissional para elegibilidade, inadmissibilidade, recusas, histórico criminal ou médico, permanência irregular, status migratório e escolha de programa. Não exponha raciocínio interno; use somente justificativas curtas e verificáveis. ${methodology}`,
     prompt: `Analise o snapshot abaixo. Dados pessoais diretos foram excluídos do prompt. Respostas:\n${JSON.stringify(answers)}`,
   });
-  return assessmentSchema.parse({ ...output, methodologyVersion: "1.0.0", promptVersion: "2026-08-03", model: modelId });
+  return assessmentSchema.parse({ ...output, methodologyVersion: operationalConfig.methodologyVersion, promptVersion: operationalConfig.promptVersion, model: modelId });
 }
