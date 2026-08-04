@@ -44,4 +44,46 @@ describe("parecer concluído", () => {
     expect(container.querySelector(".review-editor-header")).toBeTruthy();
     expect(container.querySelector(".review-editor-header .secondary-button")).toHaveTextContent("Pré-visualizar");
   });
+
+  it("reidrata os campos salvos no formato do banco", async () => {
+    detailFetch
+      .mockResolvedValueOnce({
+        case: { id: "case-review", case_number: "CSF-2026-0002", status: "in_review" },
+        client: { full_name: "Pessoa em análise", email_display: "cliente@example.com" },
+      })
+      .mockResolvedValueOnce({
+        review: {
+          coherent_path: "Caminho já escrito",
+          assumptions_to_review: "Premissas já escritas",
+          next_steps: ["Primeiro passo", "Segundo passo", "Terceiro passo"],
+          recommended_resources: ["Recurso salvo"],
+        },
+      });
+
+    render(<ReviewEditor caseId="case-review" />);
+
+    expect(await screen.findByDisplayValue("Caminho já escrito")).toBeVisible();
+    expect(screen.getByDisplayValue("Premissas já escritas")).toBeVisible();
+    expect(screen.getByDisplayValue("Primeiro passo")).toBeVisible();
+    expect(screen.getByDisplayValue("Segundo passo")).toBeVisible();
+    expect(screen.getByDisplayValue("Terceiro passo")).toBeVisible();
+  });
+
+  it("confirma visualmente o envio para aprovação", async () => {
+    detailFetch.mockImplementation(async (path, init) => {
+      if (init?.method === "PUT") return { review: { status: "ready_for_approval" } };
+      if (path.includes("/api/diagnostics/reviews")) return { review: null };
+      return {
+        case: { id: "case-review", case_number: "CSF-2026-0002", status: "in_review" },
+        client: { full_name: "Pessoa em análise", email_display: "cliente@example.com" },
+      };
+    });
+
+    render(<ReviewEditor caseId="case-review" />);
+    const button = await screen.findByRole("button", { name: "Pronto para aprovação" });
+    button.click();
+
+    expect(await screen.findByRole("status")).toHaveTextContent("Parecer salvo e enviado para aprovação.");
+    expect(detailFetch).toHaveBeenCalledWith("/api/diagnostics/reviews", expect.objectContaining({ method: "PUT" }));
+  });
 });

@@ -65,7 +65,7 @@ export const requestInformationSchema = z.object({
   idempotencyKey: z.string().uuid(),
 });
 
-export const reviewSchema = z.object({
+const reviewFields = z.object({
   caseId: z.string().uuid(),
   coherentPath: z.string().max(12_000),
   assumptionsToReview: z.string().max(12_000),
@@ -73,11 +73,20 @@ export const reviewSchema = z.object({
   immediateFocus: z.string().max(12_000),
   studyStrategy: z.string().max(12_000),
   validationRisks: z.string().max(12_000),
-  nextSteps: z.array(z.string().min(1).max(2_000)).min(3).max(3),
   additionalNotes: z.string().max(12_000),
   recommendedResources: z.array(z.string().max(2_000)).max(20),
-  status: z.enum(["draft", "ready_for_approval"]),
 });
+
+export const reviewSchema = z.discriminatedUnion("status", [
+  reviewFields.extend({
+    nextSteps: z.array(z.string().max(2_000)).length(3),
+    status: z.literal("draft"),
+  }),
+  reviewFields.extend({
+    nextSteps: z.array(z.string().trim().min(1).max(2_000)).length(3),
+    status: z.literal("ready_for_approval"),
+  }),
+]);
 
 export const approveSchema = z.object({ caseId: z.string().uuid(), reviewId: z.string().uuid() });
 
