@@ -74,7 +74,7 @@ export async function requireFormCase(request: Request) {
   const tokenHash = hashFormToken(token);
   const { data, error } = await admin
     .from("diagnostic_access_tokens")
-    .select("id, case_id, expires_at, revoked_at, diagnostic_cases!inner(id, case_number, status, client_id, submitted_at)")
+    .select("id, case_id, expires_at, revoked_at, diagnostic_cases!inner(id, case_number, status, client_id, submitted_at, source_metadata)")
     .eq("token_hash", tokenHash)
     .maybeSingle();
   if (error) throw error;

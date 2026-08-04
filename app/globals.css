@@ -616,6 +616,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .detail-heading h1, .review-editor > header h1 { margin: 0; font: 400 clamp(50px,5.5vw,76px)/.95 var(--font-display), serif; }
 .detail-heading > div > p:not(.eyebrow), .review-editor > header > div > p:not(.eyebrow) { margin: 12px 0 0; color: var(--ink-mute); font-size: 12px; }
 .detail-actions { display: flex; gap: 10px; }
+.detail-action-group { display: grid; justify-items: end; gap: 8px; }
+.detail-action-error { max-width: 500px; margin: 0; color: var(--accent); font-size: 10px; text-align: right; }
 .detail-layout { display: grid; grid-template-columns: minmax(0,1fr) 278px; gap: 30px; margin-top: 30px; align-items: start; }
 .detail-content { min-width: 0; display: grid; gap: 25px; }
 .assessment-hero { min-height: 250px; padding: 38px; display: grid; grid-template-columns: 150px 1fr; gap: 36px; align-items: center; background: var(--ink); color: var(--paper); }
@@ -707,7 +709,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .review-editor-layout > aside ul { padding-left: 17px; }
 
 @media (max-width: 1100px) { .detail-layout, .review-editor-layout { grid-template-columns: 1fr; } .detail-sidebar, .review-editor-layout > aside { position: static; } }
-@media (max-width: 720px) { .detail-heading, .review-editor > header { align-items: start; flex-direction: column; } .detail-actions, .review-editor > header > div:last-child { width: 100%; } .detail-actions > *, .review-editor > header > div:last-child > * { flex: 1; } .assessment-hero { grid-template-columns: 1fr; } .analysis-grid, .priority-timeline > div { grid-template-columns: 1fr; } .original-answers dl div { grid-template-columns: 1fr; gap: 5px; } }
+@media (max-width: 720px) { .detail-heading, .review-editor > header { align-items: start; flex-direction: column; } .detail-action-group, .detail-actions, .review-editor > header > div:last-child { width: 100%; } .detail-action-group { justify-items: stretch; } .detail-action-error { text-align: left; } .detail-actions > *, .review-editor > header > div:last-child > * { flex: 1; } .assessment-hero { grid-template-columns: 1fr; } .analysis-grid, .priority-timeline > div { grid-template-columns: 1fr; } .original-answers dl div { grid-template-columns: 1fr; gap: 5px; } }
 
 /* Entrega e relatório */
 .delivery-page > header { padding: 28px 0 35px; display: flex; justify-content: space-between; align-items: end; border-bottom: 1px solid var(--rule); }

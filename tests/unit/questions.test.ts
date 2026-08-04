@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { diagnosticSections, layoutQuestionRows, missingRequiredQuestions, visibleQuestions } from "../../lib/questions";
+import { diagnosticSections, layoutQuestionRows, missingRequiredQuestions, pruneHiddenAnswers, visibleQuestions } from "../../lib/questions";
 
 const allConditionalAnswers = {
   has_children: true,
@@ -57,6 +57,29 @@ describe("perguntas condicionais", () => {
   it("considera arrays vazios como pendentes", () => {
     const preferences = diagnosticSections[8];
     expect(missingRequiredQuestions(preferences, { life_priorities: [] }).some(q => q.key === "life_priorities")).toBe(true);
+  });
+  it("remove dados condicionais antigos quando a situação muda", () => {
+    const answers = pruneHiddenAnswers({
+      marital_status: "Solteiro(a)",
+      spouse_summary: "Resumo antigo",
+      spouse_age: 40,
+      spouse_profession: "Fisioterapeuta",
+      has_children: false,
+      children_count: 2,
+      children_ages: "4 e 9 anos",
+      english_test: "Não",
+      english_test_details: "IELTS antigo",
+      has_refusal: "Não",
+      refusal_details: "Recusa antiga",
+    });
+
+    expect(answers).not.toHaveProperty("spouse_summary");
+    expect(answers).not.toHaveProperty("spouse_age");
+    expect(answers).not.toHaveProperty("spouse_profession");
+    expect(answers).not.toHaveProperty("children_count");
+    expect(answers).not.toHaveProperty("children_ages");
+    expect(answers).not.toHaveProperty("english_test_details");
+    expect(answers).not.toHaveProperty("refusal_details");
   });
 });
 

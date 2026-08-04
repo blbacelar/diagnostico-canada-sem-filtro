@@ -11,10 +11,13 @@ export async function POST(request: Request) {
   try {
     const payload = await parseJson(request, sendDiagnosticSchema, 40_000);
     const { admin, user } = await requireConsultant(request);
-    await claimCaseForReview(admin, payload.caseId, user.id);
     const key = getIdempotencyKey(request, payload.idempotencyKey);
     const { data: existing } = await admin.from("diagnostic_email_deliveries").select("id,status,provider_id").eq("idempotency_key", key).maybeSingle();
     if (existing) return json({ delivery: existing });
+    const diagnosticCase = await claimCaseForReview(admin, payload.caseId, user.id);
+    if (diagnosticCase.status !== "approved") {
+      throw new ApiError(409, diagnosticCase.status === "sent" ? "Este diagnóstico já foi enviado." : "O diagnóstico não está pronto para entrega.", diagnosticCase.status === "sent" ? "ALREADY_DELIVERED" : "DELIVERY_NOT_READY");
+    }
     const { data: review } = await admin.from("diagnostic_reviews").select("id,status").eq("id", payload.reviewId).eq("case_id", payload.caseId).maybeSingle();
     if (!review || review.status !== "approved") throw new ApiError(409, "A entrega exige um parecer aprovado.", "APPROVAL_REQUIRED");
     const [target, config] = await Promise.all([caseClient(admin, payload.caseId), getOperationalConfig(admin)]);

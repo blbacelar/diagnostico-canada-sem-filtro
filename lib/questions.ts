@@ -170,6 +170,16 @@ export function visibleQuestions(section: DiagnosticSection, answers: FormAnswer
   return section.questions.filter((question) => !question.showWhen || question.showWhen(answers));
 }
 
+export function pruneHiddenAnswers(answers: FormAnswers) {
+  const next = { ...answers };
+  for (const section of diagnosticSections) {
+    for (const question of section.questions) {
+      if (question.showWhen && !question.showWhen(next)) delete next[question.key];
+    }
+  }
+  return next;
+}
+
 export function layoutQuestionRows(section: DiagnosticSection, answers: FormAnswers) {
   return visibleQuestions(section, answers).reduce<Array<{ key: string; questions: DiagnosticSection["questions"] }>>((rows, question) => {
     const key = question.layoutRow ?? question.key;

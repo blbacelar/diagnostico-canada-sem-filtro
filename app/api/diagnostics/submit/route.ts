@@ -45,13 +45,16 @@ export async function POST(request: Request) {
     diagnosticSubmissionAnswersSchema.parse(answers);
 
     const now = new Date().toISOString();
+    const sourceMetadata = caseRow.source_metadata && typeof caseRow.source_metadata === "object" ? caseRow.source_metadata as Record<string, unknown> : {};
+    const consultantId = sourceMetadata.source === "consultant_reassessment" && typeof sourceMetadata.created_by_consultant_id === "string" ? sourceMetadata.created_by_consultant_id : null;
+    const submissionActor = consultantId ? "consultant" : "client";
     const { data: submission, error: submissionError } = await admin
       .from("diagnostic_submissions")
       .insert({
         case_id: caseRow.id,
         answers_snapshot: answers,
         schema_version: 1,
-        consent_snapshot: { granted: true, policyVersion: payload.policyVersion, submittedAt: now },
+        consent_snapshot: { granted: true, policyVersion: payload.policyVersion, submittedAt: now, submittedBy: submissionActor },
         idempotency_key: idempotencyKey,
         submitted_at: now,
       })
@@ -97,10 +100,10 @@ export async function POST(request: Request) {
       .single();
     if (assessmentError) throw assessmentError;
 
-    await admin.from("diagnostic_cases").update({ status: "ai_processing", submitted_at: now }).eq("id", caseRow.id);
+    await admin.from("diagnostic_cases").update({ status: "ai_processing", submitted_at: now, objective: String(answers.main_objective ?? "").trim() || null }).eq("id", caseRow.id);
     await admin.from("diagnostic_access_tokens").update({ revoked_at: now }).eq("case_id", caseRow.id).is("revoked_at", null);
     await admin.from("diagnostic_status_history").insert([
-      { case_id: caseRow.id, from_status: "client_draft", to_status: "submitted", actor_type: "client", note: "Snapshot imutável criado." },
+      { case_id: caseRow.id, from_status: "client_draft", to_status: "submitted", actor_type: submissionActor, actor_user_id: consultantId, note: consultantId ? "Snapshot imutável criado pela consultoria após atualização das informações." : "Snapshot imutável criado." },
       { case_id: caseRow.id, from_status: "submitted", to_status: "ai_processing", actor_type: "system", note: "Análise estruturada iniciada." },
     ]);
 
@@ -142,7 +145,8 @@ export async function POST(request: Request) {
     waitUntil(processAssessment(caseRow.id, submission.id, assessment.id));
     await writeAudit(admin, {
       caseId: caseRow.id,
-      actorType: "client",
+      actorUserId: consultantId,
+      actorType: submissionActor,
       action: "diagnostic.submitted",
       metadata: { submissionId: submission.id, schemaVersion: 1 },
     });

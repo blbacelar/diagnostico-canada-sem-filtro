@@ -5,7 +5,7 @@ import Link from "next/link";
 import { AlertTriangle, ArrowLeft, ArrowRight, Check, Cloud, CloudOff, LockKeyhole, Pencil, Send } from "lucide-react";
 import { formatCurrencyAmount, formatCurrencyEditingAmount, normalizeCurrencyInput } from "../lib/currency";
 import { operationalConfig } from "../lib/operational-config";
-import { diagnosticSections, layoutQuestionRows, visibleQuestions } from "../lib/questions";
+import { diagnosticSections, layoutQuestionRows, pruneHiddenAnswers, visibleQuestions } from "../lib/questions";
 import { validateQuestionAnswer, validationErrorsForDiagnostic, validationErrorsForSection } from "../lib/diagnostic-validation";
 import type { DiagnosticQuestion, FormAnswers } from "../lib/types";
 import { cn } from "../lib/utils";
@@ -17,10 +17,10 @@ import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Textarea } from "./ui/textarea";
 
-type SessionData = { caseNumber: string; status: string; answers: FormAnswers; client: { fullName: string }; submittedAt: string | null; policyVersion?: string };
+type SessionData = { caseId: string; caseNumber: string; status: string; answers: FormAnswers; client: { fullName: string }; submittedAt: string | null; policyVersion?: string; consultantManaged?: boolean };
 type SaveState = "idle" | "saving" | "saved" | "offline" | "error";
 
-export function FormApp({ initialToken }: { initialToken?: string }) {
+export function FormApp({ initialToken, dashboardReturn = false }: { initialToken?: string; dashboardReturn?: boolean }) {
   const [session, setSession] = useState<SessionData | null>(null);
   const [answers, setAnswers] = useState<FormAnswers>({});
   const [step, setStep] = useState(0);
@@ -31,10 +31,12 @@ export function FormApp({ initialToken }: { initialToken?: string }) {
   const [submitError, setSubmitError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState<{ caseNumber: string; expectedTime: string } | null>(null);
+  const answersRef = useRef<FormAnswers>({});
   const initialized = useRef(false);
   const submitInFlight = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isReview = step === diagnosticSections.length;
+  const dashboardMode = dashboardReturn || session?.consultantManaged === true;
 
   useEffect(() => {
     async function loadSession() {
@@ -46,7 +48,8 @@ export function FormApp({ initialToken }: { initialToken?: string }) {
         const data = await response.json() as SessionData & { error?: string };
         if (!response.ok) throw new Error(data.error ?? "Este link não é mais válido.");
         setSession(data);
-        setAnswers(data.answers ?? {});
+        answersRef.current = data.answers ?? {};
+        setAnswers(answersRef.current);
         if (initialToken && window.location.search) window.history.replaceState({}, "", "/formulario");
         initialized.current = true;
       } catch (error) {
@@ -95,23 +98,19 @@ export function FormApp({ initialToken }: { initialToken?: string }) {
   const progress = isReview ? 100 : Math.round((completedSections / diagnosticSections.length) * 100);
 
   function update(question: DiagnosticQuestion, value: unknown) {
-    setAnswers((current) => {
-      const next = { ...current, [question.key]: value };
-      if (question.key === "has_children" && value !== true) {
-        next.children_count = null;
-        next.children_ages = null;
-      }
-      return next;
-    });
+    const nextAnswers = pruneHiddenAnswers({ ...answersRef.current, [question.key]: value });
+    answersRef.current = nextAnswers;
+    setAnswers(nextAnswers);
     setFieldErrors((current) => {
       if (!(question.key in current)) return current;
       const message = validateQuestionAnswer(question, value, true);
       const next = { ...current };
       if (message) next[question.key] = message;
       else delete next[question.key];
-      if (question.key === "has_children" && value !== true) {
-        delete next.children_count;
-        delete next.children_ages;
+      for (const section of diagnosticSections) {
+        for (const conditionalQuestion of section.questions) {
+          if (conditionalQuestion.showWhen && !(conditionalQuestion.key in nextAnswers)) delete next[conditionalQuestion.key];
+        }
       }
       return next;
     });
@@ -195,10 +194,10 @@ export function FormApp({ initialToken }: { initialToken?: string }) {
   }
 
   if (loading) return <FormStatus title="Abrindo seu diagnóstico" detail="Validando o link pessoal com segurança…" />;
-  if (fatalError) return <FormStatus error title="Este link não pode ser usado" detail={fatalError} />;
-  if (submitted) return <FormStatus success title="Respostas recebidas" detail={`O diagnóstico ${submitted.caseNumber} foi enviado. Prazo estimado: ${submitted.expectedTime}. A análise automática ficará restrita às consultoras até a revisão profissional.`} />;
+  if (fatalError) return <FormStatus error title="Este link não pode ser usado" detail={fatalError} dashboardHref={dashboardReturn ? "/dashboard/diagnosticos" : undefined} />;
+  if (submitted) return <FormStatus success title="Respostas recebidas" detail={`O diagnóstico ${submitted.caseNumber} foi enviado. Prazo estimado: ${submitted.expectedTime}. A análise automática ficará restrita às consultoras até a revisão profissional.`} dashboardHref={dashboardMode ? `/dashboard/diagnosticos/${session?.caseId ?? ""}` : undefined} />;
   if (!session) return null;
-  if (session.status !== "client_draft") return <FormStatus success title="Diagnóstico já enviado" detail={`As respostas de ${session.caseNumber} estão protegidas e não podem mais ser alteradas. Se a equipe precisar de informações adicionais, você receberá uma nova comunicação.`} />;
+  if (session.status !== "client_draft") return <FormStatus success title="Diagnóstico já enviado" detail={`As respostas de ${session.caseNumber} estão protegidas e não podem mais ser alteradas. Se a equipe precisar de informações adicionais, você receberá uma nova comunicação.`} dashboardHref={dashboardMode ? `/dashboard/diagnosticos/${session.caseId}` : undefined} />;
 
   const section = diagnosticSections[step];
   const sectionQuestions = isReview ? [] : visibleQuestions(section, answers);
@@ -234,7 +233,7 @@ export function FormApp({ initialToken }: { initialToken?: string }) {
         </aside>
         <main className="form-main">
           {isReview ? (
-            <ReviewAnswers answers={answers} incompleteSections={incompleteSections} onEdit={setStep} onSubmit={submit} submitting={isSubmitting} error={submitError} />
+            <ReviewAnswers answers={answers} incompleteSections={incompleteSections} onEdit={setStep} onSubmit={submit} submitting={isSubmitting} error={submitError} consultantManaged={dashboardMode} />
           ) : (
             <section className="question-section" aria-labelledby="section-title">
               <p className="eyebrow">Seção {section.number} de 11</p>
@@ -352,20 +351,20 @@ function CurrencyInput({ id, name, value, currencyCode, placeholder, required, "
   );
 }
 
-function ReviewAnswers({ answers, incompleteSections, onEdit, onSubmit, submitting, error }: { answers: FormAnswers; incompleteSections: number[]; onEdit: (index: number) => void; onSubmit: () => void; submitting: boolean; error: string }) {
+function ReviewAnswers({ answers, incompleteSections, onEdit, onSubmit, submitting, error, consultantManaged }: { answers: FormAnswers; incompleteSections: number[]; onEdit: (index: number) => void; onSubmit: () => void; submitting: boolean; error: string; consultantManaged: boolean }) {
   return (
     <section className="question-section review-section">
       <p className="eyebrow">Revisão final</p><h1>Revise antes de enviar</h1><p className="section-intro">Depois do envio, suas respostas formarão um registro protegido e só poderão ser reabertas pela equipe.</p>
       <div className="review-list">
         {diagnosticSections.map((section, index) => <article key={section.key}><header><div><small>Seção {section.number}</small><h2>{section.title}</h2></div><button type="button" onClick={() => onEdit(index)}><Pencil /> Editar</button></header>{incompleteSections[index] > 0 && <p className="review-warning"><AlertTriangle /> {incompleteSections[index]} pendência(s)</p>}<dl>{visibleQuestions(section, answers).filter((question) => answers[question.key] !== undefined && answers[question.key] !== "").map((question) => { const answer = answers[question.key]; const formatted = question.format === "currency" ? formatCurrencyAmount(answer, String(answers.funds_currency ?? "")) : Array.isArray(answer) ? answer.join(", ") : typeof answer === "boolean" ? (answer ? "Sim" : "Não") : String(answer); return <div key={question.key}><dt>{question.label}</dt><dd>{formatted}</dd></div>; })}</dl></article>)}
       </div>
-      <label className="final-consent"><input type="checkbox" defaultChecked readOnly /><span><Check />Confirmo que revisei as respostas e autorizo seu uso na elaboração do diagnóstico profissional.</span></label>
+      <label className="final-consent"><input type="checkbox" defaultChecked readOnly /><span><Check />{consultantManaged ? "Confirmo que revisei as informações atualizadas e quero enviar esta nova versão para análise." : "Confirmo que revisei as respostas e autorizo seu uso na elaboração do diagnóstico profissional."}</span></label>
       {error && <p className="inline-alert" role="alert"><AlertTriangle />{error}</p>}
       <div className="form-actions"><button className="secondary-button" type="button" onClick={() => onEdit(diagnosticSections.length - 1)}><ArrowLeft /> Voltar</button><button className="primary-button" type="button" disabled={submitting} onClick={onSubmit}>{submitting ? "Enviando…" : "Enviar para análise"}<Send /></button></div>
     </section>
   );
 }
 
-function FormStatus({ title, detail, error = false, success = false }: { title: string; detail: string; error?: boolean; success?: boolean }) {
-  return <main className="status-page"><BrandMark /><section><span className={`status-orbit ${error ? "error" : success ? "success" : ""}`}>{error ? <AlertTriangle /> : success ? <Check /> : <Cloud />}</span><p className="eyebrow">Diagnóstico Canadá Sem Filtro</p><h1>{title}</h1><p>{detail}</p>{error && <Link className="primary-button" href="/">Solicitar um novo link</Link>}</section></main>;
+function FormStatus({ title, detail, error = false, success = false, dashboardHref }: { title: string; detail: string; error?: boolean; success?: boolean; dashboardHref?: string }) {
+  return <main className="status-page"><BrandMark /><section><span className={`status-orbit ${error ? "error" : success ? "success" : ""}`}>{error ? <AlertTriangle /> : success ? <Check /> : <Cloud />}</span><p className="eyebrow">Diagnóstico Canadá Sem Filtro</p><h1>{title}</h1><p>{detail}</p>{dashboardHref ? <Link className="primary-button" href={dashboardHref}>Voltar ao dashboard</Link> : error && <Link className="primary-button" href="/">Solicitar um novo link</Link>}</section></main>;
 }

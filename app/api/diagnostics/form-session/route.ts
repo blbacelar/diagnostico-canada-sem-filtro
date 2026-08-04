@@ -13,13 +13,16 @@ export async function GET(request: Request) {
     for (const result of [clientResult, answersResult, consentResult]) if (result.error) throw result.error;
     if (!clientResult.data) throw new ApiError(404, "Cliente não encontrado.", "CLIENT_NOT_FOUND");
     const answers = Object.fromEntries((answersResult.data ?? []).map((row) => [row.question_key, row.answer]));
+    const sourceMetadata = caseRow.source_metadata && typeof caseRow.source_metadata === "object" ? caseRow.source_metadata as Record<string, unknown> : {};
     const response = json({
+      caseId: caseRow.id,
       caseNumber: caseRow.case_number,
       status: caseRow.status,
       submittedAt: caseRow.submitted_at,
       client: { fullName: clientResult.data.full_name },
       answers,
       policyVersion: consentResult.data?.policy_version ?? operationalConfig.policyVersion,
+      consultantManaged: sourceMetadata.source === "consultant_reassessment",
     });
     response.headers.append("Set-Cookie", tokenCookie(token));
     return response;
