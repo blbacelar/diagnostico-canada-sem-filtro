@@ -683,7 +683,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .timeline > div:not(:last-child)::before { content: ""; position: absolute; left: 2.5px; top: 10px; bottom: 0; width: 1px; background: var(--paper-edge); }
 .timeline strong { font-size: 9px; text-transform: capitalize; }
 .timeline small { color: var(--ink-mute); font: 400 7px var(--font-mono), monospace; }
-.review-editor-header { position: sticky; top: 0; z-index: 30; margin: -48px 36px 0; padding: 0 0 18px; background: var(--paper); box-shadow: 0 14px 24px rgba(23,34,43,.07); }
+.review-editor-header { position: sticky; top: 0; z-index: 30; margin: -48px 0 0; padding: 0 0 18px; background: var(--paper); box-shadow: 0 14px 24px rgba(23,34,43,.07); }
 .review-editor-header > .detail-back { padding-top: 10px; }
 .review-editor-header > header { padding: 27px 0 34px; display: flex; justify-content: space-between; align-items: end; border-bottom: 1px solid var(--rule); }
 .review-editor-header > header > div:last-child { display: grid; justify-items: end; gap: 8px; }
@@ -691,7 +691,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .review-save-error, .review-save-success { margin: 0; font-size: 10px; text-align: right; }
 .review-save-error { color: var(--accent); }
 .review-save-success { color: var(--success); }
-.review-editor-layout { margin: 30px 36px 0; display: grid; grid-template-columns: minmax(0,1fr); gap: 30px; align-items: start; }
+.review-editor-layout { margin-top: 30px; display: grid; grid-template-columns: minmax(0,1fr); gap: 30px; align-items: start; }
 .review-editor-layout > main { display: grid; gap: 20px; }
 .human-note { padding: 16px 18px; display: flex; gap: 12px; align-items: center; border: 1px solid rgba(47,102,85,.28); background: rgba(47,102,85,.07); }
 .human-note > span { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; background: var(--success); color: white; font: 500 10px var(--font-mono), monospace; }
@@ -715,7 +715,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .review-editor-layout > aside ul { padding-left: 17px; }
 
 @media (max-width: 1100px) { .detail-layout, .review-editor-layout { grid-template-columns: 1fr; } .detail-sidebar, .review-editor-layout > aside { position: static; } }
-@media (max-width: 820px) { .review-editor-header { margin: -36px 0 0; } .review-editor-layout { margin: 30px 0 0; } }
+@media (max-width: 820px) { .review-editor-header { margin-top: -36px; } }
 @media (max-width: 720px) { .detail-heading, .review-editor-header > header { align-items: start; flex-direction: column; } .detail-action-group, .detail-actions, .review-editor-header > header > div:last-child, .review-action-buttons { width: 100%; } .detail-action-group { justify-items: stretch; } .detail-action-error, .review-save-error, .review-save-success { text-align: left; } .detail-actions > *, .review-action-buttons > * { flex: 1; } .assessment-hero { grid-template-columns: 1fr; } .analysis-grid, .priority-timeline > div { grid-template-columns: 1fr; } .original-answers dl div { grid-template-columns: 1fr; gap: 5px; } }
 
 /* Entrega e relatório */
