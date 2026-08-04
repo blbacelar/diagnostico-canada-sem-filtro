@@ -1,11 +1,26 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
 const TOKEN_BYTES = 32;
+const DEV_FALLBACK_SECRET = "local-dev-form-token-secret-32chars";
+
+let hasWarnedAboutSecret = false;
 
 function secret() {
   const value = process.env.FORM_TOKEN_SECRET;
-  if (!value || value.length < 32) throw new Error("FORM_TOKEN_SECRET precisa ter pelo menos 32 caracteres.");
-  return value;
+
+  if (value && value.length >= 32) return value;
+
+  if (process.env.NODE_ENV !== "production") {
+    if (!hasWarnedAboutSecret) {
+      hasWarnedAboutSecret = true;
+      console.warn(
+        "FORM_TOKEN_SECRET ausente ou curto; usando fallback apenas para desenvolvimento local.",
+      );
+    }
+    return DEV_FALLBACK_SECRET;
+  }
+
+  throw new Error("FORM_TOKEN_SECRET precisa ter pelo menos 32 caracteres.");
 }
 
 export function createFormToken() {

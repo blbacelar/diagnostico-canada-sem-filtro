@@ -1,4 +1,70 @@
 import { approveSchema } from "../../../../lib/schemas";
 import { ApiError, handleApiError, json, parseJson, requireConsultant, writeAudit } from "../../../../lib/api";
 import { claimCaseForReview } from "../../../../lib/case-lock";
-export async function POST(request:Request){try{const payload=await parseJson(request,approveSchema,10_000);const{admin,user}=await requireConsultant(request);await claimCaseForReview(admin,payload.caseId,user.id);const{data:review,error}=await admin.from("diagnostic_reviews").select("id,status,case_id,version").eq("id",payload.reviewId).eq("case_id",payload.caseId).single();if(error||!review)throw new ApiError(404,"Parecer não encontrado.");if(review.status==="approved")return json({status:"approved"});if(review.status!=="ready_for_approval")throw new ApiError(409,"O parecer precisa estar pronto para aprovação.");const now=new Date().toISOString();await admin.from("diagnostic_reviews").update({status:"approved",approved_at:now,approved_by:user.id}).eq("id",review.id).eq("consultant_id",user.id);await admin.from("diagnostic_cases").update({status:"approved"}).eq("id",payload.caseId).eq("assigned_consultant_id",user.id);await admin.from("diagnostic_status_history").insert({case_id:payload.caseId,from_status:"ready_for_approval",to_status:"approved",actor_type:"consultant",actor_user_id:user.id,note:`Parecer v${review.version} aprovado.`});await writeAudit(admin,{caseId:payload.caseId,actorUserId:user.id,actorType:"consultant",action:"review.approved",metadata:{reviewId:review.id,version:review.version}});return json({status:"approved",approvedAt:now});}catch(error){return handleApiError(error);}}
+export async function POST(request: Request) {
+	try {
+		const payload = await parseJson(request, approveSchema, 10_000);
+		const { admin, user } = await requireConsultant(request);
+		const diagnosticCase = await claimCaseForReview(admin, payload.caseId, user.id);
+		const { data: review, error } = await admin
+			.from("diagnostic_reviews")
+			.select("id,status,case_id,version")
+			.eq("id", payload.reviewId)
+			.eq("case_id", payload.caseId)
+			.single();
+
+		if (error || !review) throw new ApiError(404, "Parecer não encontrado.");
+
+		// Keep case status aligned when the review is already approved but the case is stale.
+		if (review.status === "approved") {
+			if (diagnosticCase.status !== "approved") {
+				await admin
+					.from("diagnostic_cases")
+					.update({ status: "approved" })
+					.eq("id", payload.caseId)
+					.eq("assigned_consultant_id", user.id);
+			}
+			return json({ status: "approved", reviewId: review.id });
+		}
+
+		if (review.status !== "ready_for_approval") {
+			throw new ApiError(409, "O parecer precisa estar pronto para aprovação.");
+		}
+
+		const now = new Date().toISOString();
+		const { data: updatedReview } = await admin
+			.from("diagnostic_reviews")
+			.update({ status: "approved", approved_at: now, approved_by: user.id })
+			.eq("id", review.id)
+			.eq("case_id", payload.caseId)
+			.select("id")
+			.maybeSingle();
+		if (!updatedReview) {
+			throw new ApiError(409, "Não foi possível aprovar o parecer deste diagnóstico.", "APPROVAL_UPDATE_CONFLICT");
+		}
+		await admin
+			.from("diagnostic_cases")
+			.update({ status: "approved" })
+			.eq("id", payload.caseId)
+			.eq("assigned_consultant_id", user.id);
+		await admin.from("diagnostic_status_history").insert({
+			case_id: payload.caseId,
+			from_status: "ready_for_approval",
+			to_status: "approved",
+			actor_type: "consultant",
+			actor_user_id: user.id,
+			note: `Parecer v${review.version} aprovado.`,
+		});
+		await writeAudit(admin, {
+			caseId: payload.caseId,
+			actorUserId: user.id,
+			actorType: "consultant",
+			action: "review.approved",
+			metadata: { reviewId: review.id, version: review.version },
+		});
+
+		return json({ status: "approved", approvedAt: now, reviewId: review.id });
+	} catch (error) {
+		return handleApiError(error);
+	}
+}

@@ -23,6 +23,9 @@ const { detailFetch } = vi.hoisted(() => ({
 }));
 
 vi.mock("../../components/DiagnosticDetail", () => ({ detailFetch }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
 
 import { DeliveryComposer } from "../../components/DeliveryComposer";
 
