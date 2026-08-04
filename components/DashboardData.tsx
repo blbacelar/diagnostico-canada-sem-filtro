@@ -3,16 +3,17 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { AlertTriangle, ArrowUpRight, Clock3, Search, SlidersHorizontal } from "lucide-react";
+import { AlertTriangle, ArrowUpRight, Clock3, Search, SlidersHorizontal, UsersRound } from "lucide-react";
 import { getBrowserSupabase } from "../lib/supabase";
+import type { ClientListItem } from "../lib/clients";
 import { DashboardHeader } from "./DashboardShell";
 
 type CaseRow = { id: string; case_number: string; status: string; objective: string | null; submitted_at: string | null; updated_at: string; diagnostic_clients: { full_name: string; email_display: string } | null; diagnostic_ai_assessments?: Array<{ structured_result: { overallScore?: number; readinessLevel?: string; technicalAlerts?: string[] } }> };
 type Summary = { counts: Record<string, number>; recent: CaseRow[]; averageHours: number | null };
 
-async function authorizedFetch<T = any>(path: string): Promise<T> {
+async function authorizedFetch<T = any>(path: string, signal?: AbortSignal): Promise<T> {
   const { data } = await getBrowserSupabase().auth.getSession();
-  const response = await fetch(path, { headers: { Authorization: `Bearer ${data.session?.access_token ?? ""}` } });
+  const response = await fetch(path, { headers: { Authorization: `Bearer ${data.session?.access_token ?? ""}` }, signal });
   if (!response.ok) throw new Error(); return await response.json() as T;
 }
 
@@ -53,6 +54,58 @@ export function DiagnosticsListClient() {
     <div className="list-toolbar"><label><Search /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nome, e-mail ou número" /></label><label><SlidersHorizontal /><select value={status} onChange={(event) => setStatus(event.target.value)}><option value="">Todos os status</option>{Object.entries(statusLabels).map(([value,label]) => <option value={value} key={value}>{label}</option>)}</select></label></div>
     {error ? <DashboardError /> : loading ? <DashboardLoading /> : <div className="diagnostic-table"><div className="table-head"><span>Cliente / diagnóstico</span><span>Objetivo</span><span>Preparo</span><span>Status</span><span>Atualização</span><span /></div>{items.length ? items.map((item) => <CaseLine key={item.id} item={item} />) : <div className="empty-row">Nenhum diagnóstico encontrado.</div>}</div>}
   </>;
+}
+
+const dateFormatter = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+
+export function ClientsListClient() {
+  const [items, setItems] = useState<ClientListItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      setLoading(true);
+      const query = new URLSearchParams();
+      if (search.trim()) query.set("search", search.trim());
+      authorizedFetch<{ items: ClientListItem[] }>(`/api/dashboard/clients?${query}`, controller.signal)
+        .then((data) => { setItems(data.items); setError(false); })
+        .catch((fetchError: unknown) => {
+          if (!(fetchError instanceof DOMException && fetchError.name === "AbortError")) setError(true);
+        })
+        .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    }, 250);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [search]);
+
+  return <>
+    <DashboardHeader eyebrow="Relacionamento" title="Clientes" description="Consulte cada pessoa, seus diagnósticos e a atividade mais recente em um único lugar." />
+    <div className="clients-toolbar">
+      <label><Search /><input aria-label="Buscar clientes" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nome ou e-mail" /></label>
+      {!loading && !error && <p><UsersRound /><strong>{items.length}</strong> {items.length === 1 ? "cliente encontrado" : "clientes encontrados"}</p>}
+    </div>
+    {error ? <DashboardError /> : loading ? <DashboardLoading /> : <div className="clients-table">
+      <div className="clients-table-head"><span>Cliente</span><span>Diagnósticos</span><span>Caso mais recente</span><span>Status</span><span>Última atividade</span><span /></div>
+      {items.length ? items.map((item) => <ClientLine key={item.id} item={item} />) : <div className="empty-row">{search ? "Nenhum cliente corresponde à busca." : "Nenhum cliente cadastrado ainda."}</div>}
+    </div>}
+  </>;
+}
+
+function ClientLine({ item }: { item: ClientListItem }) {
+  const content = <>
+    <div className="client-identity"><div className="case-avatar">{item.full_name.split(" ").filter(Boolean).map((part) => part[0]).slice(0, 2).join("")}</div><div><strong>{item.full_name}</strong><small>{item.email_display}</small></div></div>
+    <span className="client-case-count"><strong>{item.case_count}</strong><small>{item.case_count === 1 ? "diagnóstico" : "diagnósticos"}</small></span>
+    <div className="client-latest-case"><strong>{item.latest_case?.case_number ?? "Sem diagnóstico"}</strong><small>{item.latest_case?.objective ?? "Objetivo não informado"}</small></div>
+    {item.latest_case ? <span className={`status-pill status-${item.latest_case.status}`}>{statusLabels[item.latest_case.status] ?? item.latest_case.status}</span> : <span className="status-pill">Sem caso</span>}
+    <time dateTime={item.last_activity_at}>{dateFormatter.format(new Date(item.last_activity_at))}</time>
+    <ArrowUpRight className="row-arrow" />
+  </>;
+
+  return item.latest_case
+    ? <Link className="client-line" href={`/dashboard/diagnosticos/${item.latest_case.id}`}>{content}</Link>
+    : <div className="client-line client-line--static">{content}</div>;
 }
 
 export function DashboardLoading() { return <div className="dashboard-loading"><span /><span /><span /></div>; }
