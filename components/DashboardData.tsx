@@ -13,15 +13,22 @@ type Summary = { counts: Record<string, number>; recent: CaseRow[]; averageHours
 
 export function OverviewClient() {
   const [data, setData] = useState<Summary | null>(null); const [error, setError] = useState(false);
-  useEffect(() => { authorizedFetch<Summary>("/api/dashboard/summary").then(setData).catch(() => setError(true)); }, []);
+  useEffect(() => {
+    let active = true;
+    const load = () => authorizedFetch<Summary>("/api/dashboard/summary").then((summary) => { if (active) { setData(summary); setError(false); } }).catch(() => { if (active) setError(true); });
+    load();
+    const interval = window.setInterval(load, 30_000);
+    window.addEventListener("focus", load);
+    return () => { active = false; window.clearInterval(interval); window.removeEventListener("focus", load); };
+  }, []);
   return <>
     <DashboardHeader eyebrow="Segunda-feira · central de análise" title="Bom trabalho, consultora." description="Prioridades organizadas para começar pelos casos que mais precisam de atenção." action={<Link className="outline-action" href="/dashboard/diagnosticos">Ver todos os diagnósticos <ArrowUpRight /></Link>} />
     {error ? <DashboardError /> : !data ? <DashboardLoading /> : <>
       <section className="metric-grid">
-        <Metric number={data.counts.awaiting_triage ?? 0} label="Aguardando triagem" detail="Novos casos" accent />
-        <Metric number={data.counts.technical_attention ?? 0} label="Atenção técnica" detail="Revisão prioritária" warning />
-        <Metric number={data.counts.in_review ?? 0} label="Pareceres em elaboração" detail="Em andamento" />
-        <Metric number={data.counts.ready_for_approval ?? 0} label="Prontos para aprovação" detail="Revisão final" success />
+        <Metric number={data.counts.new_cases ?? 0} label="Aguardando análise" detail="Recebidos" accent />
+        <Metric number={data.counts.in_review ?? 0} label="Em revisão" detail="Em andamento" warning />
+        <Metric number={data.counts.ready_to_send ?? 0} label="Prontos para envio" detail="Revisão concluída" />
+        <Metric number={data.counts.delivered ?? 0} label="Diagnósticos enviados" detail="Entregues" success />
       </section>
       <section className="dashboard-columns">
         <div className="priority-list"><header><div><p className="eyebrow">Fila prioritária</p><h2>Casos para revisar agora</h2></div><Link href="/dashboard/diagnosticos">Lista completa</Link></header>{data.recent.length ? data.recent.map((item) => <CaseLine key={item.id} item={item} />) : <div className="empty-row">Nenhum caso aguardando revisão.</div>}</div>
