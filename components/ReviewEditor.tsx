@@ -2,8 +2,9 @@
 /* eslint-disable react-hooks/exhaustive-deps -- Autosave intentionally reacts only to draft changes. */
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Check, Eye, FileText, Save, Sparkles } from "lucide-react";
+import { ArrowLeft, Check, Eye, FileText, Save } from "lucide-react";
 import { detailFetch, type CaseDetailData } from "./DiagnosticDetail";
 import { DashboardError } from "./DashboardData";
 import { isReviewImmutable } from "../lib/case-lifecycle";
@@ -58,6 +59,7 @@ function toDraft(review: Record<string, unknown>): ReviewDraft {
 }
 
 export function ReviewEditor({ caseId }: { caseId: string }) {
+  const router = useRouter();
   const [detail, setDetail] = useState<CaseDetailData | null>(null);
   const [draft, setDraft] = useState<ReviewDraft>(emptyDraft);
   const [state, setState] = useState("Carregando…");
@@ -121,7 +123,10 @@ export function ReviewEditor({ caseId }: { caseId: string }) {
         body: JSON.stringify({ caseId, ...draft, status }),
       });
       setState(status === "draft" ? "Tudo salvo" : "Pronto para aprovação");
-      if (status === "ready_for_approval") setNotice("Parecer salvo e enviado para aprovação.");
+      if (status === "ready_for_approval") {
+        setNotice("Parecer salvo e enviado para aprovação.");
+        router.push(`/dashboard/diagnosticos/${caseId}/email`);
+      }
     });
     saveChain.current = operation.catch(() => undefined);
     try {
@@ -150,5 +155,5 @@ export function ReviewEditor({ caseId }: { caseId: string }) {
   if (!detail) return <div className="dashboard-loading"><span /><span /></div>;
   if (isReviewImmutable(detail.case.status)) return <div className="module-empty"><FileText /><h2>Este parecer está concluído</h2><p>O conteúdo aprovado é um registro protegido e não pode mais ser alterado. Abra o relatório para consultar a versão existente ou volte ao caso para iniciar um novo diagnóstico.</p><Link className="primary-button" href={`/dashboard/diagnosticos/${caseId}/relatorio`}><Eye /> Ver relatório</Link></div>;
 
-  return <div className="review-editor"><div className="review-editor-header"><div className="detail-back"><Link href={`/dashboard/diagnosticos/${caseId}`} onClick={saveBeforeLeaving}><ArrowLeft /> Voltar ao caso</Link><span><Save /> {state}</span></div><header><div><p className="eyebrow">Parecer profissional</p><h1>{detail.client.full_name}</h1><p>{detail.case.case_number} · edição estruturada e versionada</p></div><div className="review-actions"><div className="review-action-buttons"><Link className="secondary-button" href={`/dashboard/diagnosticos/${caseId}/relatorio`}><Eye /> Pré-visualizar</Link><button className="primary-button" type="button" onClick={() => void save("ready_for_approval")} disabled={saving}><Check /> {saving ? "Salvando…" : "Pronto para aprovação"}</button></div>{error && <p className="review-save-error" role="alert">{error}</p>}{notice && <p className="review-save-success" role="status">{notice}</p>}</div></header></div><div className="review-editor-layout"><main><div className="human-note"><span>H</span><p><strong>Texto humano</strong>O conteúdo abaixo compõe a entrega. Sugestões automáticas nunca sobrescrevem sua escrita.</p></div>{fields.map(([key,label,placeholder]) => <label className="review-field" key={key}><span>{label}</span><textarea value={draft[key]} placeholder={placeholder} onChange={(event) => setDraft((current) => ({ ...current, [key]: event.target.value }))} /></label>)}<fieldset className="next-steps"><legend>Três próximos passos prioritários</legend>{draft.nextSteps.map((value,index) => <label key={index}><span>{index+1}</span><input value={value} onChange={(event) => setDraft((current) => ({ ...current, nextSteps: current.nextSteps.map((item,itemIndex) => itemIndex === index ? event.target.value : item) }))} placeholder={`Passo prioritário ${index+1}`} /></label>)}</fieldset></main><aside><p className="eyebrow"><Sparkles /> Rascunho automático</p><h2>Referências da análise</h2><section><strong>Resumo executivo</strong><p>{detail.assessment?.structured_result.executiveSummary ?? "Análise indisponível."}</p></section><section><strong>Perguntas sugeridas</strong><ul>{detail.assessment?.structured_result.followUpQuestions?.map((item) => <li key={item}>{item}</li>)}</ul></section><section><strong>Alertas técnicos</strong><ul>{detail.assessment?.structured_result.technicalAlerts?.map((item) => <li key={item}>{item}</li>)}</ul></section></aside></div></div>;
+  return <div className="review-editor"><div className="review-editor-header"><div className="detail-back"><Link href={`/dashboard/diagnosticos/${caseId}`} onClick={saveBeforeLeaving}><ArrowLeft /> Voltar ao caso</Link><span><Save /> {state}</span></div><header><div><p className="eyebrow">Parecer profissional</p><h1>{detail.client.full_name}</h1><p>{detail.case.case_number} · edição estruturada e versionada</p></div><div className="review-actions"><div className="review-action-buttons"><Link className="secondary-button" href={`/dashboard/diagnosticos/${caseId}/relatorio`}><Eye /> Pré-visualizar</Link><button className="primary-button" type="button" onClick={() => void save("ready_for_approval")} disabled={saving}><Check /> {saving ? "Salvando…" : "Pronto para aprovação"}</button></div>{error && <p className="review-save-error" role="alert">{error}</p>}{notice && <p className="review-save-success" role="status">{notice}</p>}</div></header></div><div className="review-editor-layout"><main><div className="human-note"><span>H</span><p><strong>Texto humano</strong>O conteúdo abaixo compõe a entrega. Sugestões automáticas nunca sobrescrevem sua escrita.</p></div>{fields.map(([key,label,placeholder]) => <label className="review-field" key={key}><span>{label}</span><textarea value={draft[key]} placeholder={placeholder} onChange={(event) => setDraft((current) => ({ ...current, [key]: event.target.value }))} /></label>)}<fieldset className="next-steps"><legend>Três próximos passos prioritários</legend>{draft.nextSteps.map((value,index) => <label key={index}><span>{index+1}</span><input value={value} onChange={(event) => setDraft((current) => ({ ...current, nextSteps: current.nextSteps.map((item,itemIndex) => itemIndex === index ? event.target.value : item) }))} placeholder={`Passo prioritário ${index+1}`} /></label>)}</fieldset></main></div></div>;
 }

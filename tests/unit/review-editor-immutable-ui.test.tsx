@@ -4,8 +4,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 
-const { detailFetch } = vi.hoisted(() => ({ detailFetch: vi.fn() }));
+const { detailFetch, routerPush } = vi.hoisted(() => ({ detailFetch: vi.fn(), routerPush: vi.fn() }));
 vi.mock("../../components/DiagnosticDetail", () => ({ detailFetch }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: routerPush }) }));
 
 import { ReviewEditor } from "../../components/ReviewEditor";
 
@@ -83,7 +84,9 @@ describe("parecer concluído", () => {
     const button = await screen.findByRole("button", { name: "Pronto para aprovação" });
     button.click();
 
-    expect(await screen.findByRole("status")).toHaveTextContent("Parecer salvo e enviado para aprovação.");
-    expect(detailFetch).toHaveBeenCalledWith("/api/diagnostics/reviews", expect.objectContaining({ method: "PUT" }));
+  expect(await screen.findByRole("status")).toHaveTextContent("Parecer salvo e enviado para aprovação.");
+  expect(detailFetch).toHaveBeenCalledWith("/api/diagnostics/reviews", expect.objectContaining({ method: "PUT" }));
+    expect(routerPush).toHaveBeenCalledWith("/dashboard/diagnosticos/case-review/email");
+    expect(screen.queryByText("Referências da análise")).toBeNull();
   });
 });
