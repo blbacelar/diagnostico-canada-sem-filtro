@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { AlertTriangle, ArrowUpRight, Clock3, Search, SlidersHorizontal, UsersRound } from "lucide-react";
+import { AlertTriangle, ArrowUpRight, Clock3, LockKeyhole, Search, SlidersHorizontal, UsersRound } from "lucide-react";
 import type { ClientListItem } from "../lib/clients";
 import { authorizedFetch } from "../lib/dashboard-fetch";
 import { caseStatusLabels, getCaseStatusLabel } from "../lib/status-labels";
 import { DashboardHeader } from "./DashboardShell";
 
-type CaseRow = { id: string; case_number: string; status: string; objective: string | null; submitted_at: string | null; updated_at: string; diagnostic_clients: { full_name: string; email_display: string } | null; diagnostic_ai_assessments?: Array<{ structured_result: { overallScore?: number; readinessLevel?: string; technicalAlerts?: string[] } }> };
+type CaseRow = { id: string; case_number: string; status: string; objective: string | null; submitted_at: string | null; updated_at: string; assigned_consultant_id?: string | null; locked_by_other?: boolean; locked_by_name?: string | null; diagnostic_clients: { full_name: string; email_display: string } | null; diagnostic_ai_assessments?: Array<{ structured_result: { overallScore?: number; readinessLevel?: string; technicalAlerts?: string[] } }> };
 type Summary = { counts: Record<string, number>; recent: CaseRow[]; averageHours: number | null; reviewSlaHours: number };
 
 export function OverviewClient() {
@@ -42,7 +42,10 @@ function Metric({ number, label, detail, accent, warning, success }: { number: n
 
 function CaseLine({ item }: { item: CaseRow }) {
   const result = item.diagnostic_ai_assessments?.[0]?.structured_result;
-  return <Link className="case-line" href={`/dashboard/diagnosticos/${item.id}`}><div className="case-avatar">{item.diagnostic_clients?.full_name?.split(" ").map((part) => part[0]).slice(0,2).join("")}</div><div className="case-person"><strong>{item.diagnostic_clients?.full_name}</strong><small>{item.case_number} · {item.objective ?? "Objetivo não informado"}</small></div><span className={`status-pill status-${item.status}`}>{getCaseStatusLabel(item.status)}</span>{result?.technicalAlerts?.length ? <span className="alert-count"><AlertTriangle />{result.technicalAlerts.length}</span> : <span className="score">{result?.overallScore ?? "—"}<small>/100</small></span>}<ArrowUpRight className="row-arrow" /></Link>;
+  const content = <><div className="case-avatar">{item.diagnostic_clients?.full_name?.split(" ").map((part) => part[0]).slice(0,2).join("")}</div><div className="case-person"><strong>{item.diagnostic_clients?.full_name}</strong><small>{item.case_number} · {item.objective ?? "Objetivo não informado"}</small>{item.locked_by_other && <small className="case-lock-label"><LockKeyhole /> Em revisão por {item.locked_by_name ?? "outra consultora"}</small>}</div><span className={`status-pill status-${item.status}`}>{getCaseStatusLabel(item.status)}</span>{item.locked_by_other ? <span className="case-lock-icon" title={`Em revisão por ${item.locked_by_name ?? "outra consultora"}`}><LockKeyhole /></span> : result?.technicalAlerts?.length ? <span className="alert-count"><AlertTriangle />{result.technicalAlerts.length}</span> : <span className="score">{result?.overallScore ?? "—"}<small>/100</small></span>}{item.locked_by_other ? <LockKeyhole className="row-arrow" /> : <ArrowUpRight className="row-arrow" />}</>;
+  return item.locked_by_other
+    ? <div className="case-line case-line--locked" aria-disabled="true">{content}</div>
+    : <Link className="case-line" href={`/dashboard/diagnosticos/${item.id}`}>{content}</Link>;
 }
 
 export function DiagnosticsListClient() {
@@ -108,4 +111,4 @@ function ClientLine({ item }: { item: ClientListItem }) {
 }
 
 export function DashboardLoading() { return <div className="dashboard-loading"><span /><span /><span /></div>; }
-export function DashboardError() { return <div className="dashboard-error"><AlertTriangle /><h2>Não foi possível carregar os dados</h2><p>Confirme a conexão e tente atualizar a página.</p></div>; }
+export function DashboardError({ title = "Não foi possível carregar os dados", detail = "Confirme a conexão e tente atualizar a página." }: { title?: string; detail?: string } = {}) { return <div className="dashboard-error"><AlertTriangle /><h2>{title}</h2><p>{detail}</p></div>; }

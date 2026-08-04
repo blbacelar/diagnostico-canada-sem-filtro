@@ -13,7 +13,7 @@ type Review = ReportData["review"] & { status: string };
 export function ReportPreviewClient({ caseId }: { caseId: string }) {
   const [detail, setDetail] = useState<CaseDetailData | null>(null);
   const [review, setReview] = useState<Review | null>(null);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     Promise.all([
@@ -22,10 +22,10 @@ export function ReportPreviewClient({ caseId }: { caseId: string }) {
     ]).then(([caseDetail, reviewData]) => {
       setDetail(caseDetail);
       setReview(reviewData.review);
-    }).catch(() => setError(true));
+    }).catch((fetchError) => setError(fetchError instanceof Error ? fetchError.message : "Não foi possível abrir o relatório."));
   }, [caseId]);
 
-  if (error) return <DashboardError />;
+  if (error) return <DashboardError title="Relatório indisponível" detail={error} />;
   if (!detail) return <DashboardLoading />;
   if (!detail.assessment || !review) {
     return <div className="module-empty">

@@ -26,9 +26,9 @@ export async function detailFetch<T = any>(path: string, init?: RequestInit): Pr
 }
 
 export function DiagnosticDetailClient({ caseId }: { caseId: string }) {
-  const [data, setData] = useState<CaseDetailData | null>(null); const [error, setError] = useState(false);
-  useEffect(() => { detailFetch<CaseDetailData>(`/api/dashboard/cases/${caseId}`).then(setData).catch(() => setError(true)); }, [caseId]);
-  if (error) return <DashboardError />; if (!data) return <DashboardLoading />;
+  const [data, setData] = useState<CaseDetailData | null>(null); const [error, setError] = useState("");
+  useEffect(() => { detailFetch<CaseDetailData>(`/api/dashboard/cases/${caseId}`).then(setData).catch((fetchError) => setError(fetchError instanceof Error ? fetchError.message : "Não foi possível abrir o diagnóstico.")); }, [caseId]);
+  if (error) return <DashboardError title="Diagnóstico indisponível" detail={error} />; if (!data) return <DashboardLoading />;
   const ai = data.assessment?.structured_result;
   return <>
     <div className="detail-back"><Link href="/dashboard/diagnosticos"><ArrowLeft /> Diagnósticos</Link><span>{data.case.case_number}</span></div>
