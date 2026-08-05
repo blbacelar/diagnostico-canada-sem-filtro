@@ -70,7 +70,10 @@ describe("recuperação de senha", () => {
     expect(response.status).toBe(200);
     expect(body.message).toBe(neutralMessage);
     expect(mocks.sendPasswordRecoveryEmail).not.toHaveBeenCalled();
-    expect(mocks.resetPasswordForEmail).not.toHaveBeenCalled();
+    expect(mocks.resetPasswordForEmail).toHaveBeenCalledWith(
+      "nao-existe@example.com",
+      { redirectTo: "https://diagnostico-canada-sem-filtro.vercel.app/recuperar-senha/confirmar?recovery=1" },
+    );
   });
 
   it("rejeita e-mail inválido antes de chamar os provedores", async () => {

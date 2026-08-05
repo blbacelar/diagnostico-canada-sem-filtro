@@ -9,7 +9,7 @@ const neutralMessage = "Se a conta estiver ativa, enviaremos as instruções de 
 async function sendRecoveryFallback(admin: ReturnType<typeof getAdminSupabase>, email: string, resetUrl: string) {
   const { error } = await admin.auth.resetPasswordForEmail(email, { redirectTo: resetUrl });
   if (error) {
-    console.error("password_recovery_fallback_failed", error.name);
+    console.error("password_recovery_fallback_failed", error.name, error.message);
   }
 }
 
@@ -20,17 +20,19 @@ export async function POST(request: Request) {
     if (payload.website) return json({ message: neutralMessage });
 
     const admin = getAdminSupabase();
+    const resetUrl = new URL("/recuperar-senha/confirmar", new URL(request.url).origin);
+    resetUrl.searchParams.set("recovery", "1");
     const { data, error } = await admin.auth.admin.generateLink({
       type: "recovery",
       email: payload.email,
     });
 
     if (error || !data.properties.hashed_token) {
-      console.error("password_recovery_link_failed", error?.name ?? "missing_token");
+      console.error("password_recovery_link_failed", error?.name ?? "missing_token", error?.message ?? "no_message");
+      await sendRecoveryFallback(admin, payload.email, resetUrl.toString());
       return json({ message: neutralMessage });
     }
 
-    const resetUrl = new URL("/recuperar-senha/confirmar", new URL(request.url).origin);
     resetUrl.searchParams.set("recovery", "1");
     resetUrl.searchParams.set("token_hash", data.properties.hashed_token);
 
