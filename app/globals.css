@@ -16,6 +16,10 @@
 }
 
 :root {
+  --font-display: "Instrument Serif", "Times New Roman", serif;
+  --font-body: "Spectral", Georgia, serif;
+  --font-sans: "IBM Plex Sans", "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", "SFMono-Regular", Menlo, monospace;
   --paper: #edf3f5;
   --paper-shade: #e3ecef;
   --paper-light: #f6fafb;
@@ -135,7 +139,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .process-grid b { color: var(--accent); font: 500 10px var(--font-mono), monospace; letter-spacing: .14em; }
 .process-grid h3 { margin: 22px 0 12px; font: 400 28px/1.1 var(--font-display), serif; }
 .process-grid p { color: var(--ink-soft); font: 400 16px/1.65 var(--font-body), serif; }
-.legal-note { max-width: 720px; margin: 72px auto 0; text-align: center; color: var(--ink-mute); font-size: 12px; }
+.legal-note { max-width: 920px; margin: 72px auto 0; padding: 20px 24px; border: 1px solid var(--paper-edge); background: rgba(246,250,251,.72); color: var(--ink-mute); }
+.legal-note h3 { margin: 0 0 12px; color: var(--ink); font: 500 11px var(--font-mono), monospace; letter-spacing: .11em; text-transform: uppercase; }
+.legal-note p { margin: 0; font-size: 12px; line-height: 1.65; }
+.legal-note p + p { margin-top: 10px; }
 .public-footer { max-width: 1380px; min-height: 116px; margin: 0 auto; border-top: 1px solid var(--rule); display: flex; align-items: center; gap: 36px; color: var(--ink-mute); font: 500 9px var(--font-mono), monospace; letter-spacing: .1em; text-transform: uppercase; }
 .public-footer p { margin-left: auto; }
 
@@ -832,6 +839,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .report-heading h2 { margin: 0; font: 400 34px/1 var(--font-display), serif; }
 .report-lede { font-size: 19px; }
 .report-callout { margin: 30px 0; padding: 20px; border-left: 2px solid var(--warning); background: rgba(145,108,42,.08); color: var(--ink-soft); font-size: 13px; }
+.report-legal-disclaimer { margin: 0 0 24px; padding: 20px; border-left: 2px solid var(--warning); background: rgba(145,108,42,.08); color: var(--ink-soft); }
+.report-legal-disclaimer h3 { margin: 0 0 12px; color: var(--ink); font: 500 10px var(--font-mono), monospace; letter-spacing: .1em; text-transform: uppercase; }
+.report-legal-disclaimer p { margin: 0; font-size: 13px; line-height: 1.65; }
+.report-legal-disclaimer p + p { margin-top: 10px; }
 .report-score { padding: 25px 0; display: grid; grid-template-columns: 100px 45px 1fr; align-items: center; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
 .report-score > strong { color: var(--accent); font: 400 68px/.8 var(--font-display), serif; }
 .report-score > span { color: var(--ink-mute); font: 500 8px var(--font-mono), monospace; }

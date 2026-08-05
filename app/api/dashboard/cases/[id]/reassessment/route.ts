@@ -23,10 +23,10 @@ type SourceAnswer = {
   schema_version: number;
 };
 
+type ConsultantContext = Awaited<ReturnType<typeof requireConsultant>>;
+
 async function createReassessmentFallback(
-  admin: ReturnType<typeof requireConsultant> extends Promise<infer T>
-    ? T["admin"]
-    : never,
+  admin: ConsultantContext["admin"],
   sourceCase: SourceCase,
   consultantId: string,
   token: string,

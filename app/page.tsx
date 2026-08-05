@@ -1,6 +1,7 @@
 import { ArrowDown } from "lucide-react";
 import { BrandMark } from "../components/BrandMark";
 import { LandingClient } from "../components/LandingClient";
+import { legalDisclaimerParagraphs, legalDisclaimerTitle } from "../lib/legal-disclaimer";
 import { getOperationalConfigWithFallback } from "../lib/operational-config.server";
 
 export default async function HomePage() {
@@ -16,7 +17,12 @@ export default async function HomePage() {
           <article><b>02</b><h3>A equipe organiza a leitura</h3><p>A tecnologia estrutura os dados e sinaliza pontos que merecem atenção — sem decidir por você.</p></article>
           <article><b>03</b><h3>Uma consultora revisa</h3><p>O parecer final só é entregue depois de análise humana, com limites e próximos passos claros.</p></article>
         </div>
-        <p className="legal-note">Este diagnóstico tem finalidade educacional e de planejamento. Não promete elegibilidade, aprovação migratória ou aconselhamento jurídico definitivo.</p>
+        <section className="legal-note" aria-label={legalDisclaimerTitle}>
+          <h3>{legalDisclaimerTitle}</h3>
+          {legalDisclaimerParagraphs.map((paragraph) => (
+            <p key={paragraph}>{paragraph}</p>
+          ))}
+        </section>
       </section>
       <footer className="public-footer"><BrandMark compact /><p>© 2026 Canadá Sem Filtro</p><a href="/login">Área das consultoras</a></footer>
     </main>

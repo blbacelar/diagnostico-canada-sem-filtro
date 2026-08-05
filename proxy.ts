@@ -24,7 +24,7 @@ async function hasValidDashboardSession(request: NextRequest) {
   }
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   if (request.nextUrl.pathname.startsWith("/dashboard")) {
     const valid = await hasValidDashboardSession(request);
     if (!valid) {

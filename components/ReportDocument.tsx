@@ -1,4 +1,5 @@
 import type { ReportData } from "../lib/report";
+import { legalDisclaimerParagraphs, legalDisclaimerTitle } from "../lib/legal-disclaimer";
 import { PrintButton } from "./PrintButton";
 
 export function ReportDocument({
@@ -40,15 +41,12 @@ export function ReportDocument({
 
       <article className="report-paper">
         <ReportHeading number="01" title="Antes de começar" />
-        <p className="report-lede">
-          Este diagnóstico organiza informações e oferece uma leitura educacional do seu
-          momento. Ele não garante visto, permissão, residência permanente ou aprovação e não
-          substitui aconselhamento jurídico ou análise individual de elegibilidade.
-        </p>
-        <aside className="report-callout">
-          Toda decisão migratória, questão de inadmissibilidade, recusa, histórico criminal ou
-          médico e escolha de programa deve ser validada por profissional habilitado.
-        </aside>
+        <section className="report-legal-disclaimer" aria-label={legalDisclaimerTitle}>
+          <h3>{legalDisclaimerTitle}</h3>
+          {legalDisclaimerParagraphs.map((paragraph) => (
+            <p key={paragraph}>{paragraph}</p>
+          ))}
+        </section>
 
         <ReportHeading number="02" title="Resumo do perfil" />
         <p>{ai.executiveSummary}</p>

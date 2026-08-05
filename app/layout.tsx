@@ -1,12 +1,21 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-import { IBM_Plex_Mono, IBM_Plex_Sans, Instrument_Serif, Spectral } from "next/font/google";
+import "@fontsource/instrument-serif/400.css";
+import "@fontsource/instrument-serif/400-italic.css";
+import "@fontsource/spectral/300.css";
+import "@fontsource/spectral/300-italic.css";
+import "@fontsource/spectral/400.css";
+import "@fontsource/spectral/400-italic.css";
+import "@fontsource/spectral/500.css";
+import "@fontsource/spectral/500-italic.css";
+import "@fontsource/ibm-plex-sans/300.css";
+import "@fontsource/ibm-plex-sans/400.css";
+import "@fontsource/ibm-plex-sans/500.css";
+import "@fontsource/ibm-plex-sans/600.css";
+import "@fontsource/ibm-plex-mono/400.css";
+import "@fontsource/ibm-plex-mono/500.css";
+import "@fontsource/ibm-plex-mono/600.css";
 import "./globals.css";
-
-const display = Instrument_Serif({ variable: "--font-display", subsets: ["latin"], weight: "400", style: ["normal", "italic"] });
-const body = Spectral({ variable: "--font-body", subsets: ["latin"], weight: ["300", "400", "500"], style: ["normal", "italic"] });
-const sans = IBM_Plex_Sans({ variable: "--font-sans", subsets: ["latin"], weight: ["300", "400", "500", "600"] });
-const mono = IBM_Plex_Mono({ variable: "--font-mono", subsets: ["latin"], weight: ["400", "500", "600"] });
 
 export async function generateMetadata(): Promise<Metadata> {
   const requestHeaders = await headers();
@@ -24,5 +33,5 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="pt-BR"><body suppressHydrationWarning className={`${display.variable} ${body.variable} ${sans.variable} ${mono.variable}`}>{children}</body></html>;
+  return <html lang="pt-BR"><body suppressHydrationWarning>{children}</body></html>;
 }
