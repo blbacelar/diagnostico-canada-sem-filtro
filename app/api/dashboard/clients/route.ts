@@ -1,7 +1,8 @@
 import { handleApiError, json, requireConsultant } from "../../../../lib/api";
 import { buildClientList, type ClientCaseRecord, type ClientRecord } from "../../../../lib/clients";
+import { mapPurchaseWindowsByEmail, type AllowedEmailEventRow } from "../../../../lib/purchase-window";
 
-const clientColumns = "id,full_name,email_display,source,created_at,updated_at";
+const clientColumns = "id,full_name,email_normalized,email_display,source,created_at,updated_at";
 
 export async function GET(request: Request) {
   try {
@@ -35,7 +36,19 @@ export async function GET(request: Request) {
       .limit(500);
     if (casesError) throw casesError;
 
-    return json({ items: buildClientList(clients, (cases ?? []) as ClientCaseRecord[]) });
+    const normalizedEmails = [...new Set(clients.map((client) => client.email_normalized.toLowerCase()))];
+    const { data: purchaseRows, error: purchaseError } = await admin
+      .from("allowed_emails")
+      .select("email,last_event,updated_at,last_event_at,active")
+      .in("email", normalizedEmails)
+      .eq("active", true)
+      .order("last_event_at", { ascending: false })
+      .limit(500);
+    if (purchaseError) throw purchaseError;
+
+    const purchaseByEmail = mapPurchaseWindowsByEmail((purchaseRows ?? []) as AllowedEmailEventRow[]);
+
+    return json({ items: buildClientList(clients, (cases ?? []) as ClientCaseRecord[], purchaseByEmail) });
   } catch (error) {
     return handleApiError(error);
   }

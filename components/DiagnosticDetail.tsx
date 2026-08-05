@@ -54,6 +54,14 @@ export type CaseDetailData = {
     note: string | null;
     created_at: string;
   }>;
+  delivery_window?: {
+    purchase_date: string | null;
+    purchase_event: string | null;
+    days_since_purchase: number | null;
+    days_remaining: number | null;
+    eligible_to_send: boolean;
+    message: string;
+  };
 };
 
 export async function detailFetch<T = any>(

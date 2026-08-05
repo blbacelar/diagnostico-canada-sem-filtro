@@ -11,6 +11,12 @@ import { detailFetch, type CaseDetailData } from "./DiagnosticDetail";
 import { DashboardError } from "./DashboardData";
 import { Button } from "./ui/button";
 
+const purchaseDateFormatter = new Intl.DateTimeFormat("pt-BR", {
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+});
+
 export function DeliveryComposer({ caseId }: { caseId: string }) {
   const router = useRouter();
   const [detail, setDetail] = useState<CaseDetailData | null>(null);
@@ -26,6 +32,9 @@ export function DeliveryComposer({ caseId }: { caseId: string }) {
   );
   const [state, setState] = useState("");
   const [error, setError] = useState("");
+
+  const deliveryWindow = detail?.delivery_window;
+  const deliveryUnlocked = deliveryWindow?.eligible_to_send ?? true;
 
   useEffect(() => {
     detailFetch<CaseDetailData>(`/api/dashboard/cases/${caseId}`)
@@ -67,6 +76,13 @@ export function DeliveryComposer({ caseId }: { caseId: string }) {
 
   async function send() {
     if (!review) return;
+    if (!deliveryUnlocked) {
+      setError(
+        deliveryWindow?.message ??
+          "A entrega só é liberada após 7 dias da compra aprovada.",
+      );
+      return;
+    }
 
     setState("Enviando…");
     setError("");
@@ -169,6 +185,18 @@ export function DeliveryComposer({ caseId }: { caseId: string }) {
             <input value={detail.client.email_display} readOnly />
           </label>
 
+          {deliveryWindow?.purchase_date ? (
+            <label>
+              <span>Compra registrada</span>
+              <input
+                value={purchaseDateFormatter.format(
+                  new Date(deliveryWindow.purchase_date),
+                )}
+                readOnly
+              />
+            </label>
+          ) : null}
+
           <label>
             <span>Assunto</span>
             <input
@@ -229,9 +257,20 @@ export function DeliveryComposer({ caseId }: { caseId: string }) {
             </p>
           )}
 
+          {!deliveryUnlocked && (
+            <p className="form-error" role="alert">
+              {deliveryWindow?.message ??
+                "A entrega só é liberada após 7 dias da compra aprovada."}
+            </p>
+          )}
+
           <Button
             variant="default"
-            disabled={review?.status !== "approved" || state === "Enviando…"}
+            disabled={
+              review?.status !== "approved" ||
+              state === "Enviando…" ||
+              !deliveryUnlocked
+            }
             onClick={send}
           >
             <Send />

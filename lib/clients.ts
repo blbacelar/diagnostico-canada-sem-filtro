@@ -1,6 +1,9 @@
+import type { PurchaseWindow } from "./purchase-window";
+
 export type ClientRecord = {
   id: string;
   full_name: string;
+  email_normalized: string;
   email_display: string;
   source: string;
   created_at: string;
@@ -26,10 +29,17 @@ export type ClientListItem = {
   created_at: string;
   last_activity_at: string;
   case_count: number;
+  purchase_date: string | null;
+  purchase_event: string | null;
+  delivery_eligible: boolean;
   latest_case: Omit<ClientCaseRecord, "client_id" | "archived_at"> | null;
 };
 
-export function buildClientList(clients: ClientRecord[], cases: ClientCaseRecord[]): ClientListItem[] {
+export function buildClientList(
+  clients: ClientRecord[],
+  cases: ClientCaseRecord[],
+  purchaseByEmail = new Map<string, PurchaseWindow>(),
+): ClientListItem[] {
   const casesByClient = new Map<string, ClientCaseRecord[]>();
 
   for (const diagnosticCase of cases) {
@@ -45,6 +55,7 @@ export function buildClientList(clients: ClientRecord[], cases: ClientCaseRecord
         (left, right) => new Date(right.updated_at).getTime() - new Date(left.updated_at).getTime(),
       );
       const latest = clientCases[0] ?? null;
+      const purchaseWindow = purchaseByEmail.get(client.email_normalized.toLowerCase());
       return {
         id: client.id,
         full_name: client.full_name,
@@ -56,6 +67,9 @@ export function buildClientList(clients: ClientRecord[], cases: ClientCaseRecord
             ? latest.updated_at
             : client.updated_at,
         case_count: clientCases.length,
+        purchase_date: purchaseWindow?.purchaseDate ?? null,
+        purchase_event: purchaseWindow?.purchaseEvent ?? null,
+        delivery_eligible: purchaseWindow?.eligibleToSend ?? false,
         latest_case: latest
           ? {
               id: latest.id,

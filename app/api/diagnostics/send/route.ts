@@ -6,6 +6,7 @@ import { generateReportPdf, getReportData } from "../../../../lib/report";
 import { sendFinalDiagnosticWithPdf } from "../../../../lib/email";
 import { getOperationalConfig } from "../../../../lib/operational-config.server";
 import { claimCaseForReview } from "../../../../lib/case-lock";
+import { getPurchaseWindowForEmail } from "../../../../lib/purchase-window";
 
 export async function POST(request: Request) {
   try {
@@ -55,6 +56,11 @@ export async function POST(request: Request) {
     }
 
     const [target, config] = await Promise.all([caseClient(admin, payload.caseId), getOperationalConfig(admin)]);
+    const purchaseWindow = await getPurchaseWindowForEmail(admin, target.client.email_normalized);
+    if (!purchaseWindow.eligibleToSend) {
+      throw new ApiError(409, purchaseWindow.message, "PURCHASE_WAIT_PERIOD");
+    }
+
     const reportToken = createFormToken();
     await admin.from("diagnostic_report_tokens").insert({ case_id: payload.caseId, review_id: effectiveReview.id, token_hash: hashFormToken(reportToken), expires_at: new Date(Date.now() + config.reportLinkDays * 24 * 60 * 60 * 1000).toISOString() });
     const reportUrl = `${process.env.APP_URL ?? "http://localhost:3000"}/relatorio/${encodeURIComponent(reportToken)}`;

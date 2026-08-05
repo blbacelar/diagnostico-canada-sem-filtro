@@ -101,7 +101,7 @@ export function ClientsListClient() {
       {!loading && !error && <p><UsersRound /><strong>{items.length}</strong> {items.length === 1 ? "cliente encontrado" : "clientes encontrados"}</p>}
     </div>
     {error ? <DashboardError /> : loading ? <DashboardLoading /> : <div className="clients-table">
-      <div className="clients-table-head"><span>Cliente</span><span>Diagnósticos</span><span>Caso mais recente</span><span>Status</span><span>Última atividade</span><span /></div>
+      <div className="clients-table-head"><span>Cliente</span><span>Diagnósticos</span><span>Caso mais recente</span><span>Status</span><span>Compra</span><span>Última atividade</span><span /></div>
       {items.length ? items.map((item) => <ClientLine key={item.id} item={item} />) : <div className="empty-row">{search ? "Nenhum cliente corresponde à busca." : "Nenhum cliente cadastrado ainda."}</div>}
     </div>}
   </>;
@@ -113,6 +113,7 @@ function ClientLine({ item }: { item: ClientListItem }) {
     <span className="client-case-count"><strong>{item.case_count}</strong><small>{item.case_count === 1 ? "diagnóstico" : "diagnósticos"}</small></span>
     <div className="client-latest-case"><strong>{item.latest_case?.case_number ?? "Sem diagnóstico"}</strong><small>{item.latest_case?.objective ?? "Objetivo não informado"}</small></div>
     {item.latest_case ? <span className={`status-pill status-${item.latest_case.status}`}>{getCaseStatusLabel(item.latest_case.status)}</span> : <span className="status-pill">Sem caso</span>}
+    <span className="client-purchase">{item.purchase_date ? <time dateTime={item.purchase_date}>{dateFormatter.format(new Date(item.purchase_date))}</time> : "—"}</span>
     <time dateTime={item.last_activity_at}>{dateFormatter.format(new Date(item.last_activity_at))}</time>
     <ArrowUpRight className="row-arrow" />
   </>;

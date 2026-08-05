@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { buildClientList, type ClientCaseRecord, type ClientRecord } from "../../lib/clients";
 
 const clients: ClientRecord[] = [
-  { id: "client-1", full_name: "Ana Silva", email_display: "ana@example.com", source: "hotmart", created_at: "2026-07-01T10:00:00Z", updated_at: "2026-07-02T10:00:00Z" },
-  { id: "client-2", full_name: "Bruno Souza", email_display: "bruno@example.com", source: "hotmart", created_at: "2026-07-03T10:00:00Z", updated_at: "2026-07-03T10:00:00Z" },
+  { id: "client-1", full_name: "Ana Silva", email_normalized: "ana@example.com", email_display: "ana@example.com", source: "hotmart", created_at: "2026-07-01T10:00:00Z", updated_at: "2026-07-02T10:00:00Z" },
+  { id: "client-2", full_name: "Bruno Souza", email_normalized: "bruno@example.com", email_display: "bruno@example.com", source: "hotmart", created_at: "2026-07-03T10:00:00Z", updated_at: "2026-07-03T10:00:00Z" },
 ];
 
 const cases: ClientCaseRecord[] = [
