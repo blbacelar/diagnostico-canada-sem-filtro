@@ -292,7 +292,7 @@ export function LandingClient({ policyVersion }: { policyVersion: string }) {
                 <ArrowRight aria-hidden="true" />
               </Button>
             </form>
-            <Button className="text-button" type="button" onClick={switchMode}>
+            <Button variant="ghost" className="text-button" type="button" onClick={switchMode}>
               {mode === "start" ? "Já comecei meu diagnóstico" : "Quero iniciar um novo diagnóstico"}
             </Button>
           </>

@@ -31,5 +31,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "examples", ".vercel", "dist", "test-results"]
+  "exclude": ["node_modules", "examples", ".vercel", "dist", "test-results", "supabase/functions"]
 }

@@ -120,6 +120,18 @@ export function ReportDocument({
 
         <ReportPageFooter report={report} version={review.version} />
       </article>
+
+      <article className="report-paper">
+        <ReportHeading number="10" title={legalDisclaimerTitle} />
+        <section className="report-legal-disclaimer" aria-label={legalDisclaimerTitle}>
+          <h3>{legalDisclaimerTitle}</h3>
+          {legalDisclaimerParagraphs.map((paragraph) => (
+            <p key={`final-${paragraph}`}>{paragraph}</p>
+          ))}
+        </section>
+
+        <ReportPageFooter report={report} version={review.version} />
+      </article>
     </div>
   );
 }

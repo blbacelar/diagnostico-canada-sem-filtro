@@ -1,5 +1,6 @@
 import { ApiError, handleApiError, json, requireFormCase } from "../../../../lib/api";
 import { operationalConfig } from "../../../../lib/operational-config";
+import { normalizeDiagnosticAnswers } from "../../../../lib/questions";
 import { tokenCookie } from "../../../../lib/tokens";
 
 export async function GET(request: Request) {
@@ -12,7 +13,9 @@ export async function GET(request: Request) {
     ]);
     for (const result of [clientResult, answersResult, consentResult]) if (result.error) throw result.error;
     if (!clientResult.data) throw new ApiError(404, "Cliente não encontrado.", "CLIENT_NOT_FOUND");
-    const answers = Object.fromEntries((answersResult.data ?? []).map((row) => [row.question_key, row.answer]));
+    const answers = normalizeDiagnosticAnswers(
+      Object.fromEntries((answersResult.data ?? []).map((row) => [row.question_key, row.answer])),
+    );
     const sourceMetadata = caseRow.source_metadata && typeof caseRow.source_metadata === "object" ? caseRow.source_metadata as Record<string, unknown> : {};
     const response = json({
       caseId: caseRow.id,

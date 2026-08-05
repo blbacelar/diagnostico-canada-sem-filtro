@@ -11,7 +11,7 @@ import {
   requireFormCase,
   writeAudit,
 } from "../../../../lib/api";
-import { diagnosticSections, missingRequiredQuestions } from "../../../../lib/questions";
+import { diagnosticSections, missingRequiredQuestions, normalizeDiagnosticAnswers } from "../../../../lib/questions";
 import { processAssessment } from "../../../../lib/cases";
 import { sendSubmissionConfirmation } from "../../../../lib/email";
 import { getOperationalConfig } from "../../../../lib/operational-config.server";
@@ -39,7 +39,9 @@ export async function POST(request: Request) {
 
     const { data: rows, error } = await admin.from("diagnostic_answers").select("question_key,answer").eq("case_id", caseRow.id);
     if (error) throw error;
-    const answers = Object.fromEntries((rows ?? []).map((row) => [row.question_key, row.answer]));
+    const answers = normalizeDiagnosticAnswers(
+      Object.fromEntries((rows ?? []).map((row) => [row.question_key, row.answer])),
+    );
     const missing = diagnosticSections.flatMap((section) => missingRequiredQuestions(section, answers));
     if (missing.length) throw new ApiError(422, `Existem ${missing.length} respostas obrigatórias pendentes.`, "INCOMPLETE_FORM");
     diagnosticSubmissionAnswersSchema.parse(answers);
@@ -48,13 +50,30 @@ export async function POST(request: Request) {
     const sourceMetadata = caseRow.source_metadata && typeof caseRow.source_metadata === "object" ? caseRow.source_metadata as Record<string, unknown> : {};
     const consultantId = sourceMetadata.source === "consultant_reassessment" && typeof sourceMetadata.created_by_consultant_id === "string" ? sourceMetadata.created_by_consultant_id : null;
     const submissionActor = consultantId ? "consultant" : "client";
+
+    const { error: disclaimerConsentError } = await admin.from("diagnostic_consents").insert({
+      case_id: caseRow.id,
+      consent_type: "legal_disclaimer_acknowledgment",
+      policy_version: payload.policyVersion,
+      granted: payload.legalDisclaimerAccepted,
+      source: consultantId ? "consultant_reassessment" : "form_submission",
+    });
+    if (disclaimerConsentError) throw disclaimerConsentError;
+
     const { data: submission, error: submissionError } = await admin
       .from("diagnostic_submissions")
       .insert({
         case_id: caseRow.id,
         answers_snapshot: answers,
         schema_version: 1,
-        consent_snapshot: { granted: true, policyVersion: payload.policyVersion, submittedAt: now, submittedBy: submissionActor },
+        consent_snapshot: {
+          granted: true,
+          policyVersion: payload.policyVersion,
+          submittedAt: now,
+          submittedBy: submissionActor,
+          legalDisclaimerAccepted: payload.legalDisclaimerAccepted,
+          legalDisclaimerAcceptedAt: now,
+        },
         idempotency_key: idempotencyKey,
         submitted_at: now,
       })
@@ -148,7 +167,7 @@ export async function POST(request: Request) {
       actorUserId: consultantId,
       actorType: submissionActor,
       action: "diagnostic.submitted",
-      metadata: { submissionId: submission.id, schemaVersion: 1 },
+      metadata: { submissionId: submission.id, schemaVersion: 1, legalDisclaimerAccepted: payload.legalDisclaimerAccepted },
     });
     const response = json({ caseNumber: caseRow.case_number, submittedAt: now, expectedTime }, { status: 202 });
     response.headers.append("Set-Cookie", "diagnostic_form_token=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0");

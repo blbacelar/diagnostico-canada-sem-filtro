@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, ArrowLeft, ArrowRight, Check, Cloud, CloudOff, LockKeyhole, Pencil, Send } from "lucide-react";
 import { formatCurrencyAmount, formatCurrencyEditingAmount, normalizeCurrencyInput } from "../lib/currency";
+import { legalDisclaimerParagraphs, legalDisclaimerTitle } from "../lib/legal-disclaimer";
 import { operationalConfig } from "../lib/operational-config";
 import { diagnosticSections, layoutQuestionRows, pruneHiddenAnswers, visibleQuestions } from "../lib/questions";
 import { validateQuestionAnswer, validationErrorsForDiagnostic, validationErrorsForSection } from "../lib/diagnostic-validation";
@@ -29,6 +30,7 @@ export function FormApp({ initialToken, dashboardReturn = false }: { initialToke
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState<{ caseNumber: string; expectedTime: string } | null>(null);
   const answersRef = useRef<FormAnswers>({});
@@ -140,6 +142,10 @@ export function FormApp({ initialToken, dashboardReturn = false }: { initialToke
 
   async function submit() {
     if (submitInFlight.current || session?.status !== "client_draft") return;
+    if (!disclaimerAccepted) {
+      setSubmitError("Você precisa confirmar que leu o aviso legal para enviar o diagnóstico.");
+      return;
+    }
     const validationErrors = validationErrorsForDiagnostic(answers);
     const totalInvalid = Object.keys(validationErrors).length;
     if (totalInvalid) {
@@ -171,7 +177,7 @@ export function FormApp({ initialToken, dashboardReturn = false }: { initialToke
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
-        body: JSON.stringify({ consent: true, policyVersion: session.policyVersion ?? operationalConfig.policyVersion, idempotencyKey }),
+        body: JSON.stringify({ consent: true, legalDisclaimerAccepted: true, policyVersion: session.policyVersion ?? operationalConfig.policyVersion, idempotencyKey }),
       });
       const data = await response.json() as { error?: string; code?: string; caseNumber: string; expectedTime: string };
       if (!response.ok) {
@@ -233,7 +239,7 @@ export function FormApp({ initialToken, dashboardReturn = false }: { initialToke
         </aside>
         <main className="form-main">
           {isReview ? (
-            <ReviewAnswers answers={answers} incompleteSections={incompleteSections} onEdit={setStep} onSubmit={submit} submitting={isSubmitting} error={submitError} consultantManaged={dashboardMode} />
+            <ReviewAnswers answers={answers} incompleteSections={incompleteSections} onEdit={setStep} onSubmit={submit} submitting={isSubmitting} error={submitError} consultantManaged={dashboardMode} disclaimerAccepted={disclaimerAccepted} onToggleDisclaimerAccepted={(accepted) => { setDisclaimerAccepted(accepted); if (accepted) setSubmitError(""); }} />
           ) : (
             <section className="question-section" aria-labelledby="section-title">
               <p className="eyebrow">Seção {section.number} de 11</p>
@@ -351,16 +357,20 @@ function CurrencyInput({ id, name, value, currencyCode, placeholder, required, "
   );
 }
 
-function ReviewAnswers({ answers, incompleteSections, onEdit, onSubmit, submitting, error, consultantManaged }: { answers: FormAnswers; incompleteSections: number[]; onEdit: (index: number) => void; onSubmit: () => void; submitting: boolean; error: string; consultantManaged: boolean }) {
+function ReviewAnswers({ answers, incompleteSections, onEdit, onSubmit, submitting, error, consultantManaged, disclaimerAccepted, onToggleDisclaimerAccepted }: { answers: FormAnswers; incompleteSections: number[]; onEdit: (index: number) => void; onSubmit: () => void; submitting: boolean; error: string; consultantManaged: boolean; disclaimerAccepted: boolean; onToggleDisclaimerAccepted: (accepted: boolean) => void }) {
   return (
     <section className="question-section review-section">
       <p className="eyebrow">Revisão final</p><h1>Revise antes de enviar</h1><p className="section-intro">Depois do envio, suas respostas formarão um registro protegido e só poderão ser reabertas pela equipe.</p>
       <div className="review-list">
         {diagnosticSections.map((section, index) => <article key={section.key}><header><div><small>Seção {section.number}</small><h2>{section.title}</h2></div><button type="button" onClick={() => onEdit(index)}><Pencil /> Editar</button></header>{incompleteSections[index] > 0 && <p className="review-warning"><AlertTriangle /> {incompleteSections[index]} pendência(s)</p>}<dl>{visibleQuestions(section, answers).filter((question) => answers[question.key] !== undefined && answers[question.key] !== "").map((question) => { const answer = answers[question.key]; const formatted = question.format === "currency" ? formatCurrencyAmount(answer, String(answers.funds_currency ?? "")) : Array.isArray(answer) ? answer.join(", ") : typeof answer === "boolean" ? (answer ? "Sim" : "Não") : String(answer); return <div key={question.key}><dt>{question.label}</dt><dd>{formatted}</dd></div>; })}</dl></article>)}
       </div>
-      <label className="final-consent"><input type="checkbox" defaultChecked readOnly /><span><Check />{consultantManaged ? "Confirmo que revisei as informações atualizadas e quero enviar esta nova versão para análise." : "Confirmo que revisei as respostas e autorizo seu uso na elaboração do diagnóstico profissional."}</span></label>
+      <section className="review-disclaimer" aria-label={legalDisclaimerTitle}>
+        <h2>{legalDisclaimerTitle}</h2>
+        {legalDisclaimerParagraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+      </section>
+      <label className="final-consent"><input type="checkbox" checked={disclaimerAccepted} onChange={(event) => onToggleDisclaimerAccepted(event.target.checked)} /><span><Check />{consultantManaged ? "Confirmo que li e entendi o aviso legal acima e quero enviar esta nova versão para análise." : "Confirmo que li e entendi o aviso legal acima e autorizo o uso das respostas para elaboração do diagnóstico profissional."}</span></label>
       {error && <p className="inline-alert" role="alert"><AlertTriangle />{error}</p>}
-      <div className="form-actions"><button className="secondary-button" type="button" onClick={() => onEdit(diagnosticSections.length - 1)}><ArrowLeft /> Voltar</button><button className="primary-button" type="button" disabled={submitting} onClick={onSubmit}>{submitting ? "Enviando…" : "Enviar para análise"}<Send /></button></div>
+      <div className="form-actions"><button className="secondary-button" type="button" onClick={() => onEdit(diagnosticSections.length - 1)}><ArrowLeft /> Voltar</button><button className="primary-button" type="button" disabled={submitting || !disclaimerAccepted} onClick={onSubmit}>{submitting ? "Enviando…" : "Enviar para análise"}<Send /></button></div>
     </section>
   );
 }

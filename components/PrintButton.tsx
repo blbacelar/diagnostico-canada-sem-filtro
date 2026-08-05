@@ -8,6 +8,15 @@ import { Button } from "./ui/button";
 export function PrintButton({ pdfUrl }: { pdfUrl?: string }) {
   const [loading, setLoading] = useState(false);
 
+  async function getAccessToken() {
+    const supabase = getBrowserSupabase();
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (sessionData.session?.access_token) return sessionData.session.access_token;
+
+    const { data: refreshed } = await supabase.auth.refreshSession();
+    return refreshed.session?.access_token ?? null;
+  }
+
   async function openProtectedPdf(url: string) {
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
@@ -17,15 +26,24 @@ export function PrintButton({ pdfUrl }: { pdfUrl?: string }) {
 
     setLoading(true);
     try {
-      const { data } = await getBrowserSupabase().auth.getSession();
-      const accessToken = data.session?.access_token;
+      let accessToken = await getAccessToken();
       if (!accessToken) throw new Error("Sessão não encontrada.");
 
-      const response = await fetch(url, {
+      let response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
       });
+
+      if (response.status === 401) {
+        accessToken = await getAccessToken();
+        if (!accessToken) throw new Error("Sessão expirada.");
+        response = await fetch(url, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+      }
 
       const contentType = response.headers.get("content-type") ?? "";
       if (!response.ok || !contentType.includes("application/pdf")) {

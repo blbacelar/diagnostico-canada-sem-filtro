@@ -67,7 +67,13 @@ function valueSchema(question: DiagnosticQuestion): z.ZodType {
       .refine((values) => values.every((value) => question.options?.includes(value)), "Selecione opções válidas.");
   }
 
-  if (question.type === "boolean") return z.boolean({ error: "Marque ou desmarque esta opção." });
+  if (question.type === "boolean") {
+    return z.union([
+      z.boolean({ error: "Marque ou desmarque esta opção." }),
+      z.literal("Sim"),
+      z.literal("Não"),
+    ]);
+  }
 
   return z.unknown();
 }

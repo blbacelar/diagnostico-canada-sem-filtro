@@ -122,7 +122,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .primary-button:hover { background: #9f1634; transform: translateY(-1px); }
 .primary-button:disabled { opacity: .65; cursor: wait; transform: none; }
 .primary-button svg { width: 16px; }
-.text-button { display: block; margin: 22px auto 0; padding: 7px; border: 0; border-bottom: 1px solid var(--rule-strong); background: none; color: var(--ink-soft); cursor: pointer; font-size: 12px; }
+.text-button { display: block; margin: 22px auto 0; min-height: 38px; padding: 8px 12px; border: 1px solid var(--paper-edge); border-radius: 10px; background: var(--paper-light); color: var(--ink); cursor: pointer; font: 500 12px/1.2 var(--font-sans), sans-serif; }
+.text-button:hover { background: white; border-color: var(--rule-strong); color: var(--ink); }
+.text-button:focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 35%, white); outline-offset: 2px; }
 .form-error { margin: 0; color: var(--accent); font-size: 13px; }
 .editorial-form .field-error { margin: 0; }
 .editorial-form [aria-invalid=true] { border-color: var(--accent); }
@@ -265,6 +267,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .review-list dd { margin: 0; font: 400 14px/1.5 var(--font-body), serif; }
 .review-warning { margin: 0; padding: 10px 24px; color: var(--warning); background: rgba(145,108,42,.08); font-size: 11px; display: flex; gap: 8px; }
 .review-warning svg { width: 14px; }
+.review-disclaimer { margin-top: 24px; padding: 20px; border-left: 2px solid var(--warning); background: rgba(145,108,42,.08); color: var(--ink-soft); }
+.review-disclaimer h2 { margin: 0 0 12px; color: var(--ink); font: 500 10px var(--font-mono), monospace; letter-spacing: .1em; text-transform: uppercase; }
+.review-disclaimer p { margin: 0; font-size: 13px; line-height: 1.65; }
+.review-disclaimer p + p { margin-top: 10px; }
 .final-consent { margin-top: 28px; display: grid; grid-template-columns: 22px 1fr; gap: 12px; align-items: start; cursor: pointer; }
 .final-consent input { width: 20px; height: 20px; accent-color: var(--accent); }
 .final-consent svg { display: none; }

@@ -54,6 +54,7 @@ export const answersPayloadSchema = z.object({
 
 export const submitPayloadSchema = z.object({
   consent: z.literal(true),
+  legalDisclaimerAccepted: z.literal(true, { error: "Você precisa aceitar o aviso legal para continuar." }),
   policyVersion: z.string().min(1).max(40),
   idempotencyKey: z.string().uuid(),
 });

@@ -5,6 +5,9 @@ const spouseApplies = (answers: FormAnswers) =>
   ["Casado(a)", "União estável"].includes(String(answers.marital_status ?? ""));
 const hasChildren = (answers: FormAnswers) => answers.has_children === true || answers.has_children === "Sim";
 const hasCanadianWork = (answers: FormAnswers) => answers.canadian_work_experience === "Sim";
+const hasSecondNationality = (answers: FormAnswers) => answers.has_second_nationality === "Sim";
+const hasSecondEducation = (answers: FormAnswers) => answers.has_second_education === "Sim";
+const wantsOtherArea = (answers: FormAnswers) => answers.interest_in_other_area === "Sim";
 const hasEnglishTest = (answers: FormAnswers) => ![undefined, "", "Não"].includes(answers.english_test as string);
 const hasFrenchTest = (answers: FormAnswers) => ![undefined, "", "Não"].includes(answers.french_test as string);
 const hasRefusal = (answers: FormAnswers) => answers.has_refusal === "Sim";
@@ -19,6 +22,8 @@ export const diagnosticSections: DiagnosticSection[] = [
       { key: "age", label: "Qual é a sua idade?", type: "number", min: 16, max: 100, required: true, layout: "third", layoutRow: "personal-status" },
       { key: "marital_status", label: "Qual é o seu estado civil?", type: "select", required: true, layout: "two-thirds", layoutRow: "personal-status", options: ["Solteiro(a)", "Casado(a)", "União estável", "Separado(a)", "Divorciado(a)", "Viúvo(a)"] },
       { key: "nationality", label: "Qual é a sua nacionalidade?", type: "text", required: true, layout: "half", layoutRow: "residence" },
+      { key: "has_second_nationality", label: "Você possui 2a nacionalidade?", type: "radio", required: true, layout: "half", layoutRow: "residence", options: yesNo },
+      { key: "second_nationality", label: "Qual é a 2a nacionalidade?", type: "text", required: true, layout: "full", layoutRow: "second-nationality", showWhen: hasSecondNationality },
       { key: "country_of_residence", label: "Em qual país você mora atualmente?", type: "text", required: true, layout: "half", layoutRow: "residence" },
       { key: "has_children", label: "Filhos", type: "boolean", optionalLabel: "Marque se aplicável", layout: "third", layoutRow: "children" },
       { key: "children_count", label: "Quantos filhos?", type: "number", min: 1, max: 20, required: true, layout: "third", layoutRow: "children", showWhen: hasChildren },
@@ -44,6 +49,8 @@ export const diagnosticSections: DiagnosticSection[] = [
     questions: [
       { key: "education_level", label: "Qual é o seu maior nível de escolaridade?", type: "select", required: true, layout: "half", layoutRow: "education-background", options: ["Ensino médio", "Técnico", "Graduação", "Pós-graduação", "Mestrado", "Doutorado"] },
       { key: "education_field", label: "Qual é a sua área de formação?", type: "text", required: true, layout: "half", layoutRow: "education-background" },
+      { key: "has_second_education", label: "Você possui 2a escolaridade ou formação complementar?", type: "radio", required: true, layout: "half", layoutRow: "education-secondary", options: yesNo },
+      { key: "second_education", label: "Descreva a 2a escolaridade ou formação", type: "text", required: true, layout: "half", layoutRow: "education-secondary", showWhen: hasSecondEducation },
       { key: "graduation_year", label: "Ano de conclusão da formação", type: "number", min: 1950, max: 2030, required: true, layout: "third", layoutRow: "education-credentials" },
       { key: "education_outside_canada", label: "A formação foi concluída fora do Canadá?", type: "radio", required: true, layout: "two-thirds", layoutRow: "education-credentials", options: yesNo },
       { key: "education_institution", label: "Instituição e país da formação", type: "text", optionalLabel: "Opcional", layout: "full", layoutRow: "education-institution" },
@@ -57,6 +64,8 @@ export const diagnosticSections: DiagnosticSection[] = [
     questions: [
       { key: "current_profession", label: "Qual é a sua profissão atual?", type: "text", required: true, layout: "two-thirds", layoutRow: "career-summary" },
       { key: "experience_years", label: "Anos de experiência na área", type: "number", min: 0, max: 60, required: true, layout: "third", layoutRow: "career-summary" },
+      { key: "interest_in_other_area", label: "Tem interesse em trabalhar em outra área?", type: "radio", required: true, layout: "full", layoutRow: "career-shift", options: yesNo },
+      { key: "other_area_interest_details", label: "Qual área gostaria de considerar e por quê?", type: "textarea", required: true, layout: "full", layoutRow: "career-shift-details", showWhen: wantsOtherArea },
       { key: "leadership_experience", label: "Possui experiência em liderança ou gestão?", type: "radio", required: true, layout: "half", layoutRow: "career-profile", options: yesNo },
       { key: "regulated_profession", label: "Seu trabalho exige formação específica, certificação ou licença?", type: "radio", required: true, layout: "half", layoutRow: "career-profile", options: ["Sim", "Não", "Não sei"] },
       { key: "canadian_work_experience", label: "Experiência de trabalho no Canadá?", type: "radio", required: true, layout: "third", layoutRow: "canadian-experience", options: yesNo },
@@ -165,6 +174,89 @@ export const diagnosticSections: DiagnosticSection[] = [
     ],
   },
 ];
+
+const questionsByKey = new Map(
+  diagnosticSections.flatMap((section) => section.questions.map((question) => [question.key, question] as const)),
+);
+
+function normalizeBooleanAnswer(value: unknown) {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") {
+    if (value === 1) return true;
+    if (value === 0) return false;
+    return value;
+  }
+  if (typeof value !== "string") return value;
+
+  const normalized = value.trim().toLowerCase();
+  if (["sim", "true", "1", "yes"].includes(normalized)) return true;
+  if (["nao", "não", "false", "0", "no"].includes(normalized)) return false;
+  return value;
+}
+
+function normalizeMultiAnswer(questionKey: string, value: unknown) {
+  const question = questionsByKey.get(questionKey);
+  const options = question?.options ?? [];
+
+  const asArray = (input: unknown): string[] | null => {
+    if (Array.isArray(input)) {
+      return input
+        .filter((item): item is string => typeof item === "string")
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0);
+    }
+    return null;
+  };
+
+  const directArray = asArray(value);
+  if (directArray) return Array.from(new Set(directArray));
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      const parsedArray = asArray(parsed);
+      if (parsedArray) return Array.from(new Set(parsedArray));
+    } catch {
+      // Keep fallback parsing below.
+    }
+
+    if (options.includes(trimmed)) return [trimmed];
+
+    const splitCandidates = trimmed
+      .split(/[,;|]/g)
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .filter((item) => options.includes(item));
+
+    if (splitCandidates.length > 0) return Array.from(new Set(splitCandidates));
+    return [];
+  }
+
+  if (value && typeof value === "object") {
+    const selected = Object.entries(value as Record<string, unknown>)
+      .filter(([, checked]) => checked === true)
+      .map(([option]) => option)
+      .filter((option) => options.includes(option));
+    return Array.from(new Set(selected));
+  }
+
+  return [];
+}
+
+function normalizeAnswer(questionKey: string, value: unknown) {
+  const question = questionsByKey.get(questionKey);
+  if (!question) return value;
+  if (question.type === "boolean") return normalizeBooleanAnswer(value);
+  if (question.type === "multi" || question.type === "checkbox") return normalizeMultiAnswer(questionKey, value);
+  return value;
+}
+
+export function normalizeDiagnosticAnswers(answers: FormAnswers) {
+  return Object.fromEntries(Object.entries(answers).map(([key, value]) => [key, normalizeAnswer(key, value)])) as FormAnswers;
+}
 
 export function visibleQuestions(section: DiagnosticSection, answers: FormAnswers) {
   return section.questions.filter((question) => !question.showWhen || question.showWhen(answers));
