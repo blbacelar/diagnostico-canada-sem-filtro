@@ -6,6 +6,13 @@ import { getAdminSupabase } from "../../../../lib/supabase";
 
 const neutralMessage = "Se a conta estiver ativa, enviaremos as instruções de recuperação.";
 
+async function sendRecoveryFallback(admin: ReturnType<typeof getAdminSupabase>, email: string, resetUrl: string) {
+  const { error } = await admin.auth.resetPasswordForEmail(email, { redirectTo: resetUrl });
+  if (error) {
+    console.error("password_recovery_fallback_failed", error.name);
+  }
+}
+
 export async function POST(request: Request) {
   try {
     await enforceRateLimit(request, "password_recovery", 5, 15);
@@ -31,7 +38,10 @@ export async function POST(request: Request) {
       to: payload.email,
       resetUrl: resetUrl.toString(),
     });
-    if (result.error) console.error("password_recovery_email_failed", result.error.name);
+    if (result.error) {
+      console.error("password_recovery_email_failed", result.error.name);
+      await sendRecoveryFallback(admin, payload.email, resetUrl.toString());
+    }
 
     return json({ message: neutralMessage });
   } catch (error) {

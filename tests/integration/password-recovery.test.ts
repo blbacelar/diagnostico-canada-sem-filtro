@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   enforceRateLimit: vi.fn(),
   generateLink: vi.fn(),
+  resetPasswordForEmail: vi.fn(),
   sendPasswordRecoveryEmail: vi.fn(),
 }));
 
@@ -13,7 +14,10 @@ vi.mock("../../lib/api", async (importOriginal) => {
 
 vi.mock("../../lib/supabase", () => ({
   getAdminSupabase: () => ({
-    auth: { admin: { generateLink: mocks.generateLink } },
+    auth: {
+      admin: { generateLink: mocks.generateLink },
+      resetPasswordForEmail: mocks.resetPasswordForEmail,
+    },
   }),
 }));
 
@@ -58,6 +62,7 @@ describe("recuperação de senha", () => {
 
   it("não revela se a conta não existe", async () => {
     mocks.generateLink.mockResolvedValue({ data: null, error: { name: "AuthApiError" } });
+    mocks.resetPasswordForEmail.mockResolvedValue({ data: null, error: null });
 
     const response = await POST(request("nao-existe@example.com"));
     const body = await response.json() as { message: string };
@@ -65,6 +70,7 @@ describe("recuperação de senha", () => {
     expect(response.status).toBe(200);
     expect(body.message).toBe(neutralMessage);
     expect(mocks.sendPasswordRecoveryEmail).not.toHaveBeenCalled();
+    expect(mocks.resetPasswordForEmail).not.toHaveBeenCalled();
   });
 
   it("rejeita e-mail inválido antes de chamar os provedores", async () => {
@@ -73,5 +79,19 @@ describe("recuperação de senha", () => {
     expect(response.status).toBe(422);
     expect(mocks.generateLink).not.toHaveBeenCalled();
     expect(mocks.sendPasswordRecoveryEmail).not.toHaveBeenCalled();
+  });
+
+  it("faz fallback para o reset nativo quando o provedor de e-mail falha", async () => {
+    mocks.sendPasswordRecoveryEmail.mockResolvedValue({ data: null, error: { name: "ResendError" } });
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(200);
+    expect(mocks.generateLink).toHaveBeenCalled();
+    expect(mocks.sendPasswordRecoveryEmail).toHaveBeenCalled();
+    expect(mocks.resetPasswordForEmail).toHaveBeenCalledWith(
+      "consultora@example.com",
+      { redirectTo: "https://diagnostico-canada-sem-filtro.vercel.app/recuperar-senha/confirmar?recovery=1&token_hash=token-hash-de-uso-unico" },
+    );
   });
 });
