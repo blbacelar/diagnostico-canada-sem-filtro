@@ -1,9 +1,12 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 export const publicSupabaseUrl =
-  process.env.VITE_SUPABASE_URL ?? "https://jtkebfgfmugbqglwaatn.supabase.co";
+  process.env.NEXT_PUBLIC_SUPABASE_URL ??
+  process.env.VITE_SUPABASE_URL ??
+  "https://jtkebfgfmugbqglwaatn.supabase.co";
 
 export const publicSupabaseAnonKey =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
   process.env.VITE_SUPABASE_ANON_KEY ??
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0a2ViZmdmbXVnYnFnbHdhYXRuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3ODk2NDMsImV4cCI6MjA5NDM2NTY0M30.vFgcLn_jbh6MSQxWjym5R-XbKrVbVgjL5uhSnRj__f0";
 
