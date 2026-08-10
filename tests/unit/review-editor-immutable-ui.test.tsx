@@ -15,20 +15,32 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("parecer concluído", () => {
-  it("não carrega nem salva um novo rascunho para diagnóstico enviado", async () => {
+describe("editor de parecer", () => {
+  it("exibe somente leitura apenas quando o caso está em processo de envio ativo", async () => {
     detailFetch.mockResolvedValue({
-      case: { id: "case-sent", case_number: "CSF-2026-0001", status: "sent" },
+      case: { id: "case-sending", case_number: "CSF-2026-0001", status: "sending" },
       client: { full_name: "Bruno Bacelar", email_display: "blbacelar@gmail.com" },
     });
 
-    render(<ReviewEditor caseId="case-sent" />);
+    render(<ReviewEditor caseId="case-sending" />);
 
     expect(await screen.findByText("Este parecer está concluído")).toBeVisible();
-    expect(screen.getByRole("link", { name: "Ver relatório" })).toHaveAttribute("href", "/dashboard/diagnosticos/case-sent/relatorio");
-    expect(screen.queryByRole("button", { name: "Pronto para aprovação" })).toBeNull();
     await waitFor(() => expect(detailFetch).toHaveBeenCalledTimes(1));
     expect(detailFetch).not.toHaveBeenCalledWith(expect.stringContaining("/api/diagnostics/reviews"));
+  });
+
+  it("permite editar o parecer em casos já enviados", async () => {
+    detailFetch
+      .mockResolvedValueOnce({
+        case: { id: "case-sent", case_number: "CSF-2026-0001", status: "sent" },
+        client: { full_name: "Bruno Bacelar", email_display: "blbacelar@gmail.com" },
+      })
+      .mockResolvedValueOnce({ review: null });
+
+    render(<ReviewEditor caseId="case-sent" />);
+
+    expect(await screen.findByRole("button", { name: "Pronto para aprovação" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Pré-visualizar" })).toHaveAttribute("href", "/dashboard/diagnosticos/case-sent/relatorio");
   });
 
   it("mantém as ações no cabeçalho fixo do editor", async () => {

@@ -33,7 +33,7 @@ beforeEach(() => {
 });
 
 describe("API de parecer concluído", () => {
-  it.each(["approved", "sending", "sent", "archived"])("recusa alterações quando o caso está %s", async (status) => {
+  it.each(["sending", "archived"])("recusa alterações quando o caso está %s", async (status) => {
     claimCaseForReview.mockResolvedValue({ id: payload.caseId, status });
     const response = await PUT(new Request("http://localhost/api/diagnostics/reviews", {
       method: "PUT",

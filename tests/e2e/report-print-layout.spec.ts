@@ -48,6 +48,31 @@ async function mockDashboardReport(page: Page) {
     { key: authStorageKey, value: JSON.stringify(session) },
   );
 
+  await page.context().addCookies([
+    {
+      name: "dashboard_access_token",
+      value: session.access_token,
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+
+  await page.route("**/auth/v1/user*", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(user),
+    });
+  });
+
+  await page.route("**/api/auth/session", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ ok: true }),
+    });
+  });
+
   await page.route("**/rest/v1/diagnostic_consultants*", async (route) => {
     await route.fulfill({
       status: 200,
@@ -121,7 +146,7 @@ async function mockDashboardReport(page: Page) {
     });
   });
 
-  await page.route(`**/api/diagnostics/reviews?caseId=${caseId}`, async (route) => {
+  await page.route("**/api/diagnostics/reviews*", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",

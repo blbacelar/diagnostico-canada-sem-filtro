@@ -67,6 +67,7 @@ describe("schemas Zod do diagnóstico", () => {
       age: 35,
       marital_status: "Solteiro(a)",
       nationality: "Brasileira",
+      has_second_nationality: "Não",
       country_of_residence: "Brasil",
       has_children: false,
     });
@@ -76,6 +77,7 @@ describe("schemas Zod do diagnóstico", () => {
       age: 35,
       marital_status: "Solteiro(a)",
       nationality: "Brasileira",
+      has_second_nationality: "Não",
       country_of_residence: "Brasil",
       has_children: true,
     });

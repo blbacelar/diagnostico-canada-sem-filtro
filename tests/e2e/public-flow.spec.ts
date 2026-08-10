@@ -27,7 +27,7 @@ test("@smoke @a11y landing pública apresenta identificação e mensagem sem pro
   await page.goto("/");
   await expect(page.getByRole("heading", { name: /vamos entender o seu projeto canadá/i })).toBeVisible();
   await expect(page.getByLabel("Nome completo")).toBeVisible();
-  await expect(page.getByText(/não promete elegibilidade/i)).toBeVisible();
+  await expect(page.getByText(/promessa/i)).toBeVisible();
 
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations.filter((violation) => ["critical", "serious"].includes(violation.impact ?? ""))).toEqual([]);

@@ -45,7 +45,7 @@ afterEach(() => cleanup());
 describe("relatório para impressão", () => {
   it("abre o diálogo de impressão pelo botão Imprimir", () => {
     const print = vi.spyOn(window, "print").mockImplementation(() => undefined);
-    render(<ReportDocument report={report} preview />);
+    render(<ReportDocument report={report} preview={false} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Imprimir" }));
 

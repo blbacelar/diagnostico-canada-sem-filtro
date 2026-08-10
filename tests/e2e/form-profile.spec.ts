@@ -48,6 +48,7 @@ async function openReview(page: Page) {
   await expect(page.getByRole("heading", { name: "Perfil pessoal" })).toBeVisible();
   await page.getByRole("button", { name: /Revisão e envio$/ }).click();
   await expect(page.getByRole("heading", { name: "Revise antes de enviar" })).toBeVisible();
+  await page.getByRole("checkbox").check();
 }
 
 test("@regression perfil pessoal usa controles shadcn e limpa respostas condicionais", async ({ page }) => {

@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AlertTriangle, ArrowUpRight, Clock3, LockKeyhole, Search, SlidersHorizontal, UsersRound } from "lucide-react";
 import type { ClientListItem } from "../lib/clients";
 import { authorizedFetch } from "../lib/dashboard-fetch";
 import { caseStatusLabels, getCaseStatusLabel } from "../lib/status-labels";
 import { DashboardHeader, useDashboardConsultant } from "./DashboardShell";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import {
   Select,
   SelectContent,
@@ -17,6 +19,17 @@ import {
 
 type CaseRow = { id: string; case_number: string; status: string; objective: string | null; submitted_at: string | null; updated_at: string; assigned_consultant_id?: string | null; locked_by_other?: boolean; locked_by_name?: string | null; diagnostic_clients: { full_name: string; email_display: string } | null; diagnostic_ai_assessments?: Array<{ structured_result: { overallScore?: number; readinessLevel?: string; technicalAlerts?: string[] } }> };
 type Summary = { counts: Record<string, number>; recent: CaseRow[]; averageHours: number | null; reviewSlaHours: number };
+type CaseListResponse = {
+  items: CaseRow[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+  };
+};
 
 export function OverviewClient() {
   const consultant = useDashboardConsultant();
@@ -61,13 +74,89 @@ function CaseLine({ item }: { item: CaseRow }) {
 }
 
 export function DiagnosticsListClient() {
-  const [items, setItems] = useState<CaseRow[]>([]); const [loading, setLoading] = useState(true); const [search, setSearch] = useState(""); const [status, setStatus] = useState(""); const [error, setError] = useState(false);
-  useEffect(() => { const query = new URLSearchParams(); if (search) query.set("search", search); if (status) query.set("status", status); const timer = setTimeout(() => authorizedFetch<{items:CaseRow[]}>(`/api/dashboard/cases?${query}`).then((data) => { setItems(data.items); setError(false); }).catch(() => setError(true)).finally(() => setLoading(false)), 250); return () => clearTimeout(timer); }, [search, status]);
+  const PAGE_SIZE = 10;
+  const router = useRouter();
+  const [items, setItems] = useState<CaseRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("");
+  const [error, setError] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    pageSize: PAGE_SIZE,
+    total: 0,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPreviousPage: false,
+  });
+
+  useEffect(() => {
+    const query = new URLSearchParams();
+    if (search) query.set("search", search);
+    if (status) query.set("status", status);
+    query.set("page", String(page));
+    query.set("pageSize", String(PAGE_SIZE));
+
+    const timer = setTimeout(() => {
+      setLoading(true);
+      authorizedFetch<CaseListResponse>(`/api/dashboard/cases?${query}`)
+        .then((data) => {
+          setItems(data.items);
+          setPagination(data.pagination);
+          setError(false);
+        })
+        .catch(() => setError(true))
+        .finally(() => setLoading(false));
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [page, search, status]);
+
+  function goToPreviousPage() {
+    setPage((current) => Math.max(1, current - 1));
+  }
+
+  function goToNextPage() {
+    setPage((current) => Math.min(pagination.totalPages, current + 1));
+  }
+
+  function openCase(caseId: string) {
+    router.push(`/dashboard/diagnosticos/${caseId}`);
+  }
+
   return <>
-    <DashboardHeader eyebrow="Casos" title="Diagnósticos" description="Busque, filtre e acompanhe cada etapa da análise profissional." />
-    <div className="list-toolbar"><label><Search /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nome, e-mail ou número" /></label><label><SlidersHorizontal /><Select value={status || "all"} onValueChange={(value) => setStatus(value === "all" ? "" : value)}><SelectTrigger className="list-toolbar__select-trigger"><SelectValue placeholder="Todos os status" /></SelectTrigger><SelectContent><SelectItem value="all">Todos os status</SelectItem>{Object.entries(caseStatusLabels).map(([value,label]) => <SelectItem value={value} key={value}>{label}</SelectItem>)}</SelectContent></Select></label></div>
-    {error ? <DashboardError /> : loading ? <DashboardLoading /> : <div className="diagnostic-table"><div className="table-head"><span>Cliente / diagnóstico</span><span>Objetivo</span><span>Status</span><span>Preparo</span><span>Alertas</span><span /></div>{items.length ? items.map((item) => <CaseLine key={item.id} item={item} />) : <div className="empty-row">Nenhum diagnóstico encontrado.</div>}</div>}
+    <DashboardHeader eyebrow="Operações" title="Diagnósticos" description="Acompanhe o funil completo de diagnóstico, revisões ativas e prontas para entrega." />
+    <div className="list-toolbar"><label className="list-toolbar__search"><Search /><input aria-label="Buscar diagnósticos" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Buscar por nome, e-mail ou código" /></label><label className="list-toolbar__select"><Select value={status || "all"} onValueChange={(value) => { setStatus(value === "all" ? "" : value); setPage(1); }}><SelectTrigger className="list-toolbar__select-trigger"><SelectValue placeholder="Todos os status" /></SelectTrigger><SelectContent><SelectItem value="all">Todos os status</SelectItem>{Object.entries(caseStatusLabels).map(([value,label]) => <SelectItem value={value} key={value}>{label}</SelectItem>)}</SelectContent></Select></label></div>
+    {error ? <DashboardError /> : loading ? <DashboardLoading /> : <div className="diagnostic-table"><div className="diagnostic-table__scroll"><Table className="diagnostic-table__table"><TableHeader><TableRow><TableHead className="w-[320px]">Cliente / diagnóstico</TableHead><TableHead>Objetivo</TableHead><TableHead>Status</TableHead><TableHead>Preparo</TableHead><TableHead>Alertas</TableHead><TableHead className="w-[18px]" /></TableRow></TableHeader><TableBody>{items.length ? items.map((item) => <DiagnosticTableRow key={item.id} item={item} onOpen={openCase} />) : <TableRow><TableCell colSpan={6}><div className="empty-row">Nenhum diagnóstico encontrado.</div></TableCell></TableRow>}</TableBody></Table><footer className="table-pagination"><button type="button" onClick={goToPreviousPage} disabled={!pagination.hasPreviousPage}>Anterior</button><span>Página {pagination.page} de {pagination.totalPages} · {pagination.total} itens</span><button type="button" onClick={goToNextPage} disabled={!pagination.hasNextPage}>Próxima</button></footer></div></div>}
   </>;
+}
+
+function DiagnosticTableRow({ item, onOpen }: { item: CaseRow; onOpen: (caseId: string) => void }) {
+  const result = item.diagnostic_ai_assessments?.[0]?.structured_result;
+  const score = result?.overallScore;
+  const technicalAlerts = result?.technicalAlerts ?? [];
+  const alertsCount = technicalAlerts.length;
+
+  return <TableRow className={item.locked_by_other ? "bg-[rgba(23,34,43,.035)]" : "cursor-pointer"} aria-disabled={item.locked_by_other ? "true" : undefined} onClick={() => !item.locked_by_other && onOpen(item.id)}>
+    <TableCell className="whitespace-nowrap">
+      <div className="flex items-center gap-3">
+        <div className="case-avatar">{item.diagnostic_clients?.full_name?.split(" ").map((part) => part[0]).slice(0, 2).join("")}</div>
+        <div className="min-w-0">
+          <strong className="block truncate text-[12px] font-semibold">{item.diagnostic_clients?.full_name}</strong>
+          <small className="block truncate text-[10px] uppercase tracking-[.08em]">{item.case_number}</small>
+          {item.locked_by_other && <small className="case-lock-label"><LockKeyhole /> Em revisão por {item.locked_by_name ?? "outra consultora"}</small>}
+        </div>
+      </div>
+    </TableCell>
+    <TableCell className="whitespace-nowrap text-[12px] uppercase tracking-[.08em]">{item.objective ?? "Objetivo não informado"}</TableCell>
+    <TableCell><span className={`status-pill status-${item.status}`}>{getCaseStatusLabel(item.status)}</span></TableCell>
+    <TableCell><span className="score">{score ?? "—"}<small>{typeof score === "number" ? "/100" : ""}</small></span></TableCell>
+    <TableCell>
+      {alertsCount > 0 ? <span className="alert-count alert-count--with-popover"><AlertTriangle />{alertsCount}<span className="alert-popover" role="tooltip"><strong>Alertas técnicos</strong><ul>{technicalAlerts.map((alert, index) => <li key={`${item.id}-alert-${index}`}>{alert}</li>)}</ul></span></span> : <span className="alert-count alert-count--empty">—</span>}
+    </TableCell>
+    <TableCell className="text-right">{item.locked_by_other ? <LockKeyhole className="row-arrow" /> : <ArrowUpRight className="row-arrow" />}</TableCell>
+  </TableRow>;
 }
 
 const dateFormatter = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" });

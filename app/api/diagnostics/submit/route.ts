@@ -48,15 +48,18 @@ export async function POST(request: Request) {
 
     const now = new Date().toISOString();
     const sourceMetadata = caseRow.source_metadata && typeof caseRow.source_metadata === "object" ? caseRow.source_metadata as Record<string, unknown> : {};
-    const consultantId = sourceMetadata.source === "consultant_reassessment" && typeof sourceMetadata.created_by_consultant_id === "string" ? sourceMetadata.created_by_consultant_id : null;
-    const submissionActor = consultantId ? "consultant" : "client";
+    const isConsultantManaged = sourceMetadata.source === "consultant_reassessment" || sourceMetadata.consultant_managed === true;
+    const consultantId = isConsultantManaged && typeof sourceMetadata.created_by_consultant_id === "string"
+      ? sourceMetadata.created_by_consultant_id
+      : (isConsultantManaged ? "consultant" : null);
+    const submissionActor = isConsultantManaged ? "consultant" : "client";
 
     const { error: disclaimerConsentError } = await admin.from("diagnostic_consents").insert({
       case_id: caseRow.id,
       consent_type: "legal_disclaimer_acknowledgment",
       policy_version: payload.policyVersion,
       granted: payload.legalDisclaimerAccepted,
-      source: consultantId ? "consultant_reassessment" : "form_submission",
+      source: isConsultantManaged ? "consultant_reassessment" : "form_submission",
     });
     if (disclaimerConsentError) throw disclaimerConsentError;
 
@@ -122,7 +125,7 @@ export async function POST(request: Request) {
     await admin.from("diagnostic_cases").update({ status: "ai_processing", submitted_at: now, objective: String(answers.main_objective ?? "").trim() || null }).eq("id", caseRow.id);
     await admin.from("diagnostic_access_tokens").update({ revoked_at: now }).eq("case_id", caseRow.id).is("revoked_at", null);
     await admin.from("diagnostic_status_history").insert([
-      { case_id: caseRow.id, from_status: "client_draft", to_status: "submitted", actor_type: submissionActor, actor_user_id: consultantId, note: consultantId ? "Snapshot imutável criado pela consultoria após atualização das informações." : "Snapshot imutável criado." },
+      { case_id: caseRow.id, from_status: "client_draft", to_status: "submitted", actor_type: submissionActor, actor_user_id: consultantId, note: isConsultantManaged ? "Snapshot imutável criado pela consultoria após atualização das informações." : "Snapshot imutável criado." },
       { case_id: caseRow.id, from_status: "submitted", to_status: "ai_processing", actor_type: "system", note: "Análise estruturada iniciada." },
     ]);
 
@@ -131,7 +134,8 @@ export async function POST(request: Request) {
       .select("full_name,email_normalized")
       .eq("id", caseRow.client_id)
       .single();
-    if (client) {
+
+    if (client && submissionActor !== "consultant") {
       waitUntil(sendSubmissionConfirmation({
         to: client.email_normalized,
         fullName: client.full_name,
@@ -150,16 +154,18 @@ export async function POST(request: Request) {
       }));
     }
 
-    waitUntil(notifyDashboardUsersOfSubmission(admin, {
-      caseId: caseRow.id,
-      caseNumber: caseRow.case_number,
-      clientName: client?.full_name ?? "Cliente",
-    }).catch((notificationError) => {
-      console.error("dashboard_submission_notification_failed", {
+    if (submissionActor !== "consultant") {
+      waitUntil(notifyDashboardUsersOfSubmission(admin, {
         caseId: caseRow.id,
-        error: notificationError instanceof Error ? notificationError.name : "UNKNOWN_ERROR",
-      });
-    }));
+        caseNumber: caseRow.case_number,
+        clientName: client?.full_name ?? "Cliente",
+      }).catch((notificationError) => {
+        console.error("dashboard_submission_notification_failed", {
+          caseId: caseRow.id,
+          error: notificationError instanceof Error ? notificationError.name : "UNKNOWN_ERROR",
+        });
+      }));
+    }
 
     waitUntil(processAssessment(caseRow.id, submission.id, assessment.id));
     await writeAudit(admin, {

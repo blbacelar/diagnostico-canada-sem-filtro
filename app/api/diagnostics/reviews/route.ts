@@ -4,4 +4,123 @@ import { reviewSchema } from "../../../../lib/schemas";
 import { claimCaseForReview } from "../../../../lib/case-lock";
 import { isReviewImmutable } from "../../../../lib/case-lifecycle";
 export async function GET(request:Request){try{const{admin,user}=await requireConsultant(request);const caseId=new URL(request.url).searchParams.get("caseId");if(!caseId||!z.string().uuid().safeParse(caseId).success)return json({error:"Caso inválido."},{status:422});await claimCaseForReview(admin,caseId,user.id);const{data,error}=await admin.from("diagnostic_reviews").select("*").eq("case_id",caseId).order("version",{ascending:false}).limit(1).maybeSingle();if(error)throw error;return json({review:data});}catch(error){return handleApiError(error);}}
-export async function PUT(request:Request){try{const payload=await parseJson(request,reviewSchema,80_000);const{admin,user}=await requireConsultant(request);const diagnosticCase=await claimCaseForReview(admin,payload.caseId,user.id);if(isReviewImmutable(diagnosticCase.status))throw new ApiError(409,"Este parecer já foi concluído e não pode mais ser alterado.","REVIEW_IMMUTABLE");const{data:current,error:readError}=await admin.from("diagnostic_reviews").select("id,version,status").eq("case_id",payload.caseId).in("status",["draft","ready_for_approval"]).order("version",{ascending:false}).limit(1).maybeSingle();if(readError)throw readError;const values={coherent_path:payload.coherentPath,assumptions_to_review:payload.assumptionsToReview,likely_mistakes:payload.likelyMistakes,immediate_focus:payload.immediateFocus,study_strategy:payload.studyStrategy,validation_risks:payload.validationRisks,next_steps:payload.nextSteps,additional_notes:payload.additionalNotes,recommended_resources:payload.recommendedResources,status:payload.status,consultant_id:user.id};let review;if(current){const{data,error}=await admin.from("diagnostic_reviews").update(values).eq("id",current.id).select("id,version,status,updated_at").single();if(error)throw error;review=data;}else{const{data:latest}=await admin.from("diagnostic_reviews").select("version").eq("case_id",payload.caseId).order("version",{ascending:false}).limit(1).maybeSingle();const{data,error}=await admin.from("diagnostic_reviews").insert({case_id:payload.caseId,version:(latest?.version??0)+1,...values}).select("id,version,status,updated_at").single();if(error)throw error;review=data;}if(payload.status==="ready_for_approval"){await admin.from("diagnostic_review_versions").insert({review_id:review.id,case_id:payload.caseId,version:review.version,snapshot:values,created_by:user.id});await admin.from("diagnostic_cases").update({status:"ready_for_approval",assigned_consultant_id:user.id}).eq("id",payload.caseId).eq("assigned_consultant_id",user.id);await admin.from("diagnostic_status_history").insert({case_id:payload.caseId,from_status:"in_review",to_status:"ready_for_approval",actor_type:"consultant",actor_user_id:user.id,note:"Parecer enviado para aprovação."});}else{await admin.from("diagnostic_cases").update({status:"in_review"}).eq("id",payload.caseId).eq("assigned_consultant_id",user.id).in("status",["awaiting_triage","submitted","processing_error"]);}await writeAudit(admin,{caseId:payload.caseId,actorUserId:user.id,actorType:"consultant",action:"review.saved",metadata:{reviewId:review.id,version:review.version,status:payload.status}});return json({review});}catch(error){return handleApiError(error);}}
+export async function PUT(request: Request) {
+  try {
+    const payload = await parseJson(request, reviewSchema, 80_000);
+    const { admin, user } = await requireConsultant(request);
+    const diagnosticCase = await claimCaseForReview(admin, payload.caseId, user.id);
+
+    if (isReviewImmutable(diagnosticCase.status)) {
+      throw new ApiError(409, "Este parecer está em processo de envio e não pode ser alterado.", "REVIEW_IMMUTABLE");
+    }
+
+    if (["approved", "sent"].includes(diagnosticCase.status)) {
+      const now = new Date().toISOString();
+      await admin
+        .from("diagnostic_cases")
+        .update({ status: "in_review", updated_at: now })
+        .eq("id", payload.caseId);
+
+      await admin.from("diagnostic_status_history").insert({
+        case_id: payload.caseId,
+        from_status: diagnosticCase.status,
+        to_status: "in_review",
+        actor_type: "consultant",
+        actor_user_id: user.id,
+        note: "Status reaberto para in_review ao atualizar o parecer da consultoria.",
+      });
+    }
+
+    const { data: current, error: readError } = await admin
+      .from("diagnostic_reviews")
+      .select("id,version,status")
+      .eq("case_id", payload.caseId)
+      .in("status", ["draft", "ready_for_approval"])
+      .order("version", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (readError) throw readError;
+
+    const values = {
+      coherent_path: payload.coherentPath,
+      assumptions_to_review: payload.assumptionsToReview,
+      likely_mistakes: payload.likelyMistakes,
+      immediate_focus: payload.immediateFocus,
+      study_strategy: payload.studyStrategy,
+      validation_risks: payload.validationRisks,
+      next_steps: payload.nextSteps,
+      additional_notes: payload.additionalNotes,
+      recommended_resources: payload.recommendedResources,
+      status: payload.status,
+      consultant_id: user.id,
+    };
+
+    let review;
+    if (current) {
+      const { data, error } = await admin
+        .from("diagnostic_reviews")
+        .update(values)
+        .eq("id", current.id)
+        .select("id,version,status,updated_at")
+        .single();
+      if (error) throw error;
+      review = data;
+    } else {
+      const { data: latest } = await admin
+        .from("diagnostic_reviews")
+        .select("version")
+        .eq("case_id", payload.caseId)
+        .order("version", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const { data, error } = await admin
+        .from("diagnostic_reviews")
+        .insert({ case_id: payload.caseId, version: (latest?.version ?? 0) + 1, ...values })
+        .select("id,version,status,updated_at")
+        .single();
+      if (error) throw error;
+      review = data;
+    }
+
+    if (payload.status === "ready_for_approval") {
+      await admin.from("diagnostic_review_versions").insert({
+        review_id: review.id,
+        case_id: payload.caseId,
+        version: review.version,
+        snapshot: values,
+        created_by: user.id,
+      });
+      await admin
+        .from("diagnostic_cases")
+        .update({ status: "ready_for_approval", assigned_consultant_id: user.id })
+        .eq("id", payload.caseId);
+      await admin.from("diagnostic_status_history").insert({
+        case_id: payload.caseId,
+        from_status: "in_review",
+        to_status: "ready_for_approval",
+        actor_type: "consultant",
+        actor_user_id: user.id,
+        note: "Parecer enviado para aprovação.",
+      });
+    } else {
+      await admin
+        .from("diagnostic_cases")
+        .update({ status: "in_review" })
+        .eq("id", payload.caseId)
+        .in("status", ["awaiting_triage", "submitted", "processing_error", "approved", "sent"]);
+    }
+
+    await writeAudit(admin, {
+      caseId: payload.caseId,
+      actorUserId: user.id,
+      actorType: "consultant",
+      action: "review.saved",
+      metadata: { reviewId: review.id, version: review.version, status: payload.status },
+    });
+
+    return json({ review });
+  } catch (error) {
+    return handleApiError(error);
+  }
+}

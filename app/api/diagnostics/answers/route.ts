@@ -6,7 +6,9 @@ export async function PUT(request: Request) {
 		await enforceRateLimit(request, "diagnostic_answers", 180, 15);
 		const payload = await parseJson(request, answersPayloadSchema, 120_000);
 		const { admin, caseRow } = await requireFormCase(request);
-		if (caseRow.status !== "client_draft") {
+		const sourceMetadata = caseRow.source_metadata && typeof caseRow.source_metadata === "object" ? caseRow.source_metadata as Record<string, unknown> : {};
+		const isConsultantManaged = sourceMetadata.source === "consultant_reassessment" || sourceMetadata.consultant_managed === true;
+		if (caseRow.status !== "client_draft" && !isConsultantManaged) {
 			throw new ApiError(409, "As respostas deste diagnóstico já foram enviadas.", "ANSWERS_LOCKED");
 		}
 
@@ -39,7 +41,7 @@ export async function PUT(request: Request) {
 
 			await writeAudit(admin, {
 				caseId: caseRow.id,
-				actorType: "client",
+				actorType: isConsultantManaged ? "consultant" : "client",
 				action: "answers.saved",
 				metadata: { questionCount: entries.length },
 			});

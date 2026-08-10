@@ -199,11 +199,25 @@ export function FormApp({ initialToken, dashboardReturn = false }: { initialToke
     }
   }
 
+  useEffect(() => {
+    if (submitted && dashboardMode && session?.caseId) {
+      const timer = setTimeout(() => {
+        window.location.assign(`/dashboard/diagnosticos/${session.caseId}`);
+      }, 1200);
+      return () => clearTimeout(timer);
+    }
+  }, [submitted, dashboardMode, session]);
+
   if (loading) return <FormStatus title="Abrindo seu diagnóstico" detail="Validando o link pessoal com segurança…" />;
   if (fatalError) return <FormStatus error title="Este link não pode ser usado" detail={fatalError} dashboardHref={dashboardReturn ? "/dashboard/diagnosticos" : undefined} />;
-  if (submitted) return <FormStatus success title="Respostas recebidas" detail={`O diagnóstico ${submitted.caseNumber} foi enviado. Prazo estimado: ${submitted.expectedTime}. A análise automática ficará restrita às consultoras até a revisão profissional.`} dashboardHref={dashboardMode ? `/dashboard/diagnosticos/${session?.caseId ?? ""}` : undefined} />;
+  if (submitted) {
+    if (dashboardMode) {
+      return <FormStatus success title="Diagnóstico atualizado" detail={`As respostas de ${submitted.caseNumber} foram salvas com sucesso. Redirecionando para a ficha do caso…`} dashboardHref={`/dashboard/diagnosticos/${session?.caseId ?? ""}`} />;
+    }
+    return <FormStatus success title="Respostas recebidas" detail={`O diagnóstico ${submitted.caseNumber} foi enviado. Prazo estimado: ${submitted.expectedTime}. A análise automática ficará restrita às consultoras até a revisão profissional.`} />;
+  }
   if (!session) return null;
-  if (session.status !== "client_draft") return <FormStatus success title="Diagnóstico já enviado" detail={`As respostas de ${session.caseNumber} estão protegidas e não podem mais ser alteradas. Se a equipe precisar de informações adicionais, você receberá uma nova comunicação.`} dashboardHref={dashboardMode ? `/dashboard/diagnosticos/${session.caseId}` : undefined} />;
+  if (session.status !== "client_draft" && !dashboardMode) return <FormStatus success title="Diagnóstico já enviado" detail={`As respostas de ${session.caseNumber} estão protegidas e não podem mais ser alteradas. Se a equipe precisar de informações adicionais, você receberá uma nova comunicação.`} dashboardHref={dashboardMode ? `/dashboard/diagnosticos/${session.caseId}` : undefined} />;
 
   const section = diagnosticSections[step];
   const sectionQuestions = isReview ? [] : visibleQuestions(section, answers);
@@ -211,12 +225,12 @@ export function FormApp({ initialToken, dashboardReturn = false }: { initialToke
   return (
     <div className="form-workspace">
       <header className="form-topbar">
-        <BrandMark compact />
+        <BrandMark compact href={dashboardMode ? "/dashboard/diagnosticos" : "/"} />
         <div className={`save-state save-state--${saveState}`} role="status">
           {saveState === "offline" ? <CloudOff /> : <Cloud />}
           <span>{saveState === "saving" ? "Salvando…" : saveState === "saved" ? "Tudo salvo" : saveState === "offline" ? "Sem conexão" : saveState === "error" ? "Falha ao salvar" : "Salvamento automático"}</span>
         </div>
-        <div className="case-tag"><small>Diagnóstico</small><strong>{session.caseNumber}</strong></div>
+        <div className="case-tag"><small>{dashboardMode ? "Modo Consultoria" : "Diagnóstico"}</small><strong>{session.caseNumber}</strong></div>
       </header>
       <div className="progress-strip">
         <div><span style={{ width: `${progress}%` }} /></div>
@@ -360,7 +374,9 @@ function CurrencyInput({ id, name, value, currencyCode, placeholder, required, "
 function ReviewAnswers({ answers, incompleteSections, onEdit, onSubmit, submitting, error, consultantManaged, disclaimerAccepted, onToggleDisclaimerAccepted }: { answers: FormAnswers; incompleteSections: number[]; onEdit: (index: number) => void; onSubmit: () => void; submitting: boolean; error: string; consultantManaged: boolean; disclaimerAccepted: boolean; onToggleDisclaimerAccepted: (accepted: boolean) => void }) {
   return (
     <section className="question-section review-section">
-      <p className="eyebrow">Revisão final</p><h1>Revise antes de enviar</h1><p className="section-intro">Depois do envio, suas respostas formarão um registro protegido e só poderão ser reabertas pela equipe.</p>
+      <p className="eyebrow">{consultantManaged ? "Revisão pela consultoria" : "Revisão final"}</p>
+      <h1>{consultantManaged ? "Revise as alterações" : "Revise antes de enviar"}</h1>
+      <p className="section-intro">{consultantManaged ? "Confira as respostas atualizadas antes de salvar a nova versão do diagnóstico." : "Depois do envio, suas respostas formarão um registro protegido e só poderão ser reabertas pela equipe."}</p>
       <div className="review-list">
         {diagnosticSections.map((section, index) => <article key={section.key}><header><div><small>Seção {section.number}</small><h2>{section.title}</h2></div><button type="button" onClick={() => onEdit(index)}><Pencil /> Editar</button></header>{incompleteSections[index] > 0 && <p className="review-warning"><AlertTriangle /> {incompleteSections[index]} pendência(s)</p>}<dl>{visibleQuestions(section, answers).filter((question) => answers[question.key] !== undefined && answers[question.key] !== "").map((question) => { const answer = answers[question.key]; const formatted = question.format === "currency" ? formatCurrencyAmount(answer, String(answers.funds_currency ?? "")) : Array.isArray(answer) ? answer.join(", ") : typeof answer === "boolean" ? (answer ? "Sim" : "Não") : String(answer); return <div key={question.key}><dt>{question.label}</dt><dd>{formatted}</dd></div>; })}</dl></article>)}
       </div>
@@ -368,9 +384,9 @@ function ReviewAnswers({ answers, incompleteSections, onEdit, onSubmit, submitti
         <h2>{legalDisclaimerTitle}</h2>
         {legalDisclaimerParagraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
       </section>
-      <label className="final-consent"><input type="checkbox" checked={disclaimerAccepted} onChange={(event) => onToggleDisclaimerAccepted(event.target.checked)} /><span><Check />{consultantManaged ? "Confirmo que li e entendi o aviso legal acima e quero enviar esta nova versão para análise." : "Confirmo que li e entendi o aviso legal acima e autorizo o uso das respostas para elaboração do diagnóstico profissional."}</span></label>
+      <label className="final-consent"><input type="checkbox" checked={disclaimerAccepted} onChange={(event) => onToggleDisclaimerAccepted(event.target.checked)} /><span><Check />{consultantManaged ? "Confirmo a atualização das respostas do cliente para o diagnóstico." : "Confirmo que li e entendi o aviso legal acima e autorizo o uso das respostas para elaboração do diagnóstico profissional."}</span></label>
       {error && <p className="inline-alert" role="alert"><AlertTriangle />{error}</p>}
-      <div className="form-actions"><button className="secondary-button" type="button" onClick={() => onEdit(diagnosticSections.length - 1)}><ArrowLeft /> Voltar</button><button className="primary-button" type="button" disabled={submitting || !disclaimerAccepted} onClick={onSubmit}>{submitting ? "Enviando…" : "Enviar para análise"}<Send /></button></div>
+      <div className="form-actions"><button className="secondary-button" type="button" onClick={() => onEdit(diagnosticSections.length - 1)}><ArrowLeft /> Voltar</button><button className="primary-button" type="button" disabled={submitting || !disclaimerAccepted} onClick={onSubmit}>{submitting ? "Salvando…" : (consultantManaged ? "Salvar e analisar" : "Enviar para análise")}<Send /></button></div>
     </section>
   );
 }

@@ -15,6 +15,7 @@ import {
   FileText,
   Mail,
   MapPin,
+  Pencil,
   Plus,
   Send,
   ShieldAlert,
@@ -157,6 +158,12 @@ export function DiagnosticDetailClient({ caseId }: { caseId: string }) {
               <>
                 <Link
                   className="secondary-button"
+                  href={`/dashboard/diagnosticos/${caseId}/parecer`}
+                >
+                  <Pencil /> Editar parecer
+                </Link>
+                <Link
+                  className="secondary-button"
                   href={`/dashboard/diagnosticos/${caseId}/relatorio`}
                 >
                   <Eye /> Ver diagnóstico enviado
@@ -167,6 +174,12 @@ export function DiagnosticDetailClient({ caseId }: { caseId: string }) {
               </>
             ) : approved ? (
               <>
+                <Link
+                  className="secondary-button"
+                  href={`/dashboard/diagnosticos/${caseId}/parecer`}
+                >
+                  <Pencil /> Editar parecer
+                </Link>
                 <Link
                   className="secondary-button"
                   href={`/dashboard/diagnosticos/${caseId}/relatorio`}
@@ -187,7 +200,7 @@ export function DiagnosticDetailClient({ caseId }: { caseId: string }) {
                   <Mail /> Pedir informações
                 </Link>
                 <Link className="primary-button" href={`/dashboard/diagnosticos/${caseId}/parecer`}>
-                  <FileText /> {data.review ? "Continuar parecer" : "Iniciar parecer"}
+                  <Pencil /> {data.review ? "Editar parecer" : "Iniciar parecer"}
                 </Link>
               </>
             )}

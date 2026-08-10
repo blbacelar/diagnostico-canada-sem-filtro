@@ -14,12 +14,13 @@ const expectedLayoutRows: Record<string, string[][]> = {
   personal_profile: [
     ["age", "marital_status"],
     ["nationality", "country_of_residence"],
+    ["has_second_nationality"],
     ["has_children", "children_count", "children_ages"],
     ["spouse_summary"],
   ],
   main_objective: [["main_objective"], ["objective_context"]],
-  education: [["education_level", "education_field"], ["graduation_year", "education_outside_canada"], ["education_institution"]],
-  work_experience: [["current_profession", "experience_years"], ["leadership_experience", "regulated_profession"], ["canadian_work_experience", "canadian_role", "canadian_work_duration"]],
+  education: [["education_level", "education_field"], ["has_second_education"], ["graduation_year", "education_outside_canada"], ["education_institution"]],
+  work_experience: [["current_profession", "experience_years"], ["interest_in_other_area"], ["leadership_experience", "regulated_profession"], ["canadian_work_experience", "canadian_role", "canadian_work_duration"]],
   languages: [["english_level", "english_test"], ["english_test_details"], ["french_level", "french_test"], ["french_test_details"], ["french_investment"]],
   finances: [["available_funds", "funds_currency"], ["funds_scope"], ["sell_assets", "financial_support"], ["financial_context"]],
   spouse: [["spouse_age", "spouse_education"], ["spouse_profession", "spouse_experience"], ["spouse_english", "spouse_french"], ["spouse_interest"], ["spouse_context"]],
@@ -100,6 +101,7 @@ describe("contrato de layout das 11 seções", () => {
     expect(rows.map(row => row.questions.map(question => question.key))).toEqual([
       ["age", "marital_status"],
       ["nationality", "country_of_residence"],
+      ["has_second_nationality"],
       ["has_children"],
       ["spouse_summary"],
     ]);

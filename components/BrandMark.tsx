@@ -1,9 +1,9 @@
 import Link from "next/link";
 
-export function BrandMark({ compact = false }: { compact?: boolean }) {
+export function BrandMark({ compact = false, href = "/" }: { compact?: boolean; href?: string }) {
   return (
     <Link
-      href="/"
+      href={href}
       className={`brand-mark ${compact ? "brand-mark--compact" : ""}`}
       aria-label="Canadá Sem Filtro — página inicial"
     >

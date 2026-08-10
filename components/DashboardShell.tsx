@@ -54,7 +54,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   return <DashboardConsultantProvider consultant={consultant}>
     <div className="dashboard-shell">
       <aside className="dashboard-sidebar">
-        <BrandMark />
+        <BrandMark href="/dashboard" />
         <nav aria-label="Navegação do dashboard">{nav.map((item) => { const Icon = item.icon; const active = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href)); return <Link href={item.href} className={active ? "active" : ""} key={item.href}><Icon /><span>{item.label}</span>{active && <ChevronRight className="nav-arrow" />}</Link>; })}</nav>
         <div className="consultant-card"><span>{consultant.display_name.slice(0,1) || "C"}</span><div><strong>{consultant.display_name}</strong><small>{consultant.role === "admin" ? "Administradora" : "Consultora"}</small></div><button type="button" onClick={signOut} aria-label="Sair"><LogOut /></button></div>
       </aside>
