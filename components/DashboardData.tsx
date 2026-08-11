@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { AlertTriangle, ArrowUpRight, Clock3, LockKeyhole, Search, SlidersHorizontal, UsersRound } from "lucide-react";
+import { AlertTriangle, ArrowUpRight, Clock3, LockKeyhole, Search, UsersRound } from "lucide-react";
 import type { ClientListItem } from "../lib/clients";
 import { authorizedFetch } from "../lib/dashboard-fetch";
 import { caseStatusLabels, getCaseStatusLabel } from "../lib/status-labels";
