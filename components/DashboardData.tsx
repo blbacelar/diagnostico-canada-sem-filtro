@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { AlertTriangle, ArrowUpRight, Clock3, LockKeyhole, Search, SlidersHorizontal, UsersRound } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { AlertTriangle, ArrowUpRight, ChevronLeft, ChevronRight, Clock3, LockKeyhole, Search, UsersRound } from "lucide-react";
 import type { ClientListItem } from "../lib/clients";
 import { authorizedFetch } from "../lib/dashboard-fetch";
 import { caseStatusLabels, getCaseStatusLabel } from "../lib/status-labels";
@@ -160,12 +160,15 @@ function DiagnosticTableRow({ item, onOpen }: { item: CaseRow; onOpen: (caseId: 
 }
 
 const dateFormatter = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+const CLIENT_PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const;
 
 export function ClientsListClient() {
   const [items, setItems] = useState<ClientListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [error, setError] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<(typeof CLIENT_PAGE_SIZE_OPTIONS)[number]>(10);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -183,15 +186,44 @@ export function ClientsListClient() {
     return () => { clearTimeout(timer); controller.abort(); };
   }, [search]);
 
+  const total = items.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const startIndex = total === 0 ? 0 : (safePage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, total);
+  const visibleItems = useMemo(() => items.slice(startIndex, endIndex), [endIndex, items, startIndex]);
+  const hasPreviousPage = safePage > 1;
+  const hasNextPage = safePage < totalPages;
+
   return <>
     <DashboardHeader eyebrow="Relacionamento" title="Clientes" description="Consulte cada pessoa, seus diagnósticos e a atividade mais recente em um único lugar." />
     <div className="clients-toolbar">
-      <label><Search /><input aria-label="Buscar clientes" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nome ou e-mail" /></label>
+      <label><Search /><input aria-label="Buscar clientes" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Buscar por nome ou e-mail" /></label>
       {!loading && !error && <p><UsersRound /><strong>{items.length}</strong> {items.length === 1 ? "cliente encontrado" : "clientes encontrados"}</p>}
     </div>
     {error ? <DashboardError /> : loading ? <DashboardLoading /> : <div className="clients-table">
       <div className="clients-table-head"><span>Cliente</span><span>Diagnósticos</span><span>Caso mais recente</span><span>Status</span><span>Compra</span><span>Última atividade</span><span /></div>
-      {items.length ? items.map((item) => <ClientLine key={item.id} item={item} />) : <div className="empty-row">{search ? "Nenhum cliente corresponde à busca." : "Nenhum cliente cadastrado ainda."}</div>}
+      {visibleItems.length ? visibleItems.map((item) => <ClientLine key={item.id} item={item} />) : <div className="empty-row">{search ? "Nenhum cliente corresponde à busca." : "Nenhum cliente cadastrado ainda."}</div>}
+      <footer className="table-pagination clients-pagination">
+        <div className="table-pagination__page-size">
+          <span>Itens por página</span>
+          <Select value={String(pageSize)} onValueChange={(value) => { setPageSize(CLIENT_PAGE_SIZE_OPTIONS.find((option) => String(option) === value) ?? 10); setPage(1); }}>
+            <SelectTrigger className="table-pagination__select-trigger" aria-label="Itens por página">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent align="end">
+              {CLIENT_PAGE_SIZE_OPTIONS.map((option) => <SelectItem key={option} value={String(option)}>{option}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <span className="table-pagination__status">
+          Exibindo {total === 0 ? 0 : startIndex + 1} - {endIndex} de {total} {total === 1 ? "cliente" : "clientes"} (Página {safePage} de {totalPages})
+        </span>
+        <div className="table-pagination__actions">
+          <button type="button" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={!hasPreviousPage}><ChevronLeft /> Anterior</button>
+          <button type="button" onClick={() => setPage((current) => Math.min(totalPages, current + 1))} disabled={!hasNextPage}>Próximo <ChevronRight /></button>
+        </div>
+      </footer>
     </div>}
   </>;
 }

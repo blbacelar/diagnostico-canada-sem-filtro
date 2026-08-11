@@ -4,7 +4,16 @@ import { mapPurchaseWindowsByEmail, type AllowedEmailEventRow } from "../../../.
 
 const clientColumns = "id,name,email,source,created_at,updated_at";
 
-function toLegacyClient(client: any): ClientRecord {
+type CentralClientRow = {
+  id: string;
+  name: string;
+  email: string;
+  source: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+function toLegacyClient(client: CentralClientRow): ClientRecord {
   return {
     ...client,
     full_name: client.name,
