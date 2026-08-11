@@ -15,8 +15,8 @@ export async function GET(
     const [{ data: client }, { data: submission }, { data: assessment }, { data: review }, { data: history }] =
       await Promise.all([
         admin
-          .from("diagnostic_clients")
-          .select("full_name,email_display,email_normalized")
+          .from("clients")
+          .select("name,email")
           .eq("id", diagnosticCase.client_id)
           .single(),
         admin
@@ -58,8 +58,8 @@ export async function GET(
       answers = Object.fromEntries((rows ?? []).map((row) => [row.question_key, row.answer]));
     }
 
-    const purchaseWindow = client?.email_normalized
-      ? await getPurchaseWindowForEmail(admin, client.email_normalized)
+    const purchaseWindow = client?.email
+      ? await getPurchaseWindowForEmail(admin, client.email)
       : {
           purchaseDate: null,
           purchaseEvent: null,
@@ -79,8 +79,8 @@ export async function GET(
     return json({
       case: diagnosticCase,
       client: {
-        full_name: client?.full_name ?? "Cliente",
-        email_display: client?.email_display ?? "",
+        full_name: client?.name ?? "Cliente",
+        email_display: client?.email ?? "",
       },
       answers,
       assessment: assessment ?? null,

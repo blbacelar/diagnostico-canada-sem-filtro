@@ -7,7 +7,7 @@ export async function GET(request: Request) {
   try {
     const { admin, token, caseRow } = await requireFormCase(request);
     const [clientResult, answersResult, consentResult] = await Promise.all([
-      admin.from("diagnostic_clients").select("full_name").eq("id", caseRow.client_id).single(),
+      admin.from("clients").select("name").eq("id", caseRow.client_id).single(),
       admin.from("diagnostic_answers").select("question_key,answer").eq("case_id", caseRow.id),
       admin.from("diagnostic_consents").select("policy_version").eq("case_id", caseRow.id).eq("granted", true).order("created_at", { ascending: false }).limit(1).maybeSingle(),
     ]);
@@ -22,7 +22,7 @@ export async function GET(request: Request) {
       caseNumber: caseRow.case_number,
       status: caseRow.status,
       submittedAt: caseRow.submitted_at,
-      client: { fullName: clientResult.data.full_name },
+      client: { fullName: clientResult.data.name },
       answers,
       policyVersion: consentResult.data?.policy_version ?? operationalConfig.policyVersion,
       consultantManaged: sourceMetadata.source === "consultant_reassessment",

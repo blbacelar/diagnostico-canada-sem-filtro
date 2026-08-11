@@ -41,9 +41,9 @@ export async function GET(request: Request) {
     let clientIds: string[] = [];
     if (search) {
       const { data: clients, error: clientsError } = await admin
-        .from("diagnostic_clients")
+        .from("clients")
         .select("id")
-        .or(`full_name.ilike.%${search}%,email_normalized.ilike.%${search}%`)
+        .or(`name.ilike.%${search}%,email.ilike.%${search}%`)
         .limit(50);
       if (clientsError) throw clientsError;
       clientIds = (clients ?? []).map((item) => item.id);
@@ -64,7 +64,7 @@ export async function GET(request: Request) {
     const dataQuery = applyFilters(
       admin
         .from("diagnostic_cases")
-        .select("id,case_number,status,objective,submitted_at,updated_at,assigned_consultant_id,diagnostic_clients(full_name,email_display),diagnostic_ai_assessments(version,structured_result,status)")
+        .select("id,case_number,status,objective,submitted_at,updated_at,assigned_consultant_id,clients(name,email),diagnostic_ai_assessments(version,structured_result,status)")
         .is("archived_at", null)
         .order("updated_at", { ascending: false })
         .range(offset, offset + pageSize - 1),
@@ -75,7 +75,10 @@ export async function GET(request: Request) {
     const { data, error } = await dataQuery;
     if (error) throw error;
 
-    const decorated = await decorateCaseLocks(admin, data ?? [], user.id);
+    const decorated = await decorateCaseLocks(admin, (data ?? []).map((item: any) => ({
+      ...item,
+      diagnostic_clients: item.clients ? { full_name: item.clients.name, email_display: item.clients.email } : null,
+    })), user.id);
     const items = decorated.map((item: any) => ({
       ...item,
       diagnostic_ai_assessments: [...(item.diagnostic_ai_assessments ?? [])]

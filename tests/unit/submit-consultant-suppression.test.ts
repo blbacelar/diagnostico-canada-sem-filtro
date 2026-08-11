@@ -96,7 +96,8 @@ describe("submissão gerenciada por consultor", () => {
       limit: vi.fn(() => queryMock),
       maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
       insert: vi.fn(() => queryMock),
-      single: vi.fn().mockResolvedValue({ data: { id: "sub-1", version: 1, full_name: "Cliente Teste", email_normalized: "cliente@example.com" }, error: null }),
+      upsert: vi.fn(() => queryMock),
+      single: vi.fn().mockResolvedValue({ data: { id: "sub-1", version: 1, name: "Cliente Teste", email: "cliente@example.com", phone: null }, error: null }),
       update: vi.fn(() => queryMock),
     };
 
