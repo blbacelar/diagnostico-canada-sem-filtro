@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { claimCaseForReview, decorateCaseLocks } from "../../lib/case-lock";
+import { claimCaseForReview, decorateCaseLocks, releaseCaseLock } from "../../lib/case-lock";
 
 type CaseRow = {
   id: string;
@@ -15,11 +15,15 @@ type CaseRow = {
 function adminStub(input: { current: CaseRow; claimed?: CaseRow | null; ownerName?: string }) {
   const update = vi.fn(() => ({
     eq: () => ({
-      eq: () => ({
-        is: () => ({
+      eq: () => {
+        const result = {
+          is: () => ({
+            select: () => ({ maybeSingle: vi.fn().mockResolvedValue({ data: input.claimed ?? null, error: null }) }),
+          }),
           select: () => ({ maybeSingle: vi.fn().mockResolvedValue({ data: input.claimed ?? null, error: null }) }),
-        }),
-      }),
+        };
+        return result;
+      },
     }),
   }));
   const historyInsert = vi.fn().mockResolvedValue({ error: null });
@@ -87,5 +91,28 @@ describe("reserva exclusiva de diagnóstico", () => {
     const [decorated] = await decorateCaseLocks(admin as never, [ownedCase], "consultant-a");
 
     expect(decorated).toMatchObject({ locked_by_other: true, locked_by_name: "Maria Consultora" });
+  });
+
+  it("libera o caso apenas quando pertence à consultora atual", async () => {
+    const ownedCase = { ...availableCase, status: "in_review", assigned_consultant_id: "consultant-a" };
+    const releasedCase = { ...ownedCase, assigned_consultant_id: null };
+    const { admin, update, auditInsert } = adminStub({ current: ownedCase, claimed: releasedCase });
+
+    const result = await releaseCaseLock(admin as never, ownedCase.id, "consultant-a");
+
+    expect(result).toEqual(releasedCase);
+    expect(update).toHaveBeenCalledWith({ assigned_consultant_id: null });
+    expect(auditInsert).toHaveBeenCalledWith(expect.objectContaining({ action: "diagnostic.released", actor_user_id: "consultant-a" }));
+  });
+
+  it("não libera o caso reservado por outra consultora", async () => {
+    const ownedCase = { ...availableCase, status: "in_review", assigned_consultant_id: "consultant-b" };
+    const { admin, update, auditInsert } = adminStub({ current: ownedCase });
+
+    const result = await releaseCaseLock(admin as never, ownedCase.id, "consultant-a");
+
+    expect(result).toEqual(ownedCase);
+    expect(update).not.toHaveBeenCalled();
+    expect(auditInsert).not.toHaveBeenCalled();
   });
 });

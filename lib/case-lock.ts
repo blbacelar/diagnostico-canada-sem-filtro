@@ -92,6 +92,32 @@ export async function claimCaseForReview(admin: AdminClient, caseId: string, con
   return claimed;
 }
 
+export async function releaseCaseLock(admin: AdminClient, caseId: string, consultantId: string) {
+  const current = await readCase(admin, caseId);
+  if (!isCaseLockActive(current.status) || current.assigned_consultant_id !== consultantId) return current;
+
+  const { data: released, error } = await admin
+    .from("diagnostic_cases")
+    .update({ assigned_consultant_id: null })
+    .eq("id", caseId)
+    .eq("assigned_consultant_id", consultantId)
+    .select("id,case_number,status,objective,submitted_at,updated_at,assigned_consultant_id,client_id")
+    .maybeSingle();
+  if (error) throw error;
+
+  const result = released ?? await readCase(admin, caseId);
+  if (released) {
+    await writeAudit(admin, {
+      caseId,
+      actorUserId: consultantId,
+      actorType: "consultant",
+      action: "diagnostic.released",
+      metadata: { status: released.status },
+    });
+  }
+  return result;
+}
+
 export async function decorateCaseLocks<T extends LockableCase>(admin: AdminClient, cases: T[], consultantId: string) {
   const ownerIds = [...new Set(cases
     .filter((item) => isCaseLockActive(item.status) && item.assigned_consultant_id && item.assigned_consultant_id !== consultantId)

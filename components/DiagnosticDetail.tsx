@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- Generic JSON helper supports multiple API contracts. */
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -84,13 +84,29 @@ export async function detailFetch<T = any>(
   return result;
 }
 
+async function releaseCaseLock(caseId: string, accessToken?: string | null) {
+  const token = accessToken ?? (await getBrowserSupabase().auth.getSession()).data.session?.access_token;
+  if (!token) return;
+  fetch(`/api/dashboard/cases/${caseId}/lock`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+    keepalive: true,
+  }).catch(() => {
+    // Best-effort release: stale locks are still protected by ownership checks.
+  });
+}
+
 export function DiagnosticDetailClient({ caseId }: { caseId: string }) {
   const [data, setData] = useState<CaseDetailData | null>(null);
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
   const [actionError, setActionError] = useState("");
+  const accessTokenRef = useRef<string | null>(null);
 
   useEffect(() => {
+    getBrowserSupabase().auth.getSession().then(({ data: sessionData }) => {
+      accessTokenRef.current = sessionData.session?.access_token ?? null;
+    });
     detailFetch<CaseDetailData>(`/api/dashboard/cases/${caseId}`)
       .then(setData)
       .catch((fetchError) => {
@@ -100,6 +116,14 @@ export function DiagnosticDetailClient({ caseId }: { caseId: string }) {
             : "Não foi possível abrir o diagnóstico.",
         );
       });
+    const release = () => {
+      void releaseCaseLock(caseId, accessTokenRef.current);
+    };
+    window.addEventListener("pagehide", release);
+    return () => {
+      window.removeEventListener("pagehide", release);
+      release();
+    };
   }, [caseId]);
 
   if (error) {
