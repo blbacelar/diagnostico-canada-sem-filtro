@@ -39,7 +39,7 @@ export async function processAssessment(caseId: string, submissionId: string, as
 }
 
 export async function caseClient(admin: ReturnType<typeof getAdminSupabase>, caseId: string) {
-  const { data, error } = await admin.from("diagnostic_cases").select("id, case_number, status, client_id, clients!inner(id,name,email,source,created_at,updated_at)").eq("id", caseId).single();
+  const { data, error } = await admin.from("diagnostic_cases").select("id, case_number, status, client_id, clients!inner(id,name,email,created_at,updated_at)").eq("id", caseId).single();
   if (error) throw error;
   const centralClient = Array.isArray(data.clients) ? data.clients[0] : data.clients;
   const client = legacyClientShape(centralClient);

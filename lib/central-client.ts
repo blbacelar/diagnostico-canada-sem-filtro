@@ -44,12 +44,11 @@ export async function upsertCentralClient(
         email,
         ...(input.phone ? { phone: input.phone.trim() } : {}),
         ...(input.statusJourney ? { status_journey: input.statusJourney } : {}),
-        ...(input.source ? { source: input.source } : {}),
         updated_at: new Date().toISOString(),
       },
       { onConflict: "email" },
     )
-    .select("id,name,email,source,created_at,updated_at")
+    .select("id,name,email,created_at,updated_at")
     .single();
   if (error) throw error;
   return data as CentralClient;

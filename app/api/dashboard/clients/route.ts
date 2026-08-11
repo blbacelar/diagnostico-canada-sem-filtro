@@ -2,13 +2,12 @@ import { handleApiError, json, requireConsultant } from "../../../../lib/api";
 import { buildClientList, type ClientCaseRecord, type ClientRecord } from "../../../../lib/clients";
 import { mapPurchaseWindowsByEmail, type AllowedEmailEventRow } from "../../../../lib/purchase-window";
 
-const clientColumns = "id,name,email,source,created_at,updated_at";
+const clientColumns = "id,name,email,created_at,updated_at";
 
 type CentralClientRow = {
   id: string;
   name: string;
   email: string;
-  source: string;
   created_at: string;
   updated_at: string;
 };
@@ -19,6 +18,7 @@ function toLegacyClient(client: CentralClientRow): ClientRecord {
     full_name: client.name,
     email_normalized: client.email,
     email_display: client.email,
+    source: "diagnostic",
   } as ClientRecord;
 }
 

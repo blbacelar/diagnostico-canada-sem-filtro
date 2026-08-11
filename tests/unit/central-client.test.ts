@@ -17,12 +17,17 @@ describe("cadastro central de clientes", () => {
       name: " Bruno Bacelar ",
       email: " Bruno@Example.COM ",
       statusJourney: "diagnostico_enviado",
+      source: "diagnostic",
     });
 
     expect(client.email).toBe("bruno@example.com");
     expect(query.upsert).toHaveBeenCalledWith(
       expect.objectContaining({ name: "Bruno Bacelar", email: "bruno@example.com", status_journey: "diagnostico_enviado" }),
       { onConflict: "email" },
+    );
+    expect(query.upsert).not.toHaveBeenCalledWith(
+      expect.objectContaining({ source: expect.any(String) }),
+      expect.anything(),
     );
   });
 });
