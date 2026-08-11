@@ -2,7 +2,16 @@ import { handleApiError, json, requireConsultant } from "../../../../lib/api";
 import { buildClientList, type ClientCaseRecord, type ClientRecord } from "../../../../lib/clients";
 import { mapPurchaseWindowsByEmail, type AllowedEmailEventRow } from "../../../../lib/purchase-window";
 
-const clientColumns = "id,full_name,email_normalized,email_display,source,created_at,updated_at";
+const clientColumns = "id,name,email,source,created_at,updated_at";
+
+function toLegacyClient(client: any): ClientRecord {
+  return {
+    ...client,
+    full_name: client.name,
+    email_normalized: client.email,
+    email_display: client.email,
+  } as ClientRecord;
+}
 
 export async function GET(request: Request) {
   try {
@@ -13,16 +22,16 @@ export async function GET(request: Request) {
     if (search) {
       const pattern = `%${search}%`;
       const [nameResult, emailResult] = await Promise.all([
-        admin.from("diagnostic_clients").select(clientColumns).ilike("full_name", pattern).order("updated_at", { ascending: false }).limit(100),
-        admin.from("diagnostic_clients").select(clientColumns).ilike("email_normalized", pattern.toLowerCase()).order("updated_at", { ascending: false }).limit(100),
+        admin.from("clients").select(clientColumns).ilike("name", pattern).order("updated_at", { ascending: false }).limit(100),
+        admin.from("clients").select(clientColumns).ilike("email", pattern.toLowerCase()).order("updated_at", { ascending: false }).limit(100),
       ]);
       if (nameResult.error) throw nameResult.error;
       if (emailResult.error) throw emailResult.error;
-      clients = [...new Map([...(nameResult.data ?? []), ...(emailResult.data ?? [])].map((client) => [client.id, client])).values()].slice(0, 100) as ClientRecord[];
+      clients = [...new Map([...(nameResult.data ?? []), ...(emailResult.data ?? [])].map((client) => [client.id, toLegacyClient(client)])).values()].slice(0, 100);
     } else {
-      const result = await admin.from("diagnostic_clients").select(clientColumns).order("updated_at", { ascending: false }).limit(100);
+      const result = await admin.from("clients").select(clientColumns).order("updated_at", { ascending: false }).limit(100);
       if (result.error) throw result.error;
-      clients = (result.data ?? []) as ClientRecord[];
+      clients = (result.data ?? []).map(toLegacyClient);
     }
 
     if (!clients.length) return json({ items: [] });

@@ -17,6 +17,7 @@ import { sendSubmissionConfirmation } from "../../../../lib/email";
 import { getOperationalConfig } from "../../../../lib/operational-config.server";
 import { diagnosticSubmissionAnswersSchema } from "../../../../lib/diagnostic-validation";
 import { notifyDashboardUsersOfSubmission } from "../../../../lib/dashboard-notifications";
+import { upsertCentralClient } from "../../../../lib/central-client";
 
 const expectedTime = "até 5 dias úteis";
 
@@ -53,6 +54,22 @@ export async function POST(request: Request) {
       ? sourceMetadata.created_by_consultant_id
       : (isConsultantManaged ? "consultant" : null);
     const submissionActor = isConsultantManaged ? "consultant" : "client";
+
+    // O diagnóstico e o CRM compartilham o mesmo cadastro. O upsert acontece
+    // antes da submissão imutável e mantém o e-mail como identidade única.
+    const { data: existingClient, error: clientReadError } = await admin
+      .from("clients")
+      .select("id,name,email,phone")
+      .eq("id", caseRow.client_id)
+      .single();
+    if (clientReadError || !existingClient) throw clientReadError ?? new ApiError(404, "Cliente não encontrado.", "CLIENT_NOT_FOUND");
+    const client = await upsertCentralClient(admin, {
+      name: existingClient.name,
+      email: existingClient.email,
+      phone: existingClient.phone,
+      statusJourney: "diagnostico_enviado",
+      source: "diagnostic",
+    });
 
     const { error: disclaimerConsentError } = await admin.from("diagnostic_consents").insert({
       case_id: caseRow.id,
@@ -129,22 +146,16 @@ export async function POST(request: Request) {
       { case_id: caseRow.id, from_status: "submitted", to_status: "ai_processing", actor_type: "system", note: "Análise estruturada iniciada." },
     ]);
 
-    const { data: client } = await admin
-      .from("diagnostic_clients")
-      .select("full_name,email_normalized")
-      .eq("id", caseRow.client_id)
-      .single();
-
     if (client && submissionActor !== "consultant") {
       waitUntil(sendSubmissionConfirmation({
-        to: client.email_normalized,
-        fullName: client.full_name,
+        to: client.email,
+        fullName: client.name,
         caseNumber: caseRow.case_number,
       }).then(async (result) => {
         await admin.from("diagnostic_email_deliveries").insert({
           case_id: caseRow.id,
           delivery_type: "submission_confirmation",
-          recipient: client.email_normalized,
+          recipient: client.email,
           subject: `Recebemos o diagnóstico ${caseRow.case_number}`,
           status: result.error ? "failed" : "sent",
           provider_id: result.data?.id ?? null,
@@ -158,7 +169,7 @@ export async function POST(request: Request) {
       waitUntil(notifyDashboardUsersOfSubmission(admin, {
         caseId: caseRow.id,
         caseNumber: caseRow.case_number,
-        clientName: client?.full_name ?? "Cliente",
+        clientName: client?.name ?? "Cliente",
       }).catch((notificationError) => {
         console.error("dashboard_submission_notification_failed", {
           caseId: caseRow.id,

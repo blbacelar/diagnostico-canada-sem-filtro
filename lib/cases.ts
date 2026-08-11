@@ -1,7 +1,8 @@
 import { randomInt } from "node:crypto";
 import { getAdminSupabase } from "./supabase";
 import { generateAssessment } from "./ai";
-import { writeAudit } from "./api";
+import { ApiError, writeAudit } from "./api";
+import { legacyClientShape } from "./central-client";
 
 export function newCaseNumber() {
   return `CSF-${new Date().getFullYear()}-${randomInt(0, 36 ** 6).toString(36).toUpperCase().padStart(6, "0")}`;
@@ -38,8 +39,10 @@ export async function processAssessment(caseId: string, submissionId: string, as
 }
 
 export async function caseClient(admin: ReturnType<typeof getAdminSupabase>, caseId: string) {
-  const { data, error } = await admin.from("diagnostic_cases").select("id, case_number, status, client_id, diagnostic_clients!inner(full_name,email_normalized,email_display)").eq("id", caseId).single();
+  const { data, error } = await admin.from("diagnostic_cases").select("id, case_number, status, client_id, clients!inner(id,name,email,source,created_at,updated_at)").eq("id", caseId).single();
   if (error) throw error;
-  const client = Array.isArray(data.diagnostic_clients) ? data.diagnostic_clients[0] : data.diagnostic_clients;
+  const centralClient = Array.isArray(data.clients) ? data.clients[0] : data.clients;
+  const client = legacyClientShape(centralClient);
+  if (!client) throw new ApiError(404, "Cliente não encontrado.", "CLIENT_NOT_FOUND");
   return { case: data, client };
 }

@@ -58,7 +58,7 @@ describe("API de entrega concluída", () => {
       select: vi.fn(() => clientsQuery),
       eq: vi.fn(() => clientsQuery),
       single: vi.fn().mockResolvedValue({
-        data: { full_name: "Cliente Teste", email_normalized: "cliente@example.com" },
+        data: { name: "Cliente Teste", email: "cliente@example.com" },
         error: null,
       }),
     };
@@ -80,7 +80,7 @@ describe("API de entrega concluída", () => {
       if (table === "diagnostic_reviews") return reviewsQuery;
       if (table === "diagnostic_operational_settings") return operationalSettingsQuery;
       if (table === "diagnostic_cases") return casesQuery;
-      if (table === "diagnostic_clients") return clientsQuery;
+      if (table === "clients") return clientsQuery;
       if (table === "allowed_emails") return allowedEmailsQuery;
       if (table === "diagnostic_rate_limits") return rateLimitsQuery;
       return deliveriesQuery;

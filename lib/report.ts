@@ -13,12 +13,12 @@ export async function getReportData(admin: ReturnType<typeof getAdminSupabase>, 
   const { data: diagnosticCase, error } = await admin.from("diagnostic_cases").select("id,case_number,objective,client_id,status").eq("id", caseId).single();
   if (error || !diagnosticCase) throw new ApiError(404, "Relatório não encontrado.");
   const [{ data: client }, { data: assessment }, { data: review }] = await Promise.all([
-    admin.from("diagnostic_clients").select("full_name").eq("id", diagnosticCase.client_id).single(),
+    admin.from("clients").select("name").eq("id", diagnosticCase.client_id).single(),
     admin.from("diagnostic_ai_assessments").select("structured_result").eq("case_id", caseId).eq("status", "completed").order("version", { ascending: false }).limit(1).maybeSingle(),
     admin.from("diagnostic_reviews").select("coherent_path,assumptions_to_review,likely_mistakes,immediate_focus,study_strategy,validation_risks,next_steps,additional_notes,recommended_resources,version,approved_at,status").eq("case_id", caseId).eq("status", "approved").order("version", { ascending: false }).limit(1).maybeSingle(),
   ]);
   if (!client || !assessment || !review) throw new ApiError(409, "O diagnóstico ainda não possui um relatório aprovado.", "REPORT_NOT_APPROVED");
-  return { caseId, caseNumber: diagnosticCase.case_number, generatedAt: new Date().toISOString(), clientName: client.full_name, objective: diagnosticCase.objective ?? "Projeto Canadá", assessment: assessment.structured_result as AiAssessment, review: review as ReportData["review"] };
+  return { caseId, caseNumber: diagnosticCase.case_number, generatedAt: new Date().toISOString(), clientName: client.name, objective: diagnosticCase.objective ?? "Projeto Canadá", assessment: assessment.structured_result as AiAssessment, review: review as ReportData["review"] };
 }
 
 export async function generateReportPdf(report: ReportData) {

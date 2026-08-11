@@ -51,7 +51,7 @@ describe("sanitização da busca de casos", () => {
     };
 
     const from = vi.fn((table: string) => {
-      if (table === "diagnostic_clients") return clientsQuery;
+      if (table === "clients") return clientsQuery;
       return casesQuery;
     });
 
