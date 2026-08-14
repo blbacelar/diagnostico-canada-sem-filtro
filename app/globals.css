@@ -544,6 +544,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .audit-log-list article > button { width: 100%; min-height: 70px; padding: 12px 20px; display: grid; grid-template-columns: 38px minmax(220px,1fr) 150px 150px; gap: 14px; align-items: center; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
 .audit-log-list article > button:hover { background: rgba(255,255,255,.55); }
 .audit-log-list article > button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.audit-log-list > .audit-detail-panel { margin: 0; border-width: 0 0 1px; box-shadow: inset 0 14px 22px rgba(21,35,45,.035); }
 .audit-actor { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; background: var(--paper-shade); color: var(--ink-mute); }
 .audit-actor svg { width: 14px; }
 .audit-actor--consultant { color: #46698a; background: rgba(70,105,138,.1); }

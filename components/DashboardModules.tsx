@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Bot, BookOpen, Braces, CheckCircle2, Clock3, Database, ExternalLink, Mail, RotateCcw, Save, Search, Settings, ShieldCheck, UserRound } from "lucide-react";
 import { authorizedFetch, authorizedRequest, DashboardRequestError } from "../lib/dashboard-fetch";
 import { operationalSettingsUpdateSchema, type OperationalSettingsUpdate } from "../lib/operational-config";
@@ -168,16 +168,18 @@ export function AuditLogClient() {
     <DashboardHeader eyebrow="Rastreabilidade" title="Auditoria" description="Registro cronológico e somente leitura das ações executadas no sistema." />
     <ModuleToolbar search={search} onSearch={setSearch} placeholder="Buscar por ação, caso ou responsável" count={items.length} label="eventos" />
     {error ? <DashboardError /> : !data ? <DashboardLoading /> : items.length ? <section className="audit-log-list">
-      {items.map((item) => <article className={selectedId === item.id ? "audit-log-row selected" : "audit-log-row"} key={item.id}>
-        <button type="button" onClick={() => void openDetail(item)} aria-expanded={selectedId === item.id} aria-label={`Abrir detalhes: ${getAuditLabel(item.action)}`}>
-          <span className={`audit-actor audit-actor--${item.actor_type}`}>{item.actor_type === "system" ? <Settings /> : item.actor_type === "consultant" ? <ShieldCheck /> : <UserRound />}</span>
-          <div><strong>{getAuditLabel(item.action)}</strong><small>{getActorLabel(item.actor_type)}</small></div>
-          {item.case_id && item.case_number ? <span className="audit-case-number">{item.case_number}</span> : <span className="audit-no-case">Evento geral</span>}
-          <time dateTime={item.created_at}>{dateTimeFormatter.format(new Date(item.created_at))}</time>
-        </button>
-      </article>)}
+      {items.map((item) => <Fragment key={item.id}>
+        <article className={selectedId === item.id ? "audit-log-row selected" : "audit-log-row"}>
+          <button type="button" onClick={() => void openDetail(item)} aria-expanded={selectedId === item.id} aria-label={`Abrir detalhes: ${getAuditLabel(item.action)}`}>
+            <span className={`audit-actor audit-actor--${item.actor_type}`}>{item.actor_type === "system" ? <Settings /> : item.actor_type === "consultant" ? <ShieldCheck /> : <UserRound />}</span>
+            <div><strong>{getAuditLabel(item.action)}</strong><small>{getActorLabel(item.actor_type)}</small></div>
+            {item.case_id && item.case_number ? <span className="audit-case-number">{item.case_number}</span> : <span className="audit-no-case">Evento geral</span>}
+            <time dateTime={item.created_at}>{dateTimeFormatter.format(new Date(item.created_at))}</time>
+          </button>
+        </article>
+        {selectedId === item.id && <AuditDetailPanel detail={detail} state={detailState} onClose={() => { setSelectedId(null); setDetail(null); setDetailState("idle"); }} />}
+      </Fragment>)}
     </section> : <ModuleEmpty icon={<ShieldCheck />} text={search ? "Nenhum evento corresponde à busca." : "Nenhum evento de auditoria foi registrado ainda."} />}
-    {selectedId && <AuditDetailPanel detail={detail} state={detailState} onClose={() => { setSelectedId(null); setDetail(null); setDetailState("idle"); }} />}
   </>;
 }
 
