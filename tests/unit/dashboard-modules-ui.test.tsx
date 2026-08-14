@@ -13,7 +13,13 @@ import { AuditLogClient, ContentLibraryClient, EmailTemplatesClient, SettingsCli
 const responses: Record<string, unknown> = {
   "/api/dashboard/content": { items: [{ id: "content-1", title: "Mapa de Cidades", description: "Compare cidades canadenses.", url: "https://example.com/mapa", tags: ["cidades", "regiões"], active: true, created_at: "2026-08-01T10:00:00Z", updated_at: "2026-08-02T10:00:00Z" }] },
   "/api/dashboard/templates": { items: [{ id: "template-1", template_key: "final_delivery", name: "Entrega final", subject: "Seu diagnóstico está pronto", body: "Olá, {{nome}}.", active: true, version: 2, created_at: "2026-08-01T10:00:00Z", updated_at: "2026-08-02T10:00:00Z" }] },
-  "/api/dashboard/audit": { items: [{ id: "audit-1", case_id: "case-1", case_number: "CSF-2026-ABC123", actor_type: "consultant", action: "diagnostic.viewed", created_at: "2026-08-02T10:00:00Z" }] },
+  "/api/dashboard/audit": { items: [{ id: "audit-1", case_id: "case-1", case_number: "CSF-2026-ABC123", actor_type: "consultant", action: "diagnostic.claimed", created_at: "2026-08-02T10:00:00Z" }] },
+  "/api/dashboard/audit/audit-1": {
+    audit: { id: "audit-1", case_id: "case-1", case_number: "CSF-2026-ABC123", actor_type: "consultant", action: "diagnostic.claimed", created_at: "2026-08-02T10:00:00Z", metadata: {} },
+    case: { id: "case-1", case_number: "CSF-2026-ABC123", status: "in_review", objective: "Trabalhar", submitted_at: "2026-08-01T10:00:00Z", updated_at: "2026-08-02T10:00:00Z" },
+    client: { id: "client-1", name: "Cliente Real", email: "cliente@example.com", phone: "+55 11 99999-0000", document: null, country: "Brasil", zip_code: "01000-000", city: "São Paulo", state: "SP", address: "Rua Teste", district: "Centro", number: "123", complement: null, status_journey: "diagnostico_enviado", created_at: "2026-08-01T09:00:00Z", updated_at: "2026-08-02T10:00:00Z" },
+    purchases: [{ id: "purchase-1", transaction_code: "HP123", product_name: "Diagnóstico", price_gross: 197, price_net: 169.22, status_hotmart: "PURCHASE_APPROVED", purchase_date: "2026-08-01T09:30:00Z", created_at: "2026-08-01T09:31:00Z" }],
+  },
   "/api/dashboard/settings": { account: { display_name: "Consultora Real", email: "consultora@example.com", role: "admin" }, editable: true, operation: { policy_version: "2026-08-03", methodology_version: "1.0.0", prompt_version: "2026-08-03", model: "openai/gpt-5.6-terra", form_link_days: 14, report_link_days: 30, review_sla_hours: 48, revision: 7, updated_at: "2026-08-03T10:00:00Z", app_url: "https://example.com" }, integrations: [{ key: "database", label: "Banco de dados", provider: "Supabase", configured: true, detail: "project.supabase.co" }], counts: { active_templates: 2, active_content: 2, open_cases: 1 } },
 };
 
@@ -49,11 +55,20 @@ describe("módulos reais do menu", () => {
     expect(screen.getByText("Versão 2")).toBeVisible();
   });
 
-  it("mostra a auditoria com ação legível e link para o caso", async () => {
+  it("mostra a auditoria em português e abre detalhes do cliente com transações", async () => {
     mockDashboardFetch();
     render(<AuditLogClient />);
-    expect(await screen.findByText("Diagnóstico visualizado")).toBeVisible();
-    expect(screen.getByRole("link", { name: "CSF-2026-ABC123" })).toHaveAttribute("href", "/dashboard/diagnosticos/case-1");
+    const auditButton = await screen.findByRole("button", { name: "Abrir detalhes: Diagnóstico assumido para revisão" });
+    expect(screen.queryByText("diagnostic · claimed")).toBeNull();
+    expect(screen.getByText("Diagnóstico assumido para revisão")).toBeVisible();
+
+    fireEvent.click(auditButton);
+
+    expect(await screen.findByText("Cliente Real")).toBeVisible();
+    expect(screen.getByText("cliente@example.com")).toBeVisible();
+    expect(screen.getByText("Compra aprovada")).toBeVisible();
+    expect(screen.getByText("HP123")).toBeVisible();
+    expect(screen.getByRole("link", { name: "Abrir diagnóstico" })).toHaveAttribute("href", "/dashboard/diagnosticos/case-1");
   });
 
   it("mostra conta, integrações e parâmetros operacionais editáveis", async () => {

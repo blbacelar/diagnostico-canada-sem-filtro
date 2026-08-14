@@ -538,16 +538,42 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .template-card > footer svg { width: 13px; }
 .template-card > footer time { margin-left: auto; }
 .audit-log-list { border: 1px solid var(--paper-edge); background: var(--paper-light); }
-.audit-log-list article { min-height: 70px; padding: 12px 20px; display: grid; grid-template-columns: 38px minmax(220px,1fr) 150px 150px; gap: 14px; align-items: center; border-bottom: 1px solid var(--rule); }
+.audit-log-list article { border-bottom: 1px solid var(--rule); }
 .audit-log-list article:last-child { border-bottom: 0; }
+.audit-log-list article.selected { background: rgba(183,28,61,.045); }
+.audit-log-list article > button { width: 100%; min-height: 70px; padding: 12px 20px; display: grid; grid-template-columns: 38px minmax(220px,1fr) 150px 150px; gap: 14px; align-items: center; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.audit-log-list article > button:hover { background: rgba(255,255,255,.55); }
+.audit-log-list article > button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .audit-actor { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; background: var(--paper-shade); color: var(--ink-mute); }
 .audit-actor svg { width: 14px; }
 .audit-actor--consultant { color: #46698a; background: rgba(70,105,138,.1); }
 .audit-actor--system { color: var(--success); background: rgba(47,102,85,.1); }
-.audit-log-list article > div { min-width: 0; display: grid; gap: 4px; }
+.audit-log-list article > button > div { min-width: 0; display: grid; gap: 4px; }
 .audit-log-list strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
 .audit-log-list small, .audit-log-list time, .audit-no-case { color: var(--ink-mute); font: 500 7px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .07em; }
-.audit-log-list article > a { color: var(--accent); font: 500 8px var(--font-mono), monospace; }
+.audit-case-number { color: var(--accent); font: 500 8px var(--font-mono), monospace; }
+.audit-detail-panel { margin-top: 22px; border: 1px solid var(--paper-edge); background: var(--paper-light); box-shadow: 0 18px 35px rgba(21,35,45,.08); }
+.audit-detail-panel > header { padding: 22px 24px; display: flex; align-items: center; justify-content: space-between; gap: 18px; border-bottom: 1px solid var(--paper-edge); }
+.audit-detail-panel h2 { margin: 0; font: 400 33px/1 var(--font-display), serif; }
+.audit-detail-panel > header button { min-height: 38px; padding: 10px 16px; border: 1px solid var(--paper-edge); border-radius: 999px; background: transparent; color: var(--ink); font: 700 8px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .11em; cursor: pointer; }
+.audit-detail-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); border-bottom: 1px solid var(--paper-edge); }
+.audit-detail-grid > section { padding: 24px; }
+.audit-detail-grid > section:first-child { border-right: 1px solid var(--paper-edge); }
+.audit-detail-grid dl, .audit-transactions dl { margin: 0; }
+.audit-detail-grid dl div { padding: 11px 0; display: grid; grid-template-columns: 105px minmax(0,1fr); gap: 18px; border-bottom: 1px solid var(--rule); }
+.audit-detail-grid dl div:last-child { border-bottom: 0; }
+.audit-detail-grid dt { color: var(--ink-mute); font: 500 7px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .08em; }
+.audit-detail-grid dd { margin: 0; overflow-wrap: anywhere; font-size: 11px; }
+.audit-detail-grid dd a { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); font: 700 8px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .09em; }
+.audit-detail-grid dd a svg { width: 12px; }
+.audit-detail-message { margin: 0; padding: 24px; color: var(--ink-mute); font-size: 12px; }
+.audit-transactions { padding: 24px; }
+.audit-transactions > header { margin-bottom: 16px; display: grid; gap: 6px; }
+.audit-transactions h3 { margin: 0; font: 400 28px/1 var(--font-display), serif; }
+.audit-transactions table { width: 100%; border-collapse: collapse; background: white; border: 1px solid var(--paper-edge); }
+.audit-transactions th, .audit-transactions td { padding: 13px 14px; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: top; font-size: 10px; }
+.audit-transactions th { color: var(--ink-mute); font: 700 7px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .09em; }
+.audit-transactions td:nth-child(2), .audit-transactions td:nth-child(4), .audit-transactions td:nth-child(5), .audit-transactions td:nth-child(6) { white-space: nowrap; }
 .settings-layout { margin-top: 28px; display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 20px; align-items: start; }
 .settings-account, .settings-operation, .settings-integrations, .settings-counts { border: 1px solid var(--paper-edge); background: var(--paper-light); }
 .settings-account > header, .settings-operation > header { padding: 24px; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid var(--paper-edge); }
@@ -664,9 +690,16 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .template-card > footer { align-items: start; flex-wrap: wrap; }
   .template-card > footer time { width: 100%; margin-left: 21px; }
   .audit-log-list { display: grid; gap: 10px; border: 0; background: transparent; }
-  .audit-log-list article { padding: 17px; grid-template-columns: 36px minmax(0,1fr); gap: 10px 12px; border: 1px solid var(--paper-edge); background: var(--paper-light); }
-  .audit-log-list article > a, .audit-no-case { grid-column: 2; }
+  .audit-log-list article { border: 1px solid var(--paper-edge); background: var(--paper-light); }
+  .audit-log-list article > button { padding: 17px; grid-template-columns: 36px minmax(0,1fr); gap: 10px 12px; }
+  .audit-case-number, .audit-no-case { grid-column: 2; }
   .audit-log-list time { grid-column: 2; }
+  .audit-detail-panel > header { align-items: start; flex-direction: column; }
+  .audit-detail-grid { grid-template-columns: 1fr; }
+  .audit-detail-grid > section:first-child { border-right: 0; border-bottom: 1px solid var(--paper-edge); }
+  .audit-detail-grid dl div { grid-template-columns: 1fr; gap: 5px; }
+  .audit-transactions { overflow-x: auto; }
+  .audit-transactions table { min-width: 760px; }
   .settings-counts { grid-template-columns: 1fr; }
   .settings-counts article { min-height: 90px; border-right: 0; border-bottom: 1px solid var(--paper-edge); }
   .settings-counts article:last-child { border-bottom: 0; }

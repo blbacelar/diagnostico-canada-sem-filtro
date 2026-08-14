@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Bot, BookOpen, Braces, CheckCircle2, Clock3, Database, ExternalLink, Mail, RotateCcw, Save, Search, Settings, ShieldCheck, UserRound } from "lucide-react";
 import { authorizedFetch, authorizedRequest, DashboardRequestError } from "../lib/dashboard-fetch";
 import { operationalSettingsUpdateSchema, type OperationalSettingsUpdate } from "../lib/operational-config";
+import { getCaseStatusLabel } from "../lib/status-labels";
 import { DashboardError, DashboardLoading } from "./DashboardData";
 import { DashboardHeader } from "./DashboardShell";
 import { Input } from "./ui/input";
@@ -12,6 +13,12 @@ import { Input } from "./ui/input";
 type ContentItem = { id: string; title: string; description: string; url: string | null; tags: string[]; active: boolean; created_at: string; updated_at: string };
 type TemplateItem = { id: string; template_key: string; name: string; subject: string; body: string; active: boolean; version: number; created_at: string; updated_at: string };
 type AuditItem = { id: string; case_id: string | null; case_number: string | null; actor_type: string; action: string; created_at: string };
+type AuditDetail = {
+  audit: AuditItem & { metadata?: Record<string, unknown> };
+  case: { id: string; case_number: string; status: string; objective: string | null; submitted_at: string | null; updated_at: string } | null;
+  client: { id: string; name: string; email: string; phone: string | null; document: string | null; country: string | null; zip_code: string | null; city: string | null; state: string | null; address: string | null; district: string | null; number: string | null; complement: string | null; status_journey: string | null; created_at: string; updated_at: string } | null;
+  purchases: Array<{ id: string; transaction_code: string | null; product_name: string | null; price_gross: number | null; price_net: number | null; status_hotmart: string | null; purchase_date: string | null; created_at: string | null }>;
+};
 type SettingsData = {
   account: { display_name: string; email: string; role: string };
   editable: boolean;
@@ -77,6 +84,8 @@ export function EmailTemplatesClient() {
 
 const auditLabels: Record<string, string> = {
   "diagnostic.started": "Diagnóstico iniciado",
+  "diagnostic.claimed": "Diagnóstico assumido para revisão",
+  "diagnostic.released": "Diagnóstico liberado para outra consultora",
   "form_link.renewed": "Link do formulário renovado",
   "answers.saved": "Respostas salvas",
   "diagnostic.submitted": "Diagnóstico enviado",
@@ -87,30 +96,143 @@ const auditLabels: Record<string, string> = {
   "information.requested": "Informação solicitada",
   "review.saved": "Parecer salvo",
   "review.approved": "Parecer aprovado",
+  "review.reassessment_requested": "Nova análise solicitada",
   "settings.updated": "Parâmetros operacionais atualizados",
 };
 const actorLabels: Record<string, string> = { client: "Cliente", consultant: "Consultora", system: "Sistema" };
+const purchaseStatusLabels: Record<string, string> = {
+  APPROVED: "Compra aprovada",
+  COMPLETE: "Compra completa",
+  PURCHASE_APPROVED: "Compra aprovada",
+  PURCHASE_COMPLETE: "Compra completa",
+  PURCHASE_CANCELED: "Compra cancelada",
+  PURCHASE_CANCELLED: "Compra cancelada",
+  PURCHASE_REFUNDED: "Compra reembolsada",
+  REFUNDED: "Reembolsada",
+  CHARGEBACK: "Chargeback",
+  MANUAL_ENTRY: "Entrada manual",
+};
+const journeyLabels: Record<string, string> = {
+  lead: "Lead",
+  compra: "Compra",
+  diagnostico_enviado: "Diagnóstico enviado",
+  acompanhamento: "Acompanhamento",
+  consulta_marcada: "Consulta marcada",
+  consulta_concluida: "Consulta concluída",
+  cancelamento: "Cancelamento",
+  reembolso: "Reembolso",
+};
+
+function getAuditLabel(action: string) {
+  return auditLabels[action] ?? action.split(".").map((part) => part.replaceAll("_", " ")).join(" · ");
+}
+
+function getActorLabel(actorType: string) {
+  return actorLabels[actorType] ?? actorType;
+}
+
+function getPurchaseStatusLabel(status: string | null) {
+  return status ? purchaseStatusLabels[status] ?? status.replaceAll("_", " ") : "Status indisponível";
+}
+
+function moneyFormatter(value: number | null) {
+  if (typeof value !== "number" || Number.isNaN(value)) return "—";
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
+}
 
 export function AuditLogClient() {
   const { data, error } = useDashboardResource<{ items: AuditItem[] }>("/api/dashboard/audit");
   const [search, setSearch] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [detail, setDetail] = useState<AuditDetail | null>(null);
+  const [detailState, setDetailState] = useState<"idle" | "loading" | "error">("idle");
   const items = useMemo(() => {
     const term = search.trim().toLocaleLowerCase("pt-BR");
-    return (data?.items ?? []).filter((item) => !term || [auditLabels[item.action] ?? item.action, item.case_number ?? "", actorLabels[item.actor_type] ?? item.actor_type].some((value) => value.toLocaleLowerCase("pt-BR").includes(term)));
+    return (data?.items ?? []).filter((item) => !term || [getAuditLabel(item.action), item.case_number ?? "", getActorLabel(item.actor_type)].some((value) => value.toLocaleLowerCase("pt-BR").includes(term)));
   }, [data, search]);
+
+  async function openDetail(item: AuditItem) {
+    setSelectedId(item.id);
+    setDetail(null);
+    setDetailState("loading");
+    try {
+      const result = await authorizedFetch<AuditDetail>(`/api/dashboard/audit/${item.id}`);
+      setDetail(result);
+      setDetailState("idle");
+    } catch {
+      setDetailState("error");
+    }
+  }
 
   return <>
     <DashboardHeader eyebrow="Rastreabilidade" title="Auditoria" description="Registro cronológico e somente leitura das ações executadas no sistema." />
     <ModuleToolbar search={search} onSearch={setSearch} placeholder="Buscar por ação, caso ou responsável" count={items.length} label="eventos" />
     {error ? <DashboardError /> : !data ? <DashboardLoading /> : items.length ? <section className="audit-log-list">
-      {items.map((item) => <article key={item.id}>
-        <span className={`audit-actor audit-actor--${item.actor_type}`}>{item.actor_type === "system" ? <Settings /> : item.actor_type === "consultant" ? <ShieldCheck /> : <UserRound />}</span>
-        <div><strong>{auditLabels[item.action] ?? item.action.replaceAll(".", " · ")}</strong><small>{actorLabels[item.actor_type] ?? item.actor_type}</small></div>
-        {item.case_id && item.case_number ? <Link href={`/dashboard/diagnosticos/${item.case_id}`}>{item.case_number}</Link> : <span className="audit-no-case">Evento geral</span>}
-        <time dateTime={item.created_at}>{dateTimeFormatter.format(new Date(item.created_at))}</time>
+      {items.map((item) => <article className={selectedId === item.id ? "audit-log-row selected" : "audit-log-row"} key={item.id}>
+        <button type="button" onClick={() => void openDetail(item)} aria-expanded={selectedId === item.id} aria-label={`Abrir detalhes: ${getAuditLabel(item.action)}`}>
+          <span className={`audit-actor audit-actor--${item.actor_type}`}>{item.actor_type === "system" ? <Settings /> : item.actor_type === "consultant" ? <ShieldCheck /> : <UserRound />}</span>
+          <div><strong>{getAuditLabel(item.action)}</strong><small>{getActorLabel(item.actor_type)}</small></div>
+          {item.case_id && item.case_number ? <span className="audit-case-number">{item.case_number}</span> : <span className="audit-no-case">Evento geral</span>}
+          <time dateTime={item.created_at}>{dateTimeFormatter.format(new Date(item.created_at))}</time>
+        </button>
       </article>)}
     </section> : <ModuleEmpty icon={<ShieldCheck />} text={search ? "Nenhum evento corresponde à busca." : "Nenhum evento de auditoria foi registrado ainda."} />}
+    {selectedId && <AuditDetailPanel detail={detail} state={detailState} onClose={() => { setSelectedId(null); setDetail(null); setDetailState("idle"); }} />}
   </>;
+}
+
+function AuditDetailPanel({ detail, state, onClose }: { detail: AuditDetail | null; state: "idle" | "loading" | "error"; onClose: () => void }) {
+  return <section className="audit-detail-panel" aria-live="polite">
+    <header>
+      <div><p className="eyebrow">Detalhes do evento</p><h2>{detail ? getAuditLabel(detail.audit.action) : state === "loading" ? "Carregando detalhes" : "Detalhes indisponíveis"}</h2></div>
+      <button type="button" onClick={onClose}>Fechar</button>
+    </header>
+    {state === "loading" ? <p className="audit-detail-message">Buscando dados do cliente e histórico de transações…</p> : state === "error" ? <p className="audit-detail-message">Não foi possível carregar os detalhes deste evento.</p> : detail ? <>
+      <div className="audit-detail-grid">
+        <section>
+          <p className="eyebrow">Cliente</p>
+          {detail.client ? <dl>
+            <DetailRow label="Nome" value={detail.client.name} />
+            <DetailRow label="E-mail" value={detail.client.email} />
+            <DetailRow label="Telefone" value={detail.client.phone ?? "—"} />
+            <DetailRow label="Documento" value={detail.client.document ?? "—"} />
+            <DetailRow label="Cidade" value={[detail.client.city, detail.client.state, detail.client.country].filter(Boolean).join(" · ") || "—"} />
+            <DetailRow label="Endereço" value={[detail.client.address, detail.client.number, detail.client.district, detail.client.complement, detail.client.zip_code].filter(Boolean).join(", ") || "—"} />
+            <DetailRow label="Jornada" value={detail.client.status_journey ? journeyLabels[detail.client.status_journey] ?? detail.client.status_journey : "—"} />
+          </dl> : <p className="audit-detail-message">Este evento não possui cliente vinculado.</p>}
+        </section>
+        <section>
+          <p className="eyebrow">Caso</p>
+          {detail.case ? <dl>
+            <DetailRow label="Número" value={detail.case.case_number} />
+            <DetailRow label="Status" value={getCaseStatusLabel(detail.case.status)} />
+            <DetailRow label="Objetivo" value={detail.case.objective ?? "Não informado"} />
+            <DetailRow label="Enviado em" value={detail.case.submitted_at ? dateTimeFormatter.format(new Date(detail.case.submitted_at)) : "—"} />
+            <DetailRow label="Atualizado em" value={dateTimeFormatter.format(new Date(detail.case.updated_at))} />
+            <div><dt>Acesso</dt><dd><Link href={`/dashboard/diagnosticos/${detail.case.id}`}>Abrir diagnóstico <ExternalLink /></Link></dd></div>
+          </dl> : <p className="audit-detail-message">Evento geral sem caso de diagnóstico.</p>}
+        </section>
+      </div>
+      <section className="audit-transactions">
+        <header><p className="eyebrow">Histórico de transações</p><h3>Compras vinculadas ao cliente</h3></header>
+        {detail.purchases.length ? <table>
+          <thead><tr><th>Data da compra</th><th>Transação</th><th>Produto</th><th>Status</th><th>Valor bruto</th><th>Valor líquido</th></tr></thead>
+          <tbody>{detail.purchases.map((purchase) => <tr key={purchase.id}>
+            <td>{purchase.purchase_date ? dateTimeFormatter.format(new Date(purchase.purchase_date)) : "—"}</td>
+            <td>{purchase.transaction_code ?? "—"}</td>
+            <td>{purchase.product_name ?? "—"}</td>
+            <td>{getPurchaseStatusLabel(purchase.status_hotmart)}</td>
+            <td>{moneyFormatter(purchase.price_gross)}</td>
+            <td>{moneyFormatter(purchase.price_net)}</td>
+          </tr>)}</tbody>
+        </table> : <p className="audit-detail-message">Nenhuma transação encontrada para este cliente.</p>}
+      </section>
+    </> : null}
+  </section>;
+}
+
+function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return <div><dt>{label}</dt><dd>{value}</dd></div>;
 }
 
 export function SettingsClient() {
