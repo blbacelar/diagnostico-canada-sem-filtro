@@ -19,17 +19,26 @@ const responses: Record<string, unknown> = {
   ] },
   "/api/dashboard/audit/audit-2": {
     audit: { id: "audit-2", case_id: "case-1", case_number: "CSF-2026-ABC123", actor_type: "consultant", action: "diagnostic.viewed", created_at: "2026-08-02T10:05:00Z", metadata: {} },
-    events: [
-      { id: "audit-2", case_id: "case-1", case_number: "CSF-2026-ABC123", actor_type: "consultant", action: "diagnostic.viewed", created_at: "2026-08-02T10:05:00Z", metadata: {} },
-      { id: "audit-1", case_id: "case-1", case_number: "CSF-2026-ABC123", actor_type: "consultant", action: "diagnostic.claimed", created_at: "2026-08-02T10:00:00Z", metadata: {} },
-    ],
+    events: { items: [
+        { id: "audit-2", case_id: "case-1", case_number: "CSF-2026-ABC123", actor_type: "consultant", action: "diagnostic.viewed", created_at: "2026-08-02T10:05:00Z", metadata: {} },
+        { id: "audit-1", case_id: "case-1", case_number: "CSF-2026-ABC123", actor_type: "consultant", action: "diagnostic.claimed", created_at: "2026-08-02T10:00:00Z", metadata: {} },
+      ], total: 3, offset: 0, limit: 10, has_more: true, next_offset: 2 },
+    case: { id: "case-1", case_number: "CSF-2026-ABC123", status: "in_review", objective: "Trabalhar", submitted_at: "2026-08-01T10:00:00Z", updated_at: "2026-08-02T10:00:00Z" },
+    client: { id: "client-1", name: "Cliente Real", email: "cliente@example.com", phone: "+55 11 99999-0000", document: null, country: "Brasil", zip_code: "01000-000", city: "São Paulo", state: "SP", address: "Rua Teste", district: "Centro", number: "123", complement: null, status_journey: "diagnostico_enviado", created_at: "2026-08-01T09:00:00Z", updated_at: "2026-08-02T10:00:00Z" },
+    purchases: [{ id: "purchase-1", transaction_code: "HP123", product_name: "Diagnóstico", price_gross: 197, price_net: 169.22, status_hotmart: "PURCHASE_APPROVED", purchase_date: "2026-08-01T09:30:00Z", created_at: "2026-08-01T09:31:00Z" }],
+  },
+  "/api/dashboard/audit/audit-2?eventsOffset=2&eventsLimit=10": {
+    audit: { id: "audit-2", case_id: "case-1", case_number: "CSF-2026-ABC123", actor_type: "consultant", action: "diagnostic.viewed", created_at: "2026-08-02T10:05:00Z", metadata: {} },
+    events: { items: [
+        { id: "audit-3", case_id: "case-1", case_number: "CSF-2026-ABC123", actor_type: "system", action: "ai_assessment.completed", created_at: "2026-08-02T09:55:00Z", metadata: {} },
+      ], total: 3, offset: 2, limit: 10, has_more: false, next_offset: 3 },
     case: { id: "case-1", case_number: "CSF-2026-ABC123", status: "in_review", objective: "Trabalhar", submitted_at: "2026-08-01T10:00:00Z", updated_at: "2026-08-02T10:00:00Z" },
     client: { id: "client-1", name: "Cliente Real", email: "cliente@example.com", phone: "+55 11 99999-0000", document: null, country: "Brasil", zip_code: "01000-000", city: "São Paulo", state: "SP", address: "Rua Teste", district: "Centro", number: "123", complement: null, status_journey: "diagnostico_enviado", created_at: "2026-08-01T09:00:00Z", updated_at: "2026-08-02T10:00:00Z" },
     purchases: [{ id: "purchase-1", transaction_code: "HP123", product_name: "Diagnóstico", price_gross: 197, price_net: 169.22, status_hotmart: "PURCHASE_APPROVED", purchase_date: "2026-08-01T09:30:00Z", created_at: "2026-08-01T09:31:00Z" }],
   },
   "/api/dashboard/audit/audit-1": {
     audit: { id: "audit-1", case_id: "case-1", case_number: "CSF-2026-ABC123", actor_type: "consultant", action: "diagnostic.claimed", created_at: "2026-08-02T10:00:00Z", metadata: {} },
-    events: [{ id: "audit-1", case_id: "case-1", case_number: "CSF-2026-ABC123", actor_type: "consultant", action: "diagnostic.claimed", created_at: "2026-08-02T10:00:00Z", metadata: {} }],
+    events: { items: [{ id: "audit-1", case_id: "case-1", case_number: "CSF-2026-ABC123", actor_type: "consultant", action: "diagnostic.claimed", created_at: "2026-08-02T10:00:00Z", metadata: {} }], total: 1, offset: 0, limit: 10, has_more: false, next_offset: 1 },
     case: { id: "case-1", case_number: "CSF-2026-ABC123", status: "in_review", objective: "Trabalhar", submitted_at: "2026-08-01T10:00:00Z", updated_at: "2026-08-02T10:00:00Z" },
     client: { id: "client-1", name: "Cliente Real", email: "cliente@example.com", phone: "+55 11 99999-0000", document: null, country: "Brasil", zip_code: "01000-000", city: "São Paulo", state: "SP", address: "Rua Teste", district: "Centro", number: "123", complement: null, status_journey: "diagnostico_enviado", created_at: "2026-08-01T09:00:00Z", updated_at: "2026-08-02T10:00:00Z" },
     purchases: [{ id: "purchase-1", transaction_code: "HP123", product_name: "Diagnóstico", price_gross: 197, price_net: 169.22, status_hotmart: "PURCHASE_APPROVED", purchase_date: "2026-08-01T09:30:00Z", created_at: "2026-08-01T09:31:00Z" }],
@@ -45,7 +54,8 @@ afterEach(() => {
 function mockDashboardFetch() {
   vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
     const path = String(input);
-    return new Response(JSON.stringify(responses[path]), { status: responses[path] ? 200 : 404 });
+    const response = responses[path] ?? responses[path.replace("?eventsLimit=10", "")];
+    return new Response(JSON.stringify(response), { status: response ? 200 : 404 });
   }));
 }
 
@@ -83,7 +93,11 @@ describe("módulos reais do menu", () => {
     expect(await screen.findByText("Cliente Real")).toBeVisible();
     expect(screen.getByText("cliente@example.com")).toBeVisible();
     expect(screen.getByText("Passos registrados neste caso")).toBeVisible();
+    expect(screen.getByText("2 de 3 registros carregados")).toBeVisible();
     expect(screen.getByText("Diagnóstico assumido para revisão")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Carregar mais registros" }));
+    expect(await screen.findByText("Análise estruturada concluída")).toBeVisible();
+    expect(screen.getByText("3 de 3 registros carregados")).toBeVisible();
     expect(screen.getByText("Compra aprovada")).toBeVisible();
     expect(screen.getByText("HP123")).toBeVisible();
     expect(screen.getByRole("link", { name: "Abrir diagnóstico" })).toHaveAttribute("href", "/dashboard/diagnosticos/case-1");

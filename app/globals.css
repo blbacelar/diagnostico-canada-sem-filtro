@@ -571,10 +571,14 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .audit-transactions { padding: 24px; }
 .audit-transactions > header { margin-bottom: 16px; display: grid; gap: 6px; }
 .audit-transactions h3 { margin: 0; font: 400 28px/1 var(--font-display), serif; }
+.audit-transactions > header small { color: var(--ink-mute); font: 500 7px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .08em; }
 .audit-transactions table { width: 100%; border-collapse: collapse; background: white; border: 1px solid var(--paper-edge); }
 .audit-transactions th, .audit-transactions td { padding: 13px 14px; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: top; font-size: 10px; }
 .audit-transactions th { color: var(--ink-mute); font: 700 7px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .09em; }
 .audit-transactions td:nth-child(2), .audit-transactions td:nth-child(4), .audit-transactions td:nth-child(5), .audit-transactions td:nth-child(6) { white-space: nowrap; }
+.audit-load-more { padding: 16px; display: flex; justify-content: center; border: 1px solid var(--paper-edge); border-top: 0; background: white; }
+.audit-load-more button { min-height: 40px; padding: 10px 18px; border: 1px solid var(--paper-edge); border-radius: 999px; background: var(--paper-light); color: var(--ink); font: 700 8px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .1em; cursor: pointer; }
+.audit-load-more button:disabled { cursor: wait; opacity: .65; }
 .settings-layout { margin-top: 28px; display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 20px; align-items: start; }
 .settings-account, .settings-operation, .settings-integrations, .settings-counts { border: 1px solid var(--paper-edge); background: var(--paper-light); }
 .settings-account > header, .settings-operation > header { padding: 24px; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid var(--paper-edge); }

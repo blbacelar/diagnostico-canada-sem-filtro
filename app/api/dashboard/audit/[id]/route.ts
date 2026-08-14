@@ -19,6 +19,15 @@ type AuditEventRow = {
   created_at: string;
 };
 
+const DEFAULT_EVENTS_LIMIT = 10;
+const MAX_EVENTS_LIMIT = 50;
+
+function boundedInteger(value: string | null, fallback: number, max: number) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(0, Math.min(Math.floor(parsed), max));
+}
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -26,6 +35,9 @@ export async function GET(
   try {
     const { id } = await params;
     const { admin } = await requireConsultant(request);
+    const searchParams = new URL(request.url).searchParams;
+    const eventsOffset = boundedInteger(searchParams.get("eventsOffset"), 0, 10_000);
+    const eventsLimit = boundedInteger(searchParams.get("eventsLimit"), DEFAULT_EVENTS_LIMIT, MAX_EVENTS_LIMIT);
 
     const { data: audit, error: auditError } = await admin
       .from("diagnostic_audit_logs")
@@ -39,6 +51,7 @@ export async function GET(
     let client = null;
     let purchases: unknown[] = [];
     let events: AuditEventRow[] = [audit as AuditEventRow];
+    let eventsTotal = 1;
 
     if (audit.case_id) {
       const [caseResult, eventsResult] = await Promise.all([
@@ -49,16 +62,17 @@ export async function GET(
           .maybeSingle(),
         admin
           .from("diagnostic_audit_logs")
-          .select("id,case_id,actor_type,action,metadata,created_at")
+          .select("id,case_id,actor_type,action,metadata,created_at", { count: "exact" })
           .eq("case_id", audit.case_id)
           .order("created_at", { ascending: false })
-          .limit(200),
+          .range(eventsOffset, eventsOffset + eventsLimit - 1),
       ]);
       const { data: caseRow, error: caseError } = caseResult;
       if (caseError) throw caseError;
       if (eventsResult.error) throw eventsResult.error;
       diagnosticCase = (caseRow ?? null) as DiagnosticCaseRow | null;
       events = (eventsResult.data ?? []) as AuditEventRow[];
+      eventsTotal = eventsResult.count ?? events.length;
 
       if (diagnosticCase?.client_id) {
         const [clientResult, purchasesResult] = await Promise.all([
@@ -82,7 +96,14 @@ export async function GET(
 
     return json({
       audit,
-      events,
+      events: {
+        items: events,
+        total: eventsTotal,
+        offset: eventsOffset,
+        limit: eventsLimit,
+        has_more: eventsOffset + events.length < eventsTotal,
+        next_offset: eventsOffset + events.length,
+      },
       case: diagnosticCase,
       client,
       purchases,
