@@ -13,9 +13,23 @@ import { AuditLogClient, ContentLibraryClient, EmailTemplatesClient, SettingsCli
 const responses: Record<string, unknown> = {
   "/api/dashboard/content": { items: [{ id: "content-1", title: "Mapa de Cidades", description: "Compare cidades canadenses.", url: "https://example.com/mapa", tags: ["cidades", "regiões"], active: true, created_at: "2026-08-01T10:00:00Z", updated_at: "2026-08-02T10:00:00Z" }] },
   "/api/dashboard/templates": { items: [{ id: "template-1", template_key: "final_delivery", name: "Entrega final", subject: "Seu diagnóstico está pronto", body: "Olá, {{nome}}.", active: true, version: 2, created_at: "2026-08-01T10:00:00Z", updated_at: "2026-08-02T10:00:00Z" }] },
-  "/api/dashboard/audit": { items: [{ id: "audit-1", case_id: "case-1", case_number: "CSF-2026-ABC123", actor_type: "consultant", action: "diagnostic.claimed", created_at: "2026-08-02T10:00:00Z" }] },
+  "/api/dashboard/audit": { items: [
+    { id: "audit-2", case_id: "case-1", case_number: "CSF-2026-ABC123", actor_type: "consultant", action: "diagnostic.viewed", created_at: "2026-08-02T10:05:00Z" },
+    { id: "audit-1", case_id: "case-1", case_number: "CSF-2026-ABC123", actor_type: "consultant", action: "diagnostic.claimed", created_at: "2026-08-02T10:00:00Z" },
+  ] },
+  "/api/dashboard/audit/audit-2": {
+    audit: { id: "audit-2", case_id: "case-1", case_number: "CSF-2026-ABC123", actor_type: "consultant", action: "diagnostic.viewed", created_at: "2026-08-02T10:05:00Z", metadata: {} },
+    events: [
+      { id: "audit-2", case_id: "case-1", case_number: "CSF-2026-ABC123", actor_type: "consultant", action: "diagnostic.viewed", created_at: "2026-08-02T10:05:00Z", metadata: {} },
+      { id: "audit-1", case_id: "case-1", case_number: "CSF-2026-ABC123", actor_type: "consultant", action: "diagnostic.claimed", created_at: "2026-08-02T10:00:00Z", metadata: {} },
+    ],
+    case: { id: "case-1", case_number: "CSF-2026-ABC123", status: "in_review", objective: "Trabalhar", submitted_at: "2026-08-01T10:00:00Z", updated_at: "2026-08-02T10:00:00Z" },
+    client: { id: "client-1", name: "Cliente Real", email: "cliente@example.com", phone: "+55 11 99999-0000", document: null, country: "Brasil", zip_code: "01000-000", city: "São Paulo", state: "SP", address: "Rua Teste", district: "Centro", number: "123", complement: null, status_journey: "diagnostico_enviado", created_at: "2026-08-01T09:00:00Z", updated_at: "2026-08-02T10:00:00Z" },
+    purchases: [{ id: "purchase-1", transaction_code: "HP123", product_name: "Diagnóstico", price_gross: 197, price_net: 169.22, status_hotmart: "PURCHASE_APPROVED", purchase_date: "2026-08-01T09:30:00Z", created_at: "2026-08-01T09:31:00Z" }],
+  },
   "/api/dashboard/audit/audit-1": {
     audit: { id: "audit-1", case_id: "case-1", case_number: "CSF-2026-ABC123", actor_type: "consultant", action: "diagnostic.claimed", created_at: "2026-08-02T10:00:00Z", metadata: {} },
+    events: [{ id: "audit-1", case_id: "case-1", case_number: "CSF-2026-ABC123", actor_type: "consultant", action: "diagnostic.claimed", created_at: "2026-08-02T10:00:00Z", metadata: {} }],
     case: { id: "case-1", case_number: "CSF-2026-ABC123", status: "in_review", objective: "Trabalhar", submitted_at: "2026-08-01T10:00:00Z", updated_at: "2026-08-02T10:00:00Z" },
     client: { id: "client-1", name: "Cliente Real", email: "cliente@example.com", phone: "+55 11 99999-0000", document: null, country: "Brasil", zip_code: "01000-000", city: "São Paulo", state: "SP", address: "Rua Teste", district: "Centro", number: "123", complement: null, status_journey: "diagnostico_enviado", created_at: "2026-08-01T09:00:00Z", updated_at: "2026-08-02T10:00:00Z" },
     purchases: [{ id: "purchase-1", transaction_code: "HP123", product_name: "Diagnóstico", price_gross: 197, price_net: 169.22, status_hotmart: "PURCHASE_APPROVED", purchase_date: "2026-08-01T09:30:00Z", created_at: "2026-08-01T09:31:00Z" }],
@@ -58,14 +72,18 @@ describe("módulos reais do menu", () => {
   it("mostra a auditoria em português e abre detalhes do cliente com transações", async () => {
     mockDashboardFetch();
     render(<AuditLogClient />);
-    const auditButton = await screen.findByRole("button", { name: "Abrir detalhes: Diagnóstico assumido para revisão" });
+    const auditButton = await screen.findByRole("button", { name: "Abrir detalhes: CSF-2026-ABC123" });
     expect(screen.queryByText("diagnostic · claimed")).toBeNull();
-    expect(screen.getByText("Diagnóstico assumido para revisão")).toBeVisible();
+    expect(screen.getByText("CSF-2026-ABC123")).toBeVisible();
+    expect(screen.getByText("2 eventos registrados")).toBeVisible();
+    expect(screen.getAllByText("Diagnóstico visualizado")).toHaveLength(1);
 
     fireEvent.click(auditButton);
 
     expect(await screen.findByText("Cliente Real")).toBeVisible();
     expect(screen.getByText("cliente@example.com")).toBeVisible();
+    expect(screen.getByText("Passos registrados neste caso")).toBeVisible();
+    expect(screen.getByText("Diagnóstico assumido para revisão")).toBeVisible();
     expect(screen.getByText("Compra aprovada")).toBeVisible();
     expect(screen.getByText("HP123")).toBeVisible();
     expect(screen.getByRole("link", { name: "Abrir diagnóstico" })).toHaveAttribute("href", "/dashboard/diagnosticos/case-1");

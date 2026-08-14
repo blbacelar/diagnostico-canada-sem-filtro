@@ -13,8 +13,11 @@ import { Input } from "./ui/input";
 type ContentItem = { id: string; title: string; description: string; url: string | null; tags: string[]; active: boolean; created_at: string; updated_at: string };
 type TemplateItem = { id: string; template_key: string; name: string; subject: string; body: string; active: boolean; version: number; created_at: string; updated_at: string };
 type AuditItem = { id: string; case_id: string | null; case_number: string | null; actor_type: string; action: string; created_at: string };
+type AuditEvent = AuditItem & { metadata?: Record<string, unknown> };
+type AuditGroup = { id: string; detail_audit_id: string; case_id: string | null; case_number: string | null; latest_action: string; latest_actor_type: string; latest_created_at: string; event_count: number };
 type AuditDetail = {
   audit: AuditItem & { metadata?: Record<string, unknown> };
+  events: AuditEvent[];
   case: { id: string; case_number: string; status: string; objective: string | null; submitted_at: string | null; updated_at: string } | null;
   client: { id: string; name: string; email: string; phone: string | null; document: string | null; country: string | null; zip_code: string | null; city: string | null; state: string | null; address: string | null; district: string | null; number: string | null; complement: string | null; status_journey: string | null; created_at: string; updated_at: string } | null;
   purchases: Array<{ id: string; transaction_code: string | null; product_name: string | null; price_gross: number | null; price_net: number | null; status_hotmart: string | null; purchase_date: string | null; created_at: string | null }>;
@@ -140,23 +143,51 @@ function moneyFormatter(value: number | null) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 }
 
+function groupAuditItems(items: AuditItem[]) {
+  const groups = new Map<string, AuditGroup>();
+  for (const item of items) {
+    const groupId = item.case_id ? `case:${item.case_id}` : `event:${item.id}`;
+    const existing = groups.get(groupId);
+    if (existing) {
+      existing.event_count += 1;
+      continue;
+    }
+    groups.set(groupId, {
+      id: groupId,
+      detail_audit_id: item.id,
+      case_id: item.case_id,
+      case_number: item.case_number,
+      latest_action: item.action,
+      latest_actor_type: item.actor_type,
+      latest_created_at: item.created_at,
+      event_count: 1,
+    });
+  }
+  return [...groups.values()];
+}
+
 export function AuditLogClient() {
   const { data, error } = useDashboardResource<{ items: AuditItem[] }>("/api/dashboard/audit");
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<AuditDetail | null>(null);
   const [detailState, setDetailState] = useState<"idle" | "loading" | "error">("idle");
-  const items = useMemo(() => {
+  const groups = useMemo(() => {
     const term = search.trim().toLocaleLowerCase("pt-BR");
-    return (data?.items ?? []).filter((item) => !term || [getAuditLabel(item.action), item.case_number ?? "", getActorLabel(item.actor_type)].some((value) => value.toLocaleLowerCase("pt-BR").includes(term)));
+    return groupAuditItems(data?.items ?? []).filter((group) => !term || [
+      group.case_number ?? "Evento geral",
+      getAuditLabel(group.latest_action),
+      getActorLabel(group.latest_actor_type),
+      `${group.event_count} eventos`,
+    ].some((value) => value.toLocaleLowerCase("pt-BR").includes(term)));
   }, [data, search]);
 
-  async function openDetail(item: AuditItem) {
-    setSelectedId(item.id);
+  async function openDetail(group: AuditGroup) {
+    setSelectedId(group.id);
     setDetail(null);
     setDetailState("loading");
     try {
-      const result = await authorizedFetch<AuditDetail>(`/api/dashboard/audit/${item.id}`);
+      const result = await authorizedFetch<AuditDetail>(`/api/dashboard/audit/${group.detail_audit_id}`);
       setDetail(result);
       setDetailState("idle");
     } catch {
@@ -166,18 +197,18 @@ export function AuditLogClient() {
 
   return <>
     <DashboardHeader eyebrow="Rastreabilidade" title="Auditoria" description="Registro cronológico e somente leitura das ações executadas no sistema." />
-    <ModuleToolbar search={search} onSearch={setSearch} placeholder="Buscar por ação, caso ou responsável" count={items.length} label="eventos" />
-    {error ? <DashboardError /> : !data ? <DashboardLoading /> : items.length ? <section className="audit-log-list">
-      {items.map((item) => <Fragment key={item.id}>
-        <article className={selectedId === item.id ? "audit-log-row selected" : "audit-log-row"}>
-          <button type="button" onClick={() => void openDetail(item)} aria-expanded={selectedId === item.id} aria-label={`Abrir detalhes: ${getAuditLabel(item.action)}`}>
-            <span className={`audit-actor audit-actor--${item.actor_type}`}>{item.actor_type === "system" ? <Settings /> : item.actor_type === "consultant" ? <ShieldCheck /> : <UserRound />}</span>
-            <div><strong>{getAuditLabel(item.action)}</strong><small>{getActorLabel(item.actor_type)}</small></div>
-            {item.case_id && item.case_number ? <span className="audit-case-number">{item.case_number}</span> : <span className="audit-no-case">Evento geral</span>}
-            <time dateTime={item.created_at}>{dateTimeFormatter.format(new Date(item.created_at))}</time>
+    <ModuleToolbar search={search} onSearch={setSearch} placeholder="Buscar por caso, último evento ou responsável" count={groups.length} label="casos auditados" />
+    {error ? <DashboardError /> : !data ? <DashboardLoading /> : groups.length ? <section className="audit-log-list">
+      {groups.map((group) => <Fragment key={group.id}>
+        <article className={selectedId === group.id ? "audit-log-row selected" : "audit-log-row"}>
+          <button type="button" onClick={() => void openDetail(group)} aria-expanded={selectedId === group.id} aria-label={`Abrir detalhes: ${group.case_number ?? getAuditLabel(group.latest_action)}`}>
+            <span className={`audit-actor audit-actor--${group.latest_actor_type}`}>{group.latest_actor_type === "system" ? <Settings /> : group.latest_actor_type === "consultant" ? <ShieldCheck /> : <UserRound />}</span>
+            <div><strong>{group.case_number ?? "Evento geral"}</strong><small>{group.event_count} {group.event_count === 1 ? "evento registrado" : "eventos registrados"}</small></div>
+            <span className={group.case_number ? "audit-case-number" : "audit-no-case"}>{getAuditLabel(group.latest_action)}</span>
+            <time dateTime={group.latest_created_at}>{dateTimeFormatter.format(new Date(group.latest_created_at))}</time>
           </button>
         </article>
-        {selectedId === item.id && <AuditDetailPanel detail={detail} state={detailState} onClose={() => { setSelectedId(null); setDetail(null); setDetailState("idle"); }} />}
+        {selectedId === group.id && <AuditDetailPanel detail={detail} state={detailState} onClose={() => { setSelectedId(null); setDetail(null); setDetailState("idle"); }} />}
       </Fragment>)}
     </section> : <ModuleEmpty icon={<ShieldCheck />} text={search ? "Nenhum evento corresponde à busca." : "Nenhum evento de auditoria foi registrado ainda."} />}
   </>;
@@ -186,7 +217,7 @@ export function AuditLogClient() {
 function AuditDetailPanel({ detail, state, onClose }: { detail: AuditDetail | null; state: "idle" | "loading" | "error"; onClose: () => void }) {
   return <section className="audit-detail-panel" aria-live="polite">
     <header>
-      <div><p className="eyebrow">Detalhes do evento</p><h2>{detail ? getAuditLabel(detail.audit.action) : state === "loading" ? "Carregando detalhes" : "Detalhes indisponíveis"}</h2></div>
+      <div><p className="eyebrow">Detalhes do caso auditado</p><h2>{detail?.case ? `Caso ${detail.case.case_number}` : detail ? getAuditLabel(detail.audit.action) : state === "loading" ? "Carregando detalhes" : "Detalhes indisponíveis"}</h2></div>
       <button type="button" onClick={onClose}>Fechar</button>
     </header>
     {state === "loading" ? <p className="audit-detail-message">Buscando dados do cliente e histórico de transações…</p> : state === "error" ? <p className="audit-detail-message">Não foi possível carregar os detalhes deste evento.</p> : detail ? <>
@@ -215,6 +246,17 @@ function AuditDetailPanel({ detail, state, onClose }: { detail: AuditDetail | nu
           </dl> : <p className="audit-detail-message">Evento geral sem caso de diagnóstico.</p>}
         </section>
       </div>
+      <section className="audit-transactions">
+        <header><p className="eyebrow">Histórico de auditoria</p><h3>Passos registrados neste caso</h3></header>
+        {detail.events.length ? <table>
+          <thead><tr><th>Data</th><th>Evento</th><th>Responsável</th></tr></thead>
+          <tbody>{detail.events.map((event) => <tr key={event.id}>
+            <td>{dateTimeFormatter.format(new Date(event.created_at))}</td>
+            <td>{getAuditLabel(event.action)}</td>
+            <td>{getActorLabel(event.actor_type)}</td>
+          </tr>)}</tbody>
+        </table> : <p className="audit-detail-message">Nenhum passo de auditoria encontrado para este caso.</p>}
+      </section>
       <section className="audit-transactions">
         <header><p className="eyebrow">Histórico de transações</p><h3>Compras vinculadas ao cliente</h3></header>
         {detail.purchases.length ? <table>

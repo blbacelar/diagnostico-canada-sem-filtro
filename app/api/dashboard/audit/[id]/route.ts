@@ -10,6 +10,15 @@ type DiagnosticCaseRow = {
   updated_at: string;
 };
 
+type AuditEventRow = {
+  id: string;
+  case_id: string | null;
+  actor_type: string;
+  action: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+};
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -29,15 +38,27 @@ export async function GET(
     let diagnosticCase: DiagnosticCaseRow | null = null;
     let client = null;
     let purchases: unknown[] = [];
+    let events: AuditEventRow[] = [audit as AuditEventRow];
 
     if (audit.case_id) {
-      const { data: caseRow, error: caseError } = await admin
-        .from("diagnostic_cases")
-        .select("id,case_number,status,objective,client_id,submitted_at,updated_at")
-        .eq("id", audit.case_id)
-        .maybeSingle();
+      const [caseResult, eventsResult] = await Promise.all([
+        admin
+          .from("diagnostic_cases")
+          .select("id,case_number,status,objective,client_id,submitted_at,updated_at")
+          .eq("id", audit.case_id)
+          .maybeSingle(),
+        admin
+          .from("diagnostic_audit_logs")
+          .select("id,case_id,actor_type,action,metadata,created_at")
+          .eq("case_id", audit.case_id)
+          .order("created_at", { ascending: false })
+          .limit(200),
+      ]);
+      const { data: caseRow, error: caseError } = caseResult;
       if (caseError) throw caseError;
+      if (eventsResult.error) throw eventsResult.error;
       diagnosticCase = (caseRow ?? null) as DiagnosticCaseRow | null;
+      events = (eventsResult.data ?? []) as AuditEventRow[];
 
       if (diagnosticCase?.client_id) {
         const [clientResult, purchasesResult] = await Promise.all([
@@ -61,6 +82,7 @@ export async function GET(
 
     return json({
       audit,
+      events,
       case: diagnosticCase,
       client,
       purchases,
