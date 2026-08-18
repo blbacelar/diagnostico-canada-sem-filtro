@@ -74,7 +74,7 @@ export function ContentLibraryClient() {
 export function EmailTemplatesClient() {
   const { data, error } = useDashboardResource<{ items: TemplateItem[] }>("/api/dashboard/templates");
   return <>
-    <DashboardHeader eyebrow="Comunicação" title="Modelos de e-mail" description="Assuntos, mensagens e variáveis que estão cadastrados para as comunicações do diagnóstico." />
+    <DashboardHeader eyebrow="Comunicação" title="Modelos de e-mail" description="Assuntos, mensagens e variáveis que estão cadastrados para as comunicações do simulador." />
     {error ? <DashboardError /> : !data ? <DashboardLoading /> : data.items.length ? <section className="template-list">
       {data.items.map((item) => <article className="template-card" key={item.id}>
         <header><div><p className="eyebrow"><Mail /> {item.template_key}</p><h2>{item.name}</h2></div><div><span className={item.active ? "record-status active" : "record-status"}>{item.active ? "Ativo" : "Inativo"}</span><small>Versão {item.version}</small></div></header>
@@ -87,16 +87,16 @@ export function EmailTemplatesClient() {
 }
 
 const auditLabels: Record<string, string> = {
-  "diagnostic.started": "Diagnóstico iniciado",
-  "diagnostic.claimed": "Diagnóstico assumido para revisão",
-  "diagnostic.released": "Diagnóstico liberado para outra consultora",
+  "diagnostic.started": "Simulador iniciado",
+  "diagnostic.claimed": "Simulador assumido para revisão",
+  "diagnostic.released": "Caso liberado para outra consultora",
   "form_link.renewed": "Link do formulário renovado",
   "answers.saved": "Respostas salvas",
-  "diagnostic.submitted": "Diagnóstico enviado",
+  "diagnostic.submitted": "Simulador enviado",
   "ai_assessment.completed": "Análise estruturada concluída",
   "ai_assessment.failed": "Falha na análise estruturada",
-  "diagnostic.viewed": "Diagnóstico visualizado",
-  "diagnostic.delivery": "Diagnóstico entregue",
+  "diagnostic.viewed": "Simulador visualizado",
+  "diagnostic.delivery": "Resultado do simulador entregue",
   "information.requested": "Informação solicitada",
   "review.saved": "Parecer salvo",
   "review.approved": "Parecer aprovado",
@@ -119,7 +119,7 @@ const purchaseStatusLabels: Record<string, string> = {
 const journeyLabels: Record<string, string> = {
   lead: "Lead",
   compra: "Compra",
-  diagnostico_enviado: "Diagnóstico enviado",
+  diagnostico_enviado: "Simulador enviado",
   acompanhamento: "Acompanhamento",
   consulta_marcada: "Consulta marcada",
   consulta_concluida: "Consulta concluída",
@@ -266,8 +266,8 @@ function AuditDetailPanel({ detail, state, eventsState, onLoadMoreEvents, onClos
             <DetailRow label="Objetivo" value={detail.case.objective ?? "Não informado"} />
             <DetailRow label="Enviado em" value={detail.case.submitted_at ? dateTimeFormatter.format(new Date(detail.case.submitted_at)) : "—"} />
             <DetailRow label="Atualizado em" value={dateTimeFormatter.format(new Date(detail.case.updated_at))} />
-            <div><dt>Acesso</dt><dd><Link href={`/dashboard/diagnosticos/${detail.case.id}`}>Abrir diagnóstico <ExternalLink /></Link></dd></div>
-          </dl> : <p className="audit-detail-message">Evento geral sem caso de diagnóstico.</p>}
+            <div><dt>Acesso</dt><dd><Link href={`/dashboard/diagnosticos/${detail.case.id}`}>Abrir simulador <ExternalLink /></Link></dd></div>
+          </dl> : <p className="audit-detail-message">Evento geral sem caso de simulador.</p>}
         </section>
       </div>
       <section className="audit-transactions">
@@ -364,7 +364,7 @@ export function SettingsClient() {
   }
 
   return <>
-    <DashboardHeader eyebrow="Operação" title="Configurações" description="Gerencie a conta, integrações e parâmetros usados nas próximas operações do diagnóstico." />
+    <DashboardHeader eyebrow="Operação" title="Configurações" description="Gerencie a conta, integrações e parâmetros usados nas próximas operações do simulador." />
     {error ? <DashboardError /> : !data ? <DashboardLoading /> : <div className="settings-layout">
       <section className="settings-account"><header><UserRound /><div><p className="eyebrow">Conta profissional</p><h2>{data.account.display_name}</h2></div></header><dl><SettingRow label="E-mail" value={data.account.email} /><SettingRow label="Permissão" value={data.account.role === "admin" ? "Administradora" : "Consultora"} /><SettingRow label="Endereço da aplicação" value={data.operation.app_url} /></dl></section>
       <section className="settings-counts"><article><strong>{data.counts.open_cases}</strong><span>Casos ativos</span></article><article><strong>{data.counts.active_content}</strong><span>Conteúdos ativos</span></article><article><strong>{data.counts.active_templates}</strong><span>Modelos ativos</span></article></section>

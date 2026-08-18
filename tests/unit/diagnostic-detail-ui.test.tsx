@@ -20,8 +20,8 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("detalhe de diagnóstico enviado", () => {
-  it("abre o relatório existente e separa a criação de um novo diagnóstico", async () => {
+describe("detalhe de simulador enviado", () => {
+  it("abre o relatório existente e separa a criação de um novo simulador", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
       case: { id: "case-sent", case_number: "CSF-2026-0001", status: "sent", objective: "Trabalhar", submitted_at: "2026-08-03T10:00:00Z", updated_at: "2026-08-03T12:00:00Z", assigned_consultant_id: "consultant-1" },
       client: { full_name: "Bruno Bacelar", email_display: "blbacelar@gmail.com" },
@@ -33,9 +33,9 @@ describe("detalhe de diagnóstico enviado", () => {
 
     render(<DiagnosticDetailClient caseId="case-sent" />);
 
-    expect(await screen.findByText("Diagnóstico enviado")).toBeVisible();
-    expect(screen.getByRole("button", { name: "Novo diagnóstico" })).toBeEnabled();
-    expect(screen.getAllByRole("link", { name: /Ver diagnóstico enviado/ })[0]).toHaveAttribute("href", "/dashboard/diagnosticos/case-sent/relatorio");
+    expect(await screen.findByText("Simulador enviado")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Novo simulador" })).toBeEnabled();
+    expect(screen.getAllByRole("link", { name: /Ver resultado enviado/ })[0]).toHaveAttribute("href", "/dashboard/diagnosticos/case-sent/relatorio");
     expect(screen.queryByRole("link", { name: /Continuar parecer/ })).toBeNull();
     expect(screen.queryByRole("link", { name: /Pedir informações/ })).toBeNull();
   });

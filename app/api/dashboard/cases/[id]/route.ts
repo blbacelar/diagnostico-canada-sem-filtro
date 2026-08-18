@@ -10,7 +10,7 @@ export async function GET(
     const { id } = await params;
     const { admin, user } = await requireConsultant(request);
     const diagnosticCase = await claimCaseForReview(admin, id, user.id);
-    if (!diagnosticCase) throw new ApiError(404, "Diagnóstico não encontrado.");
+    if (!diagnosticCase) throw new ApiError(404, "Simulador não encontrado.");
 
     const [{ data: client }, { data: submission }, { data: assessment }, { data: review }, { data: history }] =
       await Promise.all([

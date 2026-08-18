@@ -265,7 +265,7 @@ test("@critical @regression entrada monetária descarta caracteres não monetár
   await expect(question(page, "available_funds").getByRole("alert")).toHaveText("O valor deve ser maior ou igual a 0.");
 });
 
-test("@critical @regression diagnóstico enviado não exibe novamente a ação de envio", async ({ page }) => {
+test("@critical @regression simulador enviado não exibe novamente a ação de envio", async ({ page }) => {
   await page.route("**/api/diagnostics/form-session", (route) => route.fulfill({
     status: 200,
     contentType: "application/json",
@@ -279,7 +279,7 @@ test("@critical @regression diagnóstico enviado não exibe novamente a ação d
   }));
 
   await page.goto("/formulario?token=e2e-submitted-token");
-  await expect(page.getByRole("heading", { name: "Diagnóstico já enviado" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Simulador já enviado" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Enviar para análise" })).toHaveCount(0);
 });
 
@@ -293,7 +293,7 @@ test("@critical @regression aba desatualizada aceita o bloqueio final sem tentar
   await page.route("**/api/diagnostics/answers", (route) => route.fulfill({
     status: 409,
     contentType: "application/json",
-    body: JSON.stringify({ error: "As respostas deste diagnóstico já foram enviadas.", code: "ANSWERS_LOCKED" }),
+    body: JSON.stringify({ error: "As respostas deste simulador já foram enviadas.", code: "ANSWERS_LOCKED" }),
   }));
   await page.route("**/api/diagnostics/submit", (route) => {
     submitRequests += 1;
@@ -302,7 +302,7 @@ test("@critical @regression aba desatualizada aceita o bloqueio final sem tentar
 
   await openReview(page);
   await page.getByRole("button", { name: "Enviar para análise" }).click();
-  await expect(page.getByRole("heading", { name: "Diagnóstico já enviado" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Simulador já enviado" })).toBeVisible();
   expect(submitRequests).toBe(0);
 });
 
@@ -316,12 +316,12 @@ test("@critical @regression conflito de envio troca o formulário pelo estado bl
   await page.route("**/api/diagnostics/answers", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ savedAt: new Date().toISOString() }) }));
   await page.route("**/api/diagnostics/submit", (route) => {
     submitRequests += 1;
-    return route.fulfill({ status: 409, contentType: "application/json", body: JSON.stringify({ error: "Este diagnóstico já foi enviado.", code: "ALREADY_SUBMITTED" }) });
+    return route.fulfill({ status: 409, contentType: "application/json", body: JSON.stringify({ error: "Este simulador já foi enviado.", code: "ALREADY_SUBMITTED" }) });
   });
 
   await openReview(page);
   await page.getByRole("button", { name: "Enviar para análise" }).click();
-  await expect(page.getByRole("heading", { name: "Diagnóstico já enviado" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Simulador já enviado" })).toBeVisible();
   expect(submitRequests).toBe(1);
 });
 

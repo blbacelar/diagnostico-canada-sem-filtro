@@ -42,14 +42,14 @@ test("@regression fluxo é navegável por teclado", async ({ page }) => {
 
 test("@smoke layout mobile mantém a ação principal visível", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("button", { name: /iniciar meu diagnóstico/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /iniciar meu simulador/i })).toBeVisible();
 });
 
 test("@critical @smoke início concluído troca o formulário pela confirmação", async ({ page }) => {
   await page.route("**/api/diagnostics/start", fulfillStart);
   await page.goto("/");
   await fillStartForm(page);
-  await page.getByRole("button", { name: /iniciar meu diagnóstico/i }).click();
+  await page.getByRole("button", { name: /iniciar meu simulador/i }).click();
 
   await expect(page.getByRole("heading", { name: /agora, confira seu e-mail/i })).toBeVisible();
   await expect(page.getByText("Enviamos seu acesso seguro.")).toBeVisible();
@@ -64,7 +64,7 @@ test("@critical @smoke bloqueia e-mails diferentes antes de chamar a API", async
   });
   await page.goto("/");
   await fillStartForm(page, { emailConfirmation: "outra-pessoa@example.com" });
-  await page.getByRole("button", { name: /iniciar meu diagnóstico/i }).click();
+  await page.getByRole("button", { name: /iniciar meu simulador/i }).click();
 
   const confirmation = page.getByLabel("Confirmar e-mail");
   await expect(page.getByText("Os e-mails precisam ser iguais.")).toBeVisible();
@@ -76,7 +76,7 @@ test("@critical @smoke bloqueia e-mails diferentes antes de chamar a API", async
   await confirmation.fill("pessoa@example.com");
   await expect(page.getByText("Os e-mails precisam ser iguais.")).toHaveCount(0);
   await expect(confirmation).toHaveAttribute("aria-invalid", "false");
-  await page.getByRole("button", { name: /iniciar meu diagnóstico/i }).click();
+  await page.getByRole("button", { name: /iniciar meu simulador/i }).click();
   await expect(page.getByRole("heading", { name: /agora, confira seu e-mail/i })).toBeVisible();
   expect(requests).toBe(1);
 });
@@ -92,7 +92,7 @@ test("@critical @regression aceita e normaliza diferenças apenas de caixa e esp
     email: "  Pessoa@EXAMPLE.com ",
     emailConfirmation: "pessoa@example.com",
   });
-  await page.getByRole("button", { name: /iniciar meu diagnóstico/i }).click();
+  await page.getByRole("button", { name: /iniciar meu simulador/i }).click();
 
   await expect(page.getByRole("heading", { name: /agora, confira seu e-mail/i })).toBeVisible();
   expect(body?.email).toBe("pessoa@example.com");
@@ -101,7 +101,7 @@ test("@critical @regression aceita e normaliza diferenças apenas de caixa e esp
 
 test("@regression exibe erros acessíveis para campos obrigatórios", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: /iniciar meu diagnóstico/i }).click();
+  await page.getByRole("button", { name: /iniciar meu simulador/i }).click();
 
   await expect(page.getByText("Informe seu nome completo.")).toBeVisible();
   await expect(page.getByText("Informe um e-mail válido.")).toHaveCount(2);
@@ -118,7 +118,7 @@ test("@regression rejeita formato de e-mail inválido sem chamar a API", async (
   });
   await page.goto("/");
   await fillStartForm(page, { email: "email-invalido", emailConfirmation: "email-invalido" });
-  await page.getByRole("button", { name: /iniciar meu diagnóstico/i }).click();
+  await page.getByRole("button", { name: /iniciar meu simulador/i }).click();
 
   await expect(page.getByText("Informe um e-mail válido.")).toHaveCount(2);
   expect(requests).toBe(0);
@@ -127,7 +127,7 @@ test("@regression rejeita formato de e-mail inválido sem chamar a API", async (
 test("@regression exige consentimento explícito", async ({ page }) => {
   await page.goto("/");
   await fillStartForm(page, { consent: false });
-  await page.getByRole("button", { name: /iniciar meu diagnóstico/i }).click();
+  await page.getByRole("button", { name: /iniciar meu simulador/i }).click();
 
   await expect(page.getByText("Você precisa autorizar o tratamento dos dados.")).toBeVisible();
   await expect(page.getByRole("checkbox")).toHaveAttribute("aria-invalid", "true");
@@ -162,10 +162,10 @@ test("@critical @regression recupera de falha de rede e permite tentar novamente
   await page.route("**/api/diagnostics/start", (route) => route.abort("failed"));
   await page.goto("/");
   await fillStartForm(page);
-  await page.getByRole("button", { name: /iniciar meu diagnóstico/i }).click();
+  await page.getByRole("button", { name: /iniciar meu simulador/i }).click();
 
   await expect(page.locator(".form-error")).toHaveText("Não foi possível enviar o link agora. Tente novamente.");
-  await expect(page.getByRole("button", { name: /iniciar meu diagnóstico/i })).toBeEnabled();
+  await expect(page.getByRole("button", { name: /iniciar meu simulador/i })).toBeEnabled();
 });
 
 test("@regression retomada exige somente um e-mail válido", async ({ page }) => {
@@ -175,11 +175,11 @@ test("@regression retomada exige somente um e-mail válido", async ({ page }) =>
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ message: "Se houver um diagnóstico, enviaremos um link." }),
+      body: JSON.stringify({ message: "Se houver um simulador, enviaremos um link." }),
     });
   });
   await page.goto("/");
-  await page.getByRole("button", { name: "Já comecei meu diagnóstico" }).click();
+  await page.getByRole("button", { name: "Já comecei meu simulador" }).click();
   await expect(page.getByLabel("Confirmar e-mail")).toHaveCount(0);
   await page.getByLabel("E-mail", { exact: true }).fill("  Pessoa@EXAMPLE.com ");
   await page.getByRole("button", { name: /enviar link para continuar/i }).click();

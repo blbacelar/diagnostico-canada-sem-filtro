@@ -41,7 +41,7 @@ async function createReassessmentFallback(
   if (!sourceAnswers || sourceAnswers.length === 0) {
     throw new ApiError(
       409,
-      "O diagnóstico enviado não possui respostas para reutilizar.",
+      "O simulador enviado não possui respostas para reutilizar.",
       "SOURCE_ANSWERS_UNAVAILABLE",
     );
   }
@@ -79,7 +79,7 @@ async function createReassessmentFallback(
     if (hasDatabaseErrorCode(createCaseError, "23505")) {
       throw new ApiError(
         409,
-        "Já existe um diagnóstico em andamento para este cliente.",
+        "Já existe um simulador em andamento para este cliente.",
         "ACTIVE_DIAGNOSTIC_EXISTS",
       );
     }
@@ -112,7 +112,7 @@ async function createReassessmentFallback(
     to_status: "client_draft",
     actor_type: "consultant",
     actor_user_id: consultantId,
-    note: `Novo diagnóstico criado a partir de ${sourceCase.case_number} com respostas editáveis.`,
+    note: `Novo simulador criado a partir de ${sourceCase.case_number} com respostas editáveis.`,
   });
   if (historyError) throw historyError;
 
@@ -139,9 +139,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       .is("archived_at", null)
       .maybeSingle();
     if (sourceError) throw sourceError;
-    if (!sourceCase) throw new ApiError(404, "Diagnóstico não encontrado.", "CASE_NOT_FOUND");
+    if (!sourceCase) throw new ApiError(404, "Simulador não encontrado.", "CASE_NOT_FOUND");
     if (sourceCase.status !== "sent") {
-      throw new ApiError(409, "O novo diagnóstico só pode ser criado depois que a entrega anterior foi enviada.", "CASE_NOT_DELIVERED");
+      throw new ApiError(409, "O novo simulador só pode ser criado depois que a entrega anterior foi enviada.", "CASE_NOT_DELIVERED");
     }
 
     const config = await getOperationalConfig(admin);
@@ -170,12 +170,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
     if (error) {
       if (hasDatabaseErrorCode(error, "23505")) {
-        throw new ApiError(409, "Já existe um diagnóstico em andamento para este cliente.", "ACTIVE_DIAGNOSTIC_EXISTS");
+        throw new ApiError(409, "Já existe um simulador em andamento para este cliente.", "ACTIVE_DIAGNOSTIC_EXISTS");
       }
       if (hasDatabaseErrorCode(error, "P0001")) {
         throw new ApiError(
           409,
-          "O novo diagnóstico só pode ser criado depois que a entrega anterior foi enviada.",
+          "O novo simulador só pode ser criado depois que a entrega anterior foi enviada.",
           "CASE_NOT_DELIVERED",
         );
       }
@@ -185,7 +185,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       throw error;
     }
     const created = (data as ReassessmentRow[] | null)?.[0];
-    if (!created) throw new ApiError(500, "O novo diagnóstico não pôde ser aberto.", "REASSESSMENT_NOT_CREATED");
+    if (!created) throw new ApiError(500, "O novo simulador não pôde ser aberto.", "REASSESSMENT_NOT_CREATED");
 
     return json({
       caseId: created.id,

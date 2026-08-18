@@ -29,13 +29,13 @@ afterEach(() => {
 });
 
 describe("visão geral do dashboard", () => {
-  it("mostra diagnósticos prontos para envio e já entregues", async () => {
+  it("mostra simuladores prontos para envio e já entregues", async () => {
     authorizedFetch.mockResolvedValue(summary);
     renderOverview();
 
     expect(screen.getByRole("heading", { name: "Bom trabalho, Lopes Bacelar." })).toBeVisible();
     expect(screen.queryByText("Bom trabalho, consultora.")).toBeNull();
-    expect(await screen.findByText("Diagnósticos enviados")).toBeVisible();
+    expect(await screen.findByText("Simuladores enviados")).toBeVisible();
     expect(screen.getByText("Prontos para envio")).toBeVisible();
     expect(screen.getAllByText("01")).toHaveLength(2);
     expect(screen.queryByText("Atenção técnica")).toBeNull();
@@ -44,7 +44,7 @@ describe("visão geral do dashboard", () => {
   it("atualiza os indicadores quando a pessoa volta para a aba", async () => {
     authorizedFetch.mockResolvedValue(summary);
     renderOverview();
-    await screen.findByText("Diagnósticos enviados");
+    await screen.findByText("Simuladores enviados");
 
     window.dispatchEvent(new Event("focus"));
 

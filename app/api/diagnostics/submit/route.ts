@@ -36,7 +36,7 @@ export async function POST(request: Request) {
       .eq("idempotency_key", idempotencyKey)
       .maybeSingle();
     if (existing) return json({ caseNumber: caseRow.case_number, submittedAt: existing.submitted_at, expectedTime });
-    if (caseRow.status !== "client_draft") throw new ApiError(409, "Este diagnóstico já foi enviado.", "ALREADY_SUBMITTED");
+    if (caseRow.status !== "client_draft") throw new ApiError(409, "Este simulador já foi enviado.", "ALREADY_SUBMITTED");
 
     const { data: rows, error } = await admin.from("diagnostic_answers").select("question_key,answer").eq("case_id", caseRow.id);
     if (error) throw error;
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
       : (isConsultantManaged ? "consultant" : null);
     const submissionActor = isConsultantManaged ? "consultant" : "client";
 
-    // O diagnóstico e o CRM compartilham o mesmo cadastro. O upsert acontece
+    // O simulador e o CRM compartilham o mesmo cadastro. O upsert acontece
     // antes da submissão imutável e mantém o e-mail como identidade única.
     const { data: existingClient, error: clientReadError } = await admin
       .from("clients")
@@ -113,7 +113,7 @@ export async function POST(request: Request) {
       if (conflictingSubmission?.idempotency_key === idempotencyKey) {
         return json({ caseNumber: caseRow.case_number, submittedAt: conflictingSubmission.submitted_at, expectedTime });
       }
-      throw new ApiError(409, "Este diagnóstico já foi enviado.", "ALREADY_SUBMITTED");
+      throw new ApiError(409, "Este simulador já foi enviado.", "ALREADY_SUBMITTED");
     }
 
     const { data: previous } = await admin
@@ -156,7 +156,7 @@ export async function POST(request: Request) {
           case_id: caseRow.id,
           delivery_type: "submission_confirmation",
           recipient: client.email,
-          subject: `Recebemos o diagnóstico ${caseRow.case_number}`,
+          subject: `Recebemos o simulador ${caseRow.case_number}`,
           status: result.error ? "failed" : "sent",
           provider_id: result.data?.id ?? null,
           error_code: result.error?.name ?? null,

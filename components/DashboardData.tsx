@@ -44,13 +44,13 @@ export function OverviewClient() {
     return () => { active = false; window.clearInterval(interval); window.removeEventListener("focus", load); };
   }, []);
   return <>
-    <DashboardHeader eyebrow="Segunda-feira · central de análise" title={displayName ? `Bom trabalho, ${displayName}.` : "Bom trabalho."} description="Prioridades organizadas para começar pelos casos que mais precisam de atenção." action={<Link className="outline-action" href="/dashboard/diagnosticos">Ver todos os diagnósticos <ArrowUpRight /></Link>} />
+    <DashboardHeader eyebrow="Segunda-feira · central de análise" title={displayName ? `Bom trabalho, ${displayName}.` : "Bom trabalho."} description="Prioridades organizadas para começar pelos casos que mais precisam de atenção." action={<Link className="outline-action" href="/dashboard/diagnosticos">Ver todos os simuladores <ArrowUpRight /></Link>} />
     {error ? <DashboardError /> : !data ? <DashboardLoading /> : <>
       <section className="metric-grid">
         <Metric number={data.counts.new_cases ?? 0} label="Aguardando análise" detail="Recebidos" accent />
         <Metric number={data.counts.in_review ?? 0} label="Em revisão" detail="Em andamento" warning />
         <Metric number={data.counts.ready_to_send ?? 0} label="Prontos para envio" detail="Revisão concluída" />
-        <Metric number={data.counts.delivered ?? 0} label="Diagnósticos enviados" detail="Entregues" success />
+        <Metric number={data.counts.delivered ?? 0} label="Simuladores enviados" detail="Entregues" success />
       </section>
       <section className="dashboard-columns">
         <div className="priority-list"><header><div><p className="eyebrow">Fila prioritária</p><h2>Casos para revisar agora</h2></div><Link href="/dashboard/diagnosticos">Lista completa</Link></header>{data.recent.length ? data.recent.map((item) => <CaseLine key={item.id} item={item} />) : <div className="empty-row">Nenhum caso aguardando revisão.</div>}</div>
@@ -126,9 +126,9 @@ export function DiagnosticsListClient() {
   }
 
   return <>
-    <DashboardHeader eyebrow="Operações" title="Diagnósticos" description="Acompanhe o funil completo de diagnóstico, revisões ativas e prontas para entrega." />
-    <div className="list-toolbar"><label className="list-toolbar__search"><Search /><input aria-label="Buscar diagnósticos" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Buscar por nome, e-mail ou código" /></label><label className="list-toolbar__select"><Select value={status || "all"} onValueChange={(value) => { setStatus(value === "all" ? "" : value); setPage(1); }}><SelectTrigger className="list-toolbar__select-trigger"><SelectValue placeholder="Todos os status" /></SelectTrigger><SelectContent><SelectItem value="all">Todos os status</SelectItem>{Object.entries(caseStatusLabels).map(([value,label]) => <SelectItem value={value} key={value}>{label}</SelectItem>)}</SelectContent></Select></label></div>
-    {error ? <DashboardError /> : loading ? <DashboardLoading /> : <div className="diagnostic-table"><div className="diagnostic-table__scroll"><Table className="diagnostic-table__table"><TableHeader><TableRow><TableHead className="w-[320px]">Cliente / diagnóstico</TableHead><TableHead>Objetivo</TableHead><TableHead>Status</TableHead><TableHead>Preparo</TableHead><TableHead>Alertas</TableHead><TableHead className="w-[18px]" /></TableRow></TableHeader><TableBody>{items.length ? items.map((item) => <DiagnosticTableRow key={item.id} item={item} onOpen={openCase} />) : <TableRow><TableCell colSpan={6}><div className="empty-row">Nenhum diagnóstico encontrado.</div></TableCell></TableRow>}</TableBody></Table><footer className="table-pagination"><button type="button" onClick={goToPreviousPage} disabled={!pagination.hasPreviousPage}>Anterior</button><span>Página {pagination.page} de {pagination.totalPages} · {pagination.total} itens</span><button type="button" onClick={goToNextPage} disabled={!pagination.hasNextPage}>Próxima</button></footer></div></div>}
+    <DashboardHeader eyebrow="Operações" title="Simuladores" description="Acompanhe o funil completo do simulador, revisões ativas e prontas para entrega." />
+    <div className="list-toolbar"><label className="list-toolbar__search"><Search /><input aria-label="Buscar simuladores" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Buscar por nome, e-mail ou código" /></label><label className="list-toolbar__select"><Select value={status || "all"} onValueChange={(value) => { setStatus(value === "all" ? "" : value); setPage(1); }}><SelectTrigger className="list-toolbar__select-trigger"><SelectValue placeholder="Todos os status" /></SelectTrigger><SelectContent><SelectItem value="all">Todos os status</SelectItem>{Object.entries(caseStatusLabels).map(([value,label]) => <SelectItem value={value} key={value}>{label}</SelectItem>)}</SelectContent></Select></label></div>
+    {error ? <DashboardError /> : loading ? <DashboardLoading /> : <div className="diagnostic-table"><div className="diagnostic-table__scroll"><Table className="diagnostic-table__table"><TableHeader><TableRow><TableHead className="w-[320px]">Cliente / simulador</TableHead><TableHead>Objetivo</TableHead><TableHead>Status</TableHead><TableHead>Preparo</TableHead><TableHead>Alertas</TableHead><TableHead className="w-[18px]" /></TableRow></TableHeader><TableBody>{items.length ? items.map((item) => <DiagnosticTableRow key={item.id} item={item} onOpen={openCase} />) : <TableRow><TableCell colSpan={6}><div className="empty-row">Nenhum simulador encontrado.</div></TableCell></TableRow>}</TableBody></Table><footer className="table-pagination"><button type="button" onClick={goToPreviousPage} disabled={!pagination.hasPreviousPage}>Anterior</button><span>Página {pagination.page} de {pagination.totalPages} · {pagination.total} itens</span><button type="button" onClick={goToNextPage} disabled={!pagination.hasNextPage}>Próxima</button></footer></div></div>}
   </>;
 }
 
@@ -184,13 +184,13 @@ export function ClientsListClient() {
   }, [search]);
 
   return <>
-    <DashboardHeader eyebrow="Relacionamento" title="Clientes" description="Consulte cada pessoa, seus diagnósticos e a atividade mais recente em um único lugar." />
+    <DashboardHeader eyebrow="Relacionamento" title="Clientes" description="Consulte cada pessoa, seus simuladores e a atividade mais recente em um único lugar." />
     <div className="clients-toolbar">
       <label><Search /><input aria-label="Buscar clientes" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nome ou e-mail" /></label>
       {!loading && !error && <p><UsersRound /><strong>{items.length}</strong> {items.length === 1 ? "cliente encontrado" : "clientes encontrados"}</p>}
     </div>
     {error ? <DashboardError /> : loading ? <DashboardLoading /> : <div className="clients-table">
-      <div className="clients-table-head"><span>Cliente</span><span>Diagnósticos</span><span>Caso mais recente</span><span>Status</span><span>Compra</span><span>Última atividade</span><span /></div>
+      <div className="clients-table-head"><span>Cliente</span><span>Simuladores</span><span>Caso mais recente</span><span>Status</span><span>Compra</span><span>Última atividade</span><span /></div>
       {items.length ? items.map((item) => <ClientLine key={item.id} item={item} />) : <div className="empty-row">{search ? "Nenhum cliente corresponde à busca." : "Nenhum cliente cadastrado ainda."}</div>}
     </div>}
   </>;
@@ -199,8 +199,8 @@ export function ClientsListClient() {
 function ClientLine({ item }: { item: ClientListItem }) {
   const content = <>
     <div className="client-identity"><div className="case-avatar">{item.full_name.split(" ").filter(Boolean).map((part) => part[0]).slice(0, 2).join("")}</div><div><strong>{item.full_name}</strong><small>{item.email_display}</small></div></div>
-    <span className="client-case-count"><strong>{item.case_count}</strong><small>{item.case_count === 1 ? "diagnóstico" : "diagnósticos"}</small></span>
-    <div className="client-latest-case"><strong>{item.latest_case?.case_number ?? "Sem diagnóstico"}</strong><small>{item.latest_case?.objective ?? "Objetivo não informado"}</small></div>
+    <span className="client-case-count"><strong>{item.case_count}</strong><small>{item.case_count === 1 ? "simulador" : "simuladores"}</small></span>
+    <div className="client-latest-case"><strong>{item.latest_case?.case_number ?? "Sem simulador"}</strong><small>{item.latest_case?.objective ?? "Objetivo não informado"}</small></div>
     {item.latest_case ? <span className={`status-pill status-${item.latest_case.status}`}>{getCaseStatusLabel(item.latest_case.status)}</span> : <span className="status-pill">Sem caso</span>}
     <span className="client-purchase">{item.purchase_date ? <time dateTime={item.purchase_date}>{dateFormatter.format(new Date(item.purchase_date))}</time> : "—"}</span>
     <time dateTime={item.last_activity_at}>{dateFormatter.format(new Date(item.last_activity_at))}</time>

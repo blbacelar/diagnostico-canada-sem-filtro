@@ -39,7 +39,7 @@ export async function POST(request: Request) {
 
     let caseStatus = diagnosticCase.status;
     if (caseStatus === "sent") {
-      throw new ApiError(409, "Este diagnóstico já foi enviado.", "ALREADY_DELIVERED");
+      throw new ApiError(409, "Este simulador já foi enviado.", "ALREADY_DELIVERED");
     }
     if (caseStatus !== "approved") {
       const { data: syncedCase } = await admin
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
       caseStatus = syncedCase?.status ?? caseStatus;
     }
     if (caseStatus !== "approved") {
-      throw new ApiError(409, "O diagnóstico não está pronto para entrega.", "DELIVERY_NOT_READY");
+      throw new ApiError(409, "O simulador não está pronto para entrega.", "DELIVERY_NOT_READY");
     }
 
     const [target, config] = await Promise.all([caseClient(admin, payload.caseId), getOperationalConfig(admin)]);
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
     if (error) throw error;
     const nextStatus = result.error ? "approved" : "sent";
     await admin.from("diagnostic_cases").update({ status: nextStatus }).eq("id", payload.caseId).eq("assigned_consultant_id", user.id);
-    await admin.from("diagnostic_status_history").insert({ case_id: payload.caseId, from_status: "sending", to_status: nextStatus, actor_type: "consultant", actor_user_id: user.id, note: result.error ? "Falha no envio; parecer aprovado preservado." : "Diagnóstico final enviado." });
+    await admin.from("diagnostic_status_history").insert({ case_id: payload.caseId, from_status: "sending", to_status: nextStatus, actor_type: "consultant", actor_user_id: user.id, note: result.error ? "Falha no envio; parecer aprovado preservado." : "Resultado final do simulador enviado." });
     await writeAudit(admin, { caseId: payload.caseId, actorUserId: user.id, actorType: "consultant", action: "diagnostic.delivery", metadata: { deliveryId: delivery.id, status, deliveryMethod: payload.deliveryMethod, reportLinkDays: config.reportLinkDays } });
     return json({ delivery }, { status: result.error ? 502 : 200 });
   } catch (error) {

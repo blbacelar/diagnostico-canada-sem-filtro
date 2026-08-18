@@ -34,7 +34,7 @@ async function readCase(admin: AdminClient, caseId: string) {
     .eq("id", caseId)
     .maybeSingle();
   if (error) throw error;
-  if (!data) throw new ApiError(404, "Diagnóstico não encontrado.");
+  if (!data) throw new ApiError(404, "Simulador não encontrado.");
   return data;
 }
 
@@ -45,7 +45,7 @@ async function lockedCaseError(admin: AdminClient, consultantId: string) {
     .eq("user_id", consultantId)
     .maybeSingle();
   const owner = data?.display_name ?? "outra consultora";
-  return new ApiError(423, `Este diagnóstico já está em revisão por ${owner}.`, "CASE_LOCKED");
+  return new ApiError(423, `Este simulador já está em revisão por ${owner}.`, "CASE_LOCKED");
 }
 
 export async function claimCaseForReview(admin: AdminClient, caseId: string, consultantId: string) {
@@ -69,7 +69,7 @@ export async function claimCaseForReview(admin: AdminClient, caseId: string, con
     const latest = await readCase(admin, caseId);
     if (latest.assigned_consultant_id === consultantId || !isCaseLockActive(latest.status)) return latest;
     if (latest.assigned_consultant_id) throw await lockedCaseError(admin, latest.assigned_consultant_id);
-    throw new ApiError(409, "O diagnóstico foi atualizado por outra pessoa. Atualize a lista e tente novamente.", "CASE_LOCK_CONFLICT");
+    throw new ApiError(409, "O simulador foi atualizado por outra pessoa. Atualize a lista e tente novamente.", "CASE_LOCK_CONFLICT");
   }
 
   if (nextStatus !== current.status) {

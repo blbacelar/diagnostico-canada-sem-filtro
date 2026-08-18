@@ -40,7 +40,7 @@ export async function POST(request: Request) {
 			.select("id")
 			.maybeSingle();
 		if (!updatedReview) {
-			throw new ApiError(409, "Não foi possível aprovar o parecer deste diagnóstico.", "APPROVAL_UPDATE_CONFLICT");
+			throw new ApiError(409, "Não foi possível aprovar o parecer deste simulador.", "APPROVAL_UPDATE_CONFLICT");
 		}
 		await admin
 			.from("diagnostic_cases")

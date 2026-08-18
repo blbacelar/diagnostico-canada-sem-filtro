@@ -22,10 +22,10 @@ export function DeliveryComposer({ caseId }: { caseId: string }) {
   const [detail, setDetail] = useState<CaseDetailData | null>(null);
   const [review, setReview] = useState<any>(null);
   const [subject, setSubject] = useState(
-    "Seu Diagnóstico Canadá Sem Filtro está pronto",
+    "O resultado do seu Simulador Canadá Sem Filtro está pronto",
   );
   const [body, setBody] = useState(
-    "Olá!\n\nConcluímos a revisão profissional do seu diagnóstico. No relatório, você encontrará uma leitura contextualizada do seu momento, os pontos que pedem atenção e três próximos passos prioritários.\n\nLeia com calma e lembre-se dos limites educacionais apresentados no documento.\n\nCom carinho,\nEquipe Canadá Sem Filtro\n\nImportante: O diagnóstico Canadá Sem Filtro não é uma consulta de imigração. É um conteúdo educativo para ajudar você a conhecer a realidade de viver no Canadá — incluindo desafios, custos, oportunidades e aspectos que nem sempre aparecem nas redes sociais.\n\nPara uma análise individual do seu perfil imigratório, é necessário agendar uma consulta profissional.",
+    "Olá!\n\nConcluímos a revisão profissional do seu simulador. No relatório, você encontrará uma leitura contextualizada do seu momento, os pontos que pedem atenção e três próximos passos prioritários.\n\nLeia com calma e lembre-se dos limites educacionais apresentados no documento.\n\nCom carinho,\nEquipe Canadá Sem Filtro\n\nImportante: O Simulador Canadá Sem Filtro não é uma consulta de imigração. É um conteúdo educativo para ajudar você a conhecer a realidade de viver no Canadá — incluindo desafios, custos, oportunidades e aspectos que nem sempre aparecem nas redes sociais.\n\nPara uma análise individual do seu perfil imigratório, é necessário agendar uma consulta profissional.",
   );
   const [deliveryMethod, setDeliveryMethod] = useState<"secure_link" | "pdf">(
     "secure_link",
@@ -132,7 +132,7 @@ export function DeliveryComposer({ caseId }: { caseId: string }) {
     return (
       <div className="module-empty">
         <Check />
-        <h2>Este diagnóstico já foi enviado</h2>
+        <h2>Este simulador já foi enviado</h2>
         <p>
           A entrega existente está preservada e não pode ser enviada novamente
           por esta tela.
@@ -142,7 +142,7 @@ export function DeliveryComposer({ caseId }: { caseId: string }) {
           href={`/dashboard/diagnosticos/${caseId}/relatorio`}
         >
           <Eye />
-          Ver diagnóstico enviado
+          Ver resultado enviado
         </Link>
       </div>
     );
@@ -285,12 +285,12 @@ export function DeliveryComposer({ caseId }: { caseId: string }) {
               <strong>
                 Canadá <em>sem filtro</em>
               </strong>
-              <small>Diagnóstico profissional</small>
+              <small>Simulador profissional</small>
             </header>
             <section>
-              <h2>Seu diagnóstico está pronto</h2>
+              <h2>O resultado do seu simulador está pronto</h2>
               <p>{body}</p>
-              <span>Abrir diagnóstico final</span>
+              <span>Abrir resultado final</span>
             </section>
             <footer>Conteúdo educacional e de planejamento.</footer>
           </div>

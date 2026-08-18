@@ -9,7 +9,7 @@ export async function PUT(request: Request) {
 		const sourceMetadata = caseRow.source_metadata && typeof caseRow.source_metadata === "object" ? caseRow.source_metadata as Record<string, unknown> : {};
 		const isConsultantManaged = sourceMetadata.source === "consultant_reassessment" || sourceMetadata.consultant_managed === true;
 		if (caseRow.status !== "client_draft" && !isConsultantManaged) {
-			throw new ApiError(409, "As respostas deste diagnóstico já foram enviadas.", "ANSWERS_LOCKED");
+			throw new ApiError(409, "As respostas deste simulador já foram enviadas.", "ANSWERS_LOCKED");
 		}
 
 		const normalizedAnswers = normalizeDiagnosticAnswers(payload.answers);

@@ -12,7 +12,7 @@ import { AuditLogClient, ContentLibraryClient, EmailTemplatesClient, SettingsCli
 
 const responses: Record<string, unknown> = {
   "/api/dashboard/content": { items: [{ id: "content-1", title: "Mapa de Cidades", description: "Compare cidades canadenses.", url: "https://example.com/mapa", tags: ["cidades", "regiões"], active: true, created_at: "2026-08-01T10:00:00Z", updated_at: "2026-08-02T10:00:00Z" }] },
-  "/api/dashboard/templates": { items: [{ id: "template-1", template_key: "final_delivery", name: "Entrega final", subject: "Seu diagnóstico está pronto", body: "Olá, {{nome}}.", active: true, version: 2, created_at: "2026-08-01T10:00:00Z", updated_at: "2026-08-02T10:00:00Z" }] },
+  "/api/dashboard/templates": { items: [{ id: "template-1", template_key: "final_delivery", name: "Entrega final", subject: "O resultado do seu simulador está pronto", body: "Olá, {{nome}}.", active: true, version: 2, created_at: "2026-08-01T10:00:00Z", updated_at: "2026-08-02T10:00:00Z" }] },
   "/api/dashboard/audit": { items: [
     { id: "audit-2", case_id: "case-1", case_number: "CSF-2026-ABC123", actor_type: "consultant", action: "diagnostic.viewed", created_at: "2026-08-02T10:05:00Z" },
     { id: "audit-1", case_id: "case-1", case_number: "CSF-2026-ABC123", actor_type: "consultant", action: "diagnostic.claimed", created_at: "2026-08-02T10:00:00Z" },
@@ -74,7 +74,7 @@ describe("módulos reais do menu", () => {
     mockDashboardFetch();
     render(<EmailTemplatesClient />);
     expect(await screen.findByText("Entrega final")).toBeVisible();
-    expect(screen.getByText("Seu diagnóstico está pronto")).toBeVisible();
+    expect(screen.getByText("O resultado do seu simulador está pronto")).toBeVisible();
     expect(screen.getByText("Olá, {{nome}}.")).toBeVisible();
     expect(screen.getByText("Versão 2")).toBeVisible();
   });
@@ -86,7 +86,7 @@ describe("módulos reais do menu", () => {
     expect(screen.queryByText("diagnostic · claimed")).toBeNull();
     expect(screen.getByText("CSF-2026-ABC123")).toBeVisible();
     expect(screen.getByText("2 eventos registrados")).toBeVisible();
-    expect(screen.getAllByText("Diagnóstico visualizado")).toHaveLength(1);
+    expect(screen.getAllByText("Simulador visualizado")).toHaveLength(1);
 
     fireEvent.click(auditButton);
 
@@ -94,13 +94,13 @@ describe("módulos reais do menu", () => {
     expect(screen.getByText("cliente@example.com")).toBeVisible();
     expect(screen.getByText("Passos registrados neste caso")).toBeVisible();
     expect(screen.getByText("2 de 3 registros carregados")).toBeVisible();
-    expect(screen.getByText("Diagnóstico assumido para revisão")).toBeVisible();
+    expect(screen.getByText("Simulador assumido para revisão")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Carregar mais registros" }));
     expect(await screen.findByText("Análise estruturada concluída")).toBeVisible();
     expect(screen.getByText("3 de 3 registros carregados")).toBeVisible();
     expect(screen.getByText("Compra aprovada")).toBeVisible();
     expect(screen.getByText("HP123")).toBeVisible();
-    expect(screen.getByRole("link", { name: "Abrir diagnóstico" })).toHaveAttribute("href", "/dashboard/diagnosticos/case-1");
+    expect(screen.getByRole("link", { name: "Abrir simulador" })).toHaveAttribute("href", "/dashboard/diagnosticos/case-1");
   });
 
   it("mostra conta, integrações e parâmetros operacionais editáveis", async () => {

@@ -94,8 +94,8 @@ describe("API de entrega concluída", () => {
       body: JSON.stringify({
         caseId: "00000000-0000-4000-8000-000000000001",
         reviewId: "00000000-0000-4000-8000-000000000002",
-        subject: "Diagnóstico concluído",
-        body: "Seu diagnóstico está pronto para consulta.",
+        subject: "Simulador concluído",
+        body: "O resultado do seu simulador está pronto para consulta.",
         deliveryMethod: "secure_link",
         idempotencyKey,
       }),

@@ -6,10 +6,6 @@ type InviteResult = {
   user?: { id?: string } | null;
 };
 
-type UserListResult = {
-  users?: Array<{ id: string; email?: string | null }>;
-};
-
 Deno.serve(async (req) => {
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Use POST" }), {

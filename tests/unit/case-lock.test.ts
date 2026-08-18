@@ -79,7 +79,7 @@ describe("reserva exclusiva de diagnóstico", () => {
     await expect(claimCaseForReview(admin as never, ownedCase.id, "consultant-a")).rejects.toMatchObject({
       status: 423,
       code: "CASE_LOCKED",
-      message: "Este diagnóstico já está em revisão por Maria Consultora.",
+      message: "Este simulador já está em revisão por Maria Consultora.",
     });
     expect(update).not.toHaveBeenCalled();
   });

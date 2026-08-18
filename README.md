@@ -1,4 +1,4 @@
-# Diagnóstico Canadá Sem Filtro
+# Simulador Canadá Sem Filtro
 
 Aplicação web de coleta, análise estruturada e revisão profissional para pessoas interessadas em estudar, trabalhar, empreender ou construir um projeto de vida no Canadá.
 
@@ -94,7 +94,7 @@ A análise:
 
 | Endpoint | Proteção | Finalidade |
 | --- | --- | --- |
-| `POST /api/diagnostics/start` | rate limit + validação | Criar ou renovar diagnóstico ativo |
+| `POST /api/diagnostics/start` | rate limit + validação | Criar ou renovar simulador ativo |
 | `POST /api/diagnostics/resume-link` | resposta neutra | Reenviar link pessoal |
 | `GET /api/diagnostics/form-session` | token pessoal | Abrir sessão do formulário |
 | `PUT /api/diagnostics/answers` | token + escopo | Autosave |

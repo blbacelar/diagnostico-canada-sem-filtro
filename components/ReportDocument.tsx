@@ -24,7 +24,7 @@ export function ReportDocument({
         <header>
           <strong>Canadá</strong>
           <em>sem filtro</em>
-          <small>Diagnóstico profissional</small>
+          <small>Simulador profissional</small>
         </header>
         <div>
           <p>Relatório individual</p>

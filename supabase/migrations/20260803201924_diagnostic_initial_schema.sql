@@ -1,4 +1,4 @@
--- Diagnóstico Canadá Sem Filtro
+-- Simulador Canadá Sem Filtro
 -- Migration aditiva para o projeto Supabase compartilhado.
 -- Não altera journals, allowed_emails ou qualquer objeto do Diário de Bordo.
 
@@ -406,8 +406,8 @@ end $$;
 
 insert into public.diagnostic_email_templates (template_key, name, subject, body, active)
 values
-  ('information_request', 'Solicitação de informação', 'Precisamos de uma informação para o seu diagnóstico', 'Olá, {{nome}}.\n\nPara continuarmos a análise do diagnóstico {{diagnostico}}, precisamos confirmar:\n\n{{mensagem}}\n\nEquipe Canadá Sem Filtro', true),
-  ('final_delivery', 'Entrega final', 'Seu Diagnóstico Canadá Sem Filtro está pronto', 'Olá, {{nome}}.\n\nConcluímos a revisão profissional do diagnóstico {{diagnostico}}.\n\nEquipe Canadá Sem Filtro', true)
+  ('information_request', 'Solicitação de informação', 'Precisamos de uma informação para o seu simulador', 'Olá, {{nome}}.\n\nPara continuarmos a análise do simulador {{diagnostico}}, precisamos confirmar:\n\n{{mensagem}}\n\nEquipe Canadá Sem Filtro', true),
+  ('final_delivery', 'Entrega final', 'O resultado do seu Simulador Canadá Sem Filtro está pronto', 'Olá, {{nome}}.\n\nConcluímos a revisão profissional do simulador {{diagnostico}}.\n\nEquipe Canadá Sem Filtro', true)
 on conflict (template_key) do nothing;
 
 insert into public.diagnostic_content_recommendations (title, description, url, tags)

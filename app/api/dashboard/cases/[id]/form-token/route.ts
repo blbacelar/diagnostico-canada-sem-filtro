@@ -19,14 +19,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       .maybeSingle();
 
     if (caseError) throw caseError;
-    if (!diagnosticCase) throw new ApiError(404, "Diagnóstico não encontrado.", "CASE_NOT_FOUND");
+    if (!diagnosticCase) throw new ApiError(404, "Simulador não encontrado.", "CASE_NOT_FOUND");
 
     const now = new Date().toISOString();
 
     if (["sending"].includes(diagnosticCase.status)) {
       throw new ApiError(
         409,
-        "Um diagnóstico em processo de envio não pode ser alterado.",
+        "Um simulador em processo de envio não pode ser alterado.",
         "CASE_IMMUTABLE",
       );
     }

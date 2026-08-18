@@ -9,11 +9,11 @@ export async function generateMetadata(): Promise<Metadata> {
   const origin = `${protocol}://${host}`;
   return {
     metadataBase: new URL(origin),
-    title: { default: "Diagnóstico Canadá Sem Filtro", template: "%s · Canadá Sem Filtro" },
-    description: "Diagnóstico profissional para estudar, trabalhar, empreender ou construir um projeto de vida no Canadá.",
+    title: { default: "Simulador Canadá Sem Filtro", template: "%s · Canadá Sem Filtro" },
+    description: "Simulador profissional para estudar, trabalhar, empreender ou construir um projeto de vida no Canadá.",
     icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" },
-    openGraph: { title: "Diagnóstico Canadá Sem Filtro", description: "Uma leitura honesta. Um plano responsável.", url: origin, siteName: "Canadá Sem Filtro", locale: "pt_BR", type: "website", images: [{ url: `${origin}/og.png`, width: 1200, height: 630, alt: "Vamos entender o seu projeto Canadá" }] },
-    twitter: { card: "summary_large_image", title: "Diagnóstico Canadá Sem Filtro", description: "Uma leitura honesta. Um plano responsável.", images: [`${origin}/og.png`] },
+    openGraph: { title: "Simulador Canadá Sem Filtro", description: "Uma leitura honesta. Um plano responsável.", url: origin, siteName: "Canadá Sem Filtro", locale: "pt_BR", type: "website", images: [{ url: `${origin}/og.png`, width: 1200, height: 630, alt: "Vamos entender o seu projeto Canadá" }] },
+    twitter: { card: "summary_large_image", title: "Simulador Canadá Sem Filtro", description: "Uma leitura honesta. Um plano responsável.", images: [`${origin}/og.png`] },
   };
 }
 

@@ -9,7 +9,7 @@ import { BrandMark } from "./BrandMark";
 
 const nav = [
   { href: "/dashboard", label: "Visão geral", icon: CircleGauge },
-  { href: "/dashboard/diagnosticos", label: "Diagnósticos", icon: LayoutList },
+  { href: "/dashboard/diagnosticos", label: "Simuladores", icon: LayoutList },
   { href: "/dashboard/clientes", label: "Clientes", icon: Users },
   // { href: "/dashboard/conteudos", label: "Conteúdos", icon: BookOpen },
   // { href: "/dashboard/modelos", label: "Modelos de e-mail", icon: Mail },

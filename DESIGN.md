@@ -1,4 +1,4 @@
-# Design system — Diagnóstico Canadá Sem Filtro
+# Design system — Simulador Canadá Sem Filtro
 
 ## Direção
 

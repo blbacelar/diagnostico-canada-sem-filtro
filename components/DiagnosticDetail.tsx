@@ -113,7 +113,7 @@ export function DiagnosticDetailClient({ caseId }: { caseId: string }) {
         setError(
           fetchError instanceof Error
             ? fetchError.message
-            : "Não foi possível abrir o diagnóstico.",
+            : "Não foi possível abrir o simulador.",
         );
       });
     const release = () => {
@@ -127,7 +127,7 @@ export function DiagnosticDetailClient({ caseId }: { caseId: string }) {
   }, [caseId]);
 
   if (error) {
-    return <DashboardError title="Diagnóstico indisponível" detail={error} />;
+    return <DashboardError title="Simulador indisponível" detail={error} />;
   }
 
   if (!data) {
@@ -152,7 +152,7 @@ export function DiagnosticDetailClient({ caseId }: { caseId: string }) {
       setActionError(
         creationError instanceof Error
           ? creationError.message
-          : "Não foi possível criar o novo diagnóstico.",
+          : "Não foi possível criar o novo simulador.",
       );
       setCreating(false);
     }
@@ -162,14 +162,14 @@ export function DiagnosticDetailClient({ caseId }: { caseId: string }) {
     <>
       <div className="detail-back">
         <Link href="/dashboard/diagnosticos">
-          <ArrowLeft /> Diagnósticos
+          <ArrowLeft /> Simuladores
         </Link>
         <span>{data.case.case_number}</span>
       </div>
 
       <header className="detail-heading">
         <div>
-          <p className="eyebrow">{delivered ? "Diagnóstico enviado" : "Caso em análise"}</p>
+          <p className="eyebrow">{delivered ? "Simulador enviado" : "Caso em análise"}</p>
           <h1>{data.client.full_name}</h1>
           <p>
             {data.client.email_display} · {data.case.objective ?? "Objetivo não definido"}
@@ -190,10 +190,10 @@ export function DiagnosticDetailClient({ caseId }: { caseId: string }) {
                   className="secondary-button"
                   href={`/dashboard/diagnosticos/${caseId}/relatorio`}
                 >
-                  <Eye /> Ver diagnóstico enviado
+                  <Eye /> Ver resultado enviado
                 </Link>
                 <Button type="button" onClick={createReassessment} disabled={creating}>
-                  <Plus /> {creating ? "Preparando…" : "Novo diagnóstico"}
+                  <Plus /> {creating ? "Preparando…" : "Novo simulador"}
                 </Button>
               </>
             ) : approved ? (
@@ -216,7 +216,7 @@ export function DiagnosticDetailClient({ caseId }: { caseId: string }) {
               </>
             ) : sending ? (
               <Link className="primary-button" href={`/dashboard/diagnosticos/${caseId}/relatorio`}>
-                <Eye /> Acompanhar diagnóstico
+                <Eye /> Acompanhar envio
               </Link>
             ) : (
               <>
@@ -400,7 +400,7 @@ export function DiagnosticDetailClient({ caseId }: { caseId: string }) {
           <section className="quick-links">
             <p className="eyebrow">Ações</p>
             <Link href={`/dashboard/diagnosticos/${caseId}/relatorio`}>
-              {delivered ? "Ver diagnóstico enviado" : "Pré-visualizar relatório"} <ArrowUpRight />
+              {delivered ? "Ver resultado enviado" : "Pré-visualizar relatório"} <ArrowUpRight />
             </Link>
             {!delivered && !sending && (
               <Link href={`/dashboard/diagnosticos/${caseId}/email`}>

@@ -14,7 +14,7 @@ export function BrandMark({ compact = false, href = "/" }: { compact?: boolean; 
         <strong>Canadá</strong>
         <em>sem filtro</em>
       </span>
-      {!compact && <small>Diagnóstico profissional</small>}
+      {!compact && <small>Simulador profissional</small>}
     </Link>
   );
 }

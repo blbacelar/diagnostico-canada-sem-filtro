@@ -33,11 +33,11 @@ begin
   for share;
 
   if not found then
-    raise exception 'Diagnóstico de origem não encontrado.' using errcode = 'P0002';
+    raise exception 'Simulador de origem não encontrado.' using errcode = 'P0002';
   end if;
 
   if source_case.status <> 'sent' then
-    raise exception 'Somente um diagnóstico já enviado pode originar uma nova avaliação.' using errcode = 'P0001';
+    raise exception 'Somente um simulador já enviado pode originar uma nova avaliação.' using errcode = 'P0001';
   end if;
 
   select answer #>> '{}'
@@ -85,7 +85,7 @@ begin
 
   get diagnostics copied_answer_count = row_count;
   if copied_answer_count = 0 then
-    raise exception 'O diagnóstico enviado não possui respostas para reutilizar.' using errcode = 'P0002';
+    raise exception 'O simulador enviado não possui respostas para reutilizar.' using errcode = 'P0002';
   end if;
 
   insert into public.diagnostic_access_tokens (
@@ -111,7 +111,7 @@ begin
     'client_draft',
     'consultant',
     p_consultant_id,
-    format('Novo diagnóstico criado a partir de %s com respostas editáveis.', source_case.case_number)
+    format('Novo simulador criado a partir de %s com respostas editáveis.', source_case.case_number)
   );
 
   insert into public.diagnostic_audit_logs (

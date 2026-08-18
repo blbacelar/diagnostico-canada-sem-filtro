@@ -6,7 +6,7 @@ import { getReportData, type ReportData } from "../../../lib/report";
 import { hashFormToken } from "../../../lib/tokens";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Diagnóstico final", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "Resultado final do simulador", robots: { index: false, follow: false } };
 
 async function loadPublicReport(token: string): Promise<ReportData | null> {
   try {

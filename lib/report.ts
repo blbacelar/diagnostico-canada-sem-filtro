@@ -17,7 +17,7 @@ export async function getReportData(admin: ReturnType<typeof getAdminSupabase>, 
     admin.from("diagnostic_ai_assessments").select("structured_result").eq("case_id", caseId).eq("status", "completed").order("version", { ascending: false }).limit(1).maybeSingle(),
     admin.from("diagnostic_reviews").select("coherent_path,assumptions_to_review,likely_mistakes,immediate_focus,study_strategy,validation_risks,next_steps,additional_notes,recommended_resources,version,approved_at,status").eq("case_id", caseId).eq("status", "approved").order("version", { ascending: false }).limit(1).maybeSingle(),
   ]);
-  if (!client || !assessment || !review) throw new ApiError(409, "O diagnóstico ainda não possui um relatório aprovado.", "REPORT_NOT_APPROVED");
+  if (!client || !assessment || !review) throw new ApiError(409, "O simulador ainda não possui um relatório aprovado.", "REPORT_NOT_APPROVED");
   return { caseId, caseNumber: diagnosticCase.case_number, generatedAt: new Date().toISOString(), clientName: client.name, objective: diagnosticCase.objective ?? "Projeto Canadá", assessment: assessment.structured_result as AiAssessment, review: review as ReportData["review"] };
 }
 
@@ -142,7 +142,7 @@ export async function generateReportPdf(report: ReportData) {
     const logoTopY = height - 88;
     page.drawText("Canadá", { x: logoX, y: logoTopY, size: 34, font: titleFont, color: ink });
     page.drawText("sem filtro", { x: logoX, y: logoTopY - 26, size: 27, font: italicFont, color: burgundy });
-    page.drawText("DIAGNÓSTICO PROFISSIONAL", {
+    page.drawText("SIMULADOR PROFISSIONAL", {
       x: logoX,
       y: logoTopY - 48,
       size: 7,

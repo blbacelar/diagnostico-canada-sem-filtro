@@ -130,7 +130,7 @@ export function LandingClient({ policyVersion }: { policyVersion: string }) {
     <div className="landing-grid">
       <section className="landing-copy" aria-labelledby="landing-title">
         <p className="eyebrow">
-          <span /> Canadá sem filtro · diagnóstico
+          <span /> Canadá sem filtro · simulador
         </p>
         <h1 id="landing-title">
           Vamos entender o seu <em>projeto Canadá.</em>
@@ -138,7 +138,7 @@ export function LandingClient({ policyVersion }: { policyVersion: string }) {
         <p className="lede">
           Um olhar honesto sobre o seu momento, suas escolhas e o que precisa acontecer antes do próximo passo.
         </p>
-        <div className="landing-facts" aria-label="Informações sobre o diagnóstico">
+        <div className="landing-facts" aria-label="Informações sobre o simulador">
           <div>
             <Clock3 aria-hidden="true" />
             <span>
@@ -198,8 +198,8 @@ export function LandingClient({ policyVersion }: { policyVersion: string }) {
             </h2>
             <p className="panel-intro">
               {mode === "start"
-                ? "Informe seus dados para criarmos um diagnóstico exclusivo e enviarmos o acesso pessoal."
-                : "Informe o mesmo e-mail. Se houver um diagnóstico em andamento, enviaremos um novo link seguro."}
+                ? "Informe seus dados para criarmos um simulador exclusivo e enviarmos o acesso pessoal."
+                : "Informe o mesmo e-mail. Se houver um simulador em andamento, enviaremos um novo link seguro."}
             </p>
             <form
               onSubmit={submit}
@@ -272,7 +272,7 @@ export function LandingClient({ policyVersion }: { policyVersion: string }) {
                       aria-describedby={fieldErrors.consent ? "consent-error" : undefined}
                     />
                     <span>
-                      <Check aria-hidden="true" /> Autorizo o tratamento dos meus dados para elaboração deste diagnóstico e comunicações relacionadas, conforme a política de privacidade.
+                      <Check aria-hidden="true" /> Autorizo o tratamento dos meus dados para elaboração deste simulador e comunicações relacionadas, conforme a política de privacidade.
                     </span>
                   </label>
                   <FieldError field="consent" errors={fieldErrors} />
@@ -287,13 +287,13 @@ export function LandingClient({ policyVersion }: { policyVersion: string }) {
                 {status === "sending"
                   ? "Enviando…"
                   : mode === "start"
-                    ? "Iniciar meu diagnóstico"
+                    ? "Iniciar meu simulador"
                     : "Enviar link para continuar"}
                 <ArrowRight aria-hidden="true" />
               </Button>
             </form>
             <Button variant="ghost" className="text-button" type="button" onClick={switchMode}>
-              {mode === "start" ? "Já comecei meu diagnóstico" : "Quero iniciar um novo diagnóstico"}
+              {mode === "start" ? "Já comecei meu simulador" : "Quero iniciar um novo simulador"}
             </Button>
           </>
         )}

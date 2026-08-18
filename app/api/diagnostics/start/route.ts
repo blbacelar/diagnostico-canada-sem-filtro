@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     if (!diagnosticCase) {
       const { data, error } = await admin.from("diagnostic_cases").insert({ case_number: newCaseNumber(), client_id: client.id, status: "client_draft", source_metadata: { source: "hotmart", utm: payload.utm ?? {}, initial_ip_hash_present: requestIp(request) !== "unknown" } }).select("id, case_number, status").single();
       if (error) throw error; diagnosticCase = data;
-      await admin.from("diagnostic_status_history").insert({ case_id: data.id, from_status: null, to_status: "client_draft", actor_type: "client", note: "Diagnóstico iniciado pelo link público." });
+      await admin.from("diagnostic_status_history").insert({ case_id: data.id, from_status: null, to_status: "client_draft", actor_type: "client", note: "Simulador iniciado pelo link público." });
     } else if (diagnosticCase.status !== "client_draft") {
       return json({ message: neutralMessage });
     }
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     await admin.from("diagnostic_consents").insert({ case_id: diagnosticCase.id, consent_type: "diagnostic_processing", policy_version: payload.policyVersion, granted: true, source: "hotmart" });
     const emailResult = await sendContinuationEmail({ to: client.email, fullName: client.name, caseNumber: diagnosticCase.case_number, token });
     const emailError = emailResult.error;
-    await admin.from("diagnostic_email_deliveries").insert({ case_id: diagnosticCase.id, delivery_type: "continuation_link", recipient: client.email, subject: "Seu link pessoal — Diagnóstico Canadá Sem Filtro", status: emailError ? "failed" : "sent", provider_id: emailResult.data?.id ?? null, error_code: emailError?.name ?? null, sent_at: emailError ? null : now });
+    await admin.from("diagnostic_email_deliveries").insert({ case_id: diagnosticCase.id, delivery_type: "continuation_link", recipient: client.email, subject: "Seu link pessoal — Simulador Canadá Sem Filtro", status: emailError ? "failed" : "sent", provider_id: emailResult.data?.id ?? null, error_code: emailError?.name ?? null, sent_at: emailError ? null : now });
     await writeAudit(admin, { caseId: diagnosticCase.id, actorType: "client", action: "diagnostic.started", metadata: { source: "hotmart", policyVersion: payload.policyVersion } });
     const response = json({ message: neutralMessage });
     response.headers.append("Set-Cookie", tokenCookie(token));

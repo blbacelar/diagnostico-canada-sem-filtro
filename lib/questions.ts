@@ -169,7 +169,7 @@ export const diagnosticSections: DiagnosticSection[] = [
     questions: [
       { key: "biggest_challenge", label: "Qual acredita ser o maior desafio do projeto Canadá?", type: "textarea", required: true, layout: "full", layoutRow: "biggest-challenge" },
       { key: "difficulty_factors", label: "Quais fatores podem dificultar o plano?", type: "multi", required: true, layout: "full", layoutRow: "difficulty-factors", options: ["Idade", "Filhos", "Recursos financeiros", "Idioma", "Profissão", "Histórico migratório", "Outro"] },
-      { key: "main_question", label: "Qual é a maior dúvida que gostaria que o diagnóstico respondesse?", type: "textarea", required: true, layout: "full", layoutRow: "main-question" },
+      { key: "main_question", label: "Qual é a maior dúvida que gostaria que o simulador ajudasse a esclarecer?", type: "textarea", required: true, layout: "full", layoutRow: "main-question" },
       { key: "anything_else", label: "Existe algo importante que não foi perguntado?", type: "textarea", optionalLabel: "Opcional", layout: "full", layoutRow: "anything-else" },
     ],
   },

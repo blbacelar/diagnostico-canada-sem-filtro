@@ -1,6 +1,6 @@
 # Estratégia de QA
 
-## Jornada crítica: início do diagnóstico
+## Jornada crítica: início do simulador
 
 O formulário público é uma fronteira de integridade e privacidade: um e-mail digitado incorretamente pode entregar o link pessoal à pessoa errada. A validação ocorre em duas camadas independentes:
 

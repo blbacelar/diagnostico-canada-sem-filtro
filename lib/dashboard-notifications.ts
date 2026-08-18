@@ -67,7 +67,7 @@ export async function notifyDashboardUsersOfSubmission(
   input: { caseId: string; caseNumber: string; clientName: string },
 ): Promise<NotificationResult> {
   const recipients = await getActiveDashboardNotificationRecipients(admin);
-  const subject = `Novo diagnóstico recebido — ${input.caseNumber}`;
+  const subject = `Novo simulador recebido — ${input.caseNumber}`;
   const deliveries = await Promise.all(recipients.map(async (recipient) => {
     try {
       const result = await sendDashboardSubmissionNotification({

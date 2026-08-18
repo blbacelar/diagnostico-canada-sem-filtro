@@ -143,7 +143,7 @@ export function FormApp({ initialToken, dashboardReturn = false }: { initialToke
   async function submit() {
     if (submitInFlight.current || session?.status !== "client_draft") return;
     if (!disclaimerAccepted) {
-      setSubmitError("Você precisa confirmar que leu o aviso legal para enviar o diagnóstico.");
+      setSubmitError("Você precisa confirmar que leu o aviso legal para enviar o simulador.");
       return;
     }
     const validationErrors = validationErrorsForDiagnostic(answers);
@@ -208,16 +208,16 @@ export function FormApp({ initialToken, dashboardReturn = false }: { initialToke
     }
   }, [submitted, dashboardMode, session]);
 
-  if (loading) return <FormStatus title="Abrindo seu diagnóstico" detail="Validando o link pessoal com segurança…" />;
+  if (loading) return <FormStatus title="Abrindo seu simulador" detail="Validando o link pessoal com segurança…" />;
   if (fatalError) return <FormStatus error title="Este link não pode ser usado" detail={fatalError} dashboardHref={dashboardReturn ? "/dashboard/diagnosticos" : undefined} />;
   if (submitted) {
     if (dashboardMode) {
-      return <FormStatus success title="Diagnóstico atualizado" detail={`As respostas de ${submitted.caseNumber} foram salvas com sucesso. Redirecionando para a ficha do caso…`} dashboardHref={`/dashboard/diagnosticos/${session?.caseId ?? ""}`} />;
+      return <FormStatus success title="Simulador atualizado" detail={`As respostas de ${submitted.caseNumber} foram salvas com sucesso. Redirecionando para a ficha do caso…`} dashboardHref={`/dashboard/diagnosticos/${session?.caseId ?? ""}`} />;
     }
-    return <FormStatus success title="Respostas recebidas" detail={`O diagnóstico ${submitted.caseNumber} foi enviado. Prazo estimado: ${submitted.expectedTime}. A análise automática ficará restrita às consultoras até a revisão profissional.`} />;
+    return <FormStatus success title="Respostas recebidas" detail={`O simulador ${submitted.caseNumber} foi enviado. Prazo estimado: ${submitted.expectedTime}. A análise automática ficará restrita às consultoras até a revisão profissional.`} />;
   }
   if (!session) return null;
-  if (session.status !== "client_draft" && !dashboardMode) return <FormStatus success title="Diagnóstico já enviado" detail={`As respostas de ${session.caseNumber} estão protegidas e não podem mais ser alteradas. Se a equipe precisar de informações adicionais, você receberá uma nova comunicação.`} dashboardHref={dashboardMode ? `/dashboard/diagnosticos/${session.caseId}` : undefined} />;
+  if (session.status !== "client_draft" && !dashboardMode) return <FormStatus success title="Simulador já enviado" detail={`As respostas de ${session.caseNumber} estão protegidas e não podem mais ser alteradas. Se a equipe precisar de informações adicionais, você receberá uma nova comunicação.`} dashboardHref={dashboardMode ? `/dashboard/diagnosticos/${session.caseId}` : undefined} />;
 
   const section = diagnosticSections[step];
   const sectionQuestions = isReview ? [] : visibleQuestions(section, answers);
@@ -230,15 +230,15 @@ export function FormApp({ initialToken, dashboardReturn = false }: { initialToke
           {saveState === "offline" ? <CloudOff /> : <Cloud />}
           <span>{saveState === "saving" ? "Salvando…" : saveState === "saved" ? "Tudo salvo" : saveState === "offline" ? "Sem conexão" : saveState === "error" ? "Falha ao salvar" : "Salvamento automático"}</span>
         </div>
-        <div className="case-tag"><small>{dashboardMode ? "Modo Consultoria" : "Diagnóstico"}</small><strong>{session.caseNumber}</strong></div>
+        <div className="case-tag"><small>{dashboardMode ? "Modo Consultoria" : "Simulador"}</small><strong>{session.caseNumber}</strong></div>
       </header>
       <div className="progress-strip">
         <div><span style={{ width: `${progress}%` }} /></div>
         <p><strong>{progress}%</strong> concluído</p>
       </div>
       <div className="form-layout">
-        <aside className="section-nav" aria-label="Seções do diagnóstico">
-          <p>Seu diagnóstico</p>
+        <aside className="section-nav" aria-label="Seções do simulador">
+          <p>Seu simulador</p>
           <ol>
             {diagnosticSections.map((item, index) => (
               <li key={item.key} className={index === step ? "active" : incompleteSections[index] === 0 ? "complete" : ""}>
@@ -249,7 +249,7 @@ export function FormApp({ initialToken, dashboardReturn = false }: { initialToke
             ))}
             <li className={isReview ? "active" : ""}><button type="button" onClick={() => setStep(diagnosticSections.length)}><span>12</span>Revisão e envio</button></li>
           </ol>
-          <div className="privacy-note"><LockKeyhole /><p><strong>Seus dados são confidenciais.</strong> O diagnóstico é acessado apenas pela equipe autorizada.</p></div>
+          <div className="privacy-note"><LockKeyhole /><p><strong>Seus dados são confidenciais.</strong> O simulador é acessado apenas pela equipe autorizada.</p></div>
         </aside>
         <main className="form-main">
           {isReview ? (
@@ -376,7 +376,7 @@ function ReviewAnswers({ answers, incompleteSections, onEdit, onSubmit, submitti
     <section className="question-section review-section">
       <p className="eyebrow">{consultantManaged ? "Revisão pela consultoria" : "Revisão final"}</p>
       <h1>{consultantManaged ? "Revise as alterações" : "Revise antes de enviar"}</h1>
-      <p className="section-intro">{consultantManaged ? "Confira as respostas atualizadas antes de salvar a nova versão do diagnóstico." : "Depois do envio, suas respostas formarão um registro protegido e só poderão ser reabertas pela equipe."}</p>
+      <p className="section-intro">{consultantManaged ? "Confira as respostas atualizadas antes de salvar a nova versão do simulador." : "Depois do envio, suas respostas formarão um registro protegido e só poderão ser reabertas pela equipe."}</p>
       <div className="review-list">
         {diagnosticSections.map((section, index) => <article key={section.key}><header><div><small>Seção {section.number}</small><h2>{section.title}</h2></div><button type="button" onClick={() => onEdit(index)}><Pencil /> Editar</button></header>{incompleteSections[index] > 0 && <p className="review-warning"><AlertTriangle /> {incompleteSections[index]} pendência(s)</p>}<dl>{visibleQuestions(section, answers).filter((question) => answers[question.key] !== undefined && answers[question.key] !== "").map((question) => { const answer = answers[question.key]; const formatted = question.format === "currency" ? formatCurrencyAmount(answer, String(answers.funds_currency ?? "")) : Array.isArray(answer) ? answer.join(", ") : typeof answer === "boolean" ? (answer ? "Sim" : "Não") : String(answer); return <div key={question.key}><dt>{question.label}</dt><dd>{formatted}</dd></div>; })}</dl></article>)}
       </div>
@@ -384,7 +384,7 @@ function ReviewAnswers({ answers, incompleteSections, onEdit, onSubmit, submitti
         <h2>{legalDisclaimerTitle}</h2>
         {legalDisclaimerParagraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
       </section>
-      <label className="final-consent"><input type="checkbox" checked={disclaimerAccepted} onChange={(event) => onToggleDisclaimerAccepted(event.target.checked)} /><span><Check />{consultantManaged ? "Confirmo a atualização das respostas do cliente para o diagnóstico." : "Confirmo que li e entendi o aviso legal acima e autorizo o uso das respostas para elaboração do diagnóstico profissional."}</span></label>
+      <label className="final-consent"><input type="checkbox" checked={disclaimerAccepted} onChange={(event) => onToggleDisclaimerAccepted(event.target.checked)} /><span><Check />{consultantManaged ? "Confirmo a atualização das respostas do cliente para o simulador." : "Confirmo que li e entendi o aviso legal acima e autorizo o uso das respostas para elaboração do simulador profissional."}</span></label>
       {error && <p className="inline-alert" role="alert"><AlertTriangle />{error}</p>}
       <div className="form-actions"><button className="secondary-button" type="button" onClick={() => onEdit(diagnosticSections.length - 1)}><ArrowLeft /> Voltar</button><button className="primary-button" type="button" disabled={submitting || !disclaimerAccepted} onClick={onSubmit}>{submitting ? "Salvando…" : (consultantManaged ? "Salvar e analisar" : "Enviar para análise")}<Send /></button></div>
     </section>
@@ -392,5 +392,5 @@ function ReviewAnswers({ answers, incompleteSections, onEdit, onSubmit, submitti
 }
 
 function FormStatus({ title, detail, error = false, success = false, dashboardHref }: { title: string; detail: string; error?: boolean; success?: boolean; dashboardHref?: string }) {
-  return <main className="status-page"><BrandMark /><section><span className={`status-orbit ${error ? "error" : success ? "success" : ""}`}>{error ? <AlertTriangle /> : success ? <Check /> : <Cloud />}</span><p className="eyebrow">Diagnóstico Canadá Sem Filtro</p><h1>{title}</h1><p>{detail}</p>{dashboardHref ? <Link className="primary-button" href={dashboardHref}>Voltar ao dashboard</Link> : error && <Link className="primary-button" href="/">Solicitar um novo link</Link>}</section></main>;
+  return <main className="status-page"><BrandMark /><section><span className={`status-orbit ${error ? "error" : success ? "success" : ""}`}>{error ? <AlertTriangle /> : success ? <Check /> : <Cloud />}</span><p className="eyebrow">Simulador Canadá Sem Filtro</p><h1>{title}</h1><p>{detail}</p>{dashboardHref ? <Link className="primary-button" href={dashboardHref}>Voltar ao dashboard</Link> : error && <Link className="primary-button" href="/">Solicitar um novo link</Link>}</section></main>;
 }

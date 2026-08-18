@@ -1,4 +1,4 @@
--- Unifica o cadastro do CRM e do App de Diagnóstico em public.clients.
+-- Unifica o cadastro do CRM e do App de Simulador em public.clients.
 -- A tabela diagnostic_clients é preservada como legado somente para auditoria;
 -- nenhuma nova leitura ou escrita da aplicação deve usá-la.
 
@@ -68,7 +68,7 @@ where diagnostic_case.client_id = legacy_client.id
 do $$
 begin
   if exists (select 1 from public.diagnostic_cases where central_client_id is null) then
-    raise exception 'Não foi possível relacionar todos os casos de diagnóstico a public.clients';
+    raise exception 'Não foi possível relacionar todos os casos de simulador a public.clients';
   end if;
 end $$;
 
