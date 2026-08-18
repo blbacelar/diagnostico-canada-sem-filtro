@@ -198,8 +198,8 @@ export function LandingClient({ policyVersion }: { policyVersion: string }) {
             </h2>
             <p className="panel-intro">
               {mode === "start"
-                ? "Informe seus dados para criarmos um simulador exclusivo e enviarmos o acesso pessoal."
-                : "Informe o mesmo e-mail. Se houver um simulador em andamento, enviaremos um novo link seguro."}
+                ? "Informe seus dados para criarmos uma simulação exclusiva e enviarmos o acesso pessoal."
+                : "Informe o mesmo e-mail. Se houver uma simulação em andamento, enviaremos um novo link seguro."}
             </p>
             <form
               onSubmit={submit}
