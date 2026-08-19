@@ -31,6 +31,11 @@ type CaseListResponse = {
   };
 };
 
+const clientStatusOptions = [
+  ...Object.entries(caseStatusLabels).map(([value, label]) => ({ value, label })),
+  { value: "no_case", label: "Sem caso" },
+];
+
 export function OverviewClient() {
   const consultant = useDashboardConsultant();
   const displayName = consultant?.display_name.trim();
@@ -165,6 +170,7 @@ export function ClientsListClient() {
   const [items, setItems] = useState<ClientListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("");
   const [error, setError] = useState(false);
 
   useEffect(() => {
@@ -173,6 +179,7 @@ export function ClientsListClient() {
       setLoading(true);
       const query = new URLSearchParams();
       if (search.trim()) query.set("search", search.trim());
+      if (status) query.set("status", status);
       authorizedFetch<{ items: ClientListItem[] }>(`/api/dashboard/clients?${query}`, controller.signal)
         .then((data) => { setItems(data.items); setError(false); })
         .catch((fetchError: unknown) => {
@@ -181,17 +188,28 @@ export function ClientsListClient() {
         .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     }, 250);
     return () => { clearTimeout(timer); controller.abort(); };
-  }, [search]);
+  }, [search, status]);
 
   return <>
     <DashboardHeader eyebrow="Relacionamento" title="Clientes" description="Consulte cada pessoa, seus simuladores e a atividade mais recente em um único lugar." />
     <div className="clients-toolbar">
       <label><Search /><input aria-label="Buscar clientes" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nome ou e-mail" /></label>
+      <label className="clients-toolbar__select">
+        <Select value={status || "all"} onValueChange={(value) => setStatus(value === "all" ? "" : value)}>
+          <SelectTrigger className="clients-toolbar__select-trigger" aria-label="Filtrar clientes por status">
+            <SelectValue placeholder="Todos os status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os status</SelectItem>
+            {clientStatusOptions.map((option) => <SelectItem value={option.value} key={option.value}>{option.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </label>
       {!loading && !error && <p><UsersRound /><strong>{items.length}</strong> {items.length === 1 ? "cliente encontrado" : "clientes encontrados"}</p>}
     </div>
     {error ? <DashboardError /> : loading ? <DashboardLoading /> : <div className="clients-table">
       <div className="clients-table-head"><span>Cliente</span><span>Simuladores</span><span>Caso mais recente</span><span>Status</span><span>Compra</span><span>Última atividade</span><span /></div>
-      {items.length ? items.map((item) => <ClientLine key={item.id} item={item} />) : <div className="empty-row">{search ? "Nenhum cliente corresponde à busca." : "Nenhum cliente cadastrado ainda."}</div>}
+      {items.length ? items.map((item) => <ClientLine key={item.id} item={item} />) : <div className="empty-row">{search || status ? "Nenhum cliente corresponde aos filtros." : "Nenhum cliente cadastrado ainda."}</div>}
     </div>}
   </>;
 }

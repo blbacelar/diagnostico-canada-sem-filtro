@@ -30,7 +30,9 @@ function toLegacyClient(client: CentralClientRow): ClientRecord {
 export async function GET(request: Request) {
   try {
     const { admin } = await requireConsultant(request);
-    const search = new URL(request.url).searchParams.get("search")?.trim().slice(0, 120) ?? "";
+    const searchParams = new URL(request.url).searchParams;
+    const search = searchParams.get("search")?.trim().slice(0, 120) ?? "";
+    const status = searchParams.get("status")?.trim().slice(0, 80) ?? "";
     let clients: ClientRecord[] = [];
 
     if (search) {
@@ -96,7 +98,12 @@ export async function GET(request: Request) {
 
     const purchaseByEmail = mapPurchaseWindowsByEmail(purchaseRowsWithRealDates);
 
-    return json({ items: buildClientList(clients, (cases ?? []) as ClientCaseRecord[], purchaseByEmail) });
+    const items = buildClientList(clients, (cases ?? []) as ClientCaseRecord[], purchaseByEmail);
+    const filteredItems = status
+      ? items.filter((item) => status === "no_case" ? !item.latest_case : item.latest_case?.status === status)
+      : items;
+
+    return json({ items: filteredItems });
   } catch (error) {
     return handleApiError(error);
   }

@@ -480,10 +480,13 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .table-pagination > span { color: var(--ink-mute); font: 500 8px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .08em; }
 .table-pagination > button { min-width: 92px; min-height: 32px; padding: 0 12px; border: 1px solid var(--paper-edge); background: white; color: var(--ink); font: 500 8px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .08em; cursor: pointer; }
 .table-pagination > button[disabled] { opacity: .45; cursor: default; }
-.clients-toolbar { margin: 28px 0 18px; display: flex; justify-content: space-between; align-items: center; gap: 18px; }
-.clients-toolbar label { width: min(520px, 100%); min-height: 48px; padding: 0 14px; display: flex; align-items: center; gap: 10px; border: 1px solid var(--paper-edge); background: var(--paper-light); }
+.clients-toolbar { margin: 28px 0 18px; display: grid; grid-template-columns: minmax(260px, 1fr) 250px auto; align-items: center; gap: 12px; }
+.clients-toolbar label { min-height: 48px; padding: 0 14px; display: flex; align-items: center; gap: 10px; border: 1px solid var(--paper-edge); background: var(--paper-light); }
 .clients-toolbar label > svg { width: 15px; color: var(--ink-mute); }
 .clients-toolbar input { width: 100%; border: 0; outline: 0; background: transparent; font-size: 12px; }
+.clients-toolbar [data-slot="select"] { width: 100%; }
+.clients-toolbar__select-trigger { width: 100% !important; min-height: 0 !important; height: auto !important; border: 0 !important; border-radius: 0 !important; background: transparent !important; padding: 0 !important; box-shadow: none !important; font-size: 12px !important; }
+.clients-toolbar__select-trigger:focus-visible { outline: 0 !important; box-shadow: none !important; }
 .clients-toolbar > p { margin: 0; display: flex; align-items: center; gap: 7px; color: var(--ink-mute); font: 500 8px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .08em; white-space: nowrap; }
 .clients-toolbar > p svg { width: 15px; }
 .clients-toolbar > p strong { color: var(--ink); font-size: 12px; }
@@ -674,7 +677,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .case-line { grid-template-columns: 38px minmax(140px,1fr) 18px; }
   .case-line .status-pill, .case-line .score, .case-line .alert-count, .case-line .case-objective { display: none; }
   .list-toolbar { grid-template-columns: 1fr; }
-  .clients-toolbar { align-items: stretch; flex-direction: column; }
+  .clients-toolbar { align-items: stretch; grid-template-columns: 1fr; }
   .clients-toolbar > p { min-height: 28px; }
   .clients-table { border: 0; background: transparent; overflow: visible; display: grid; gap: 12px; }
   .clients-table-head { display: none; }
