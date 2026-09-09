@@ -73,7 +73,7 @@ export async function GET(request: Request) {
 
     const { data: purchaseRecords, error: purchaseRecordsError } = await admin
       .from("purchases")
-      .select("client_id,transaction_code,status_hotmart,purchase_date,created_at")
+      .select("client_id,transaction_code,product_name,status_hotmart,purchase_date,created_at")
       .in("client_id", clients.map((client) => client.id))
       .order("purchase_date", { ascending: true })
       .limit(500);

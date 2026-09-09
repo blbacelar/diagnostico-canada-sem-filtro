@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   attachPurchaseRecord,
   buildPurchaseWindow,
+  isDiagnosticProductPurchase,
   mapPurchaseWindowsByEmail,
   type AllowedEmailEventRow,
 } from "../../lib/purchase-window";
@@ -83,9 +84,42 @@ describe("janela de compra para entrega", () => {
       active: true,
     };
 
-    const result = attachPurchaseRecord(row, { purchase_date: "2026-08-02T02:12:15.000Z" });
+    const result = attachPurchaseRecord(row, {
+      product_name: "7 Aulas + E-Book + App + Diagnóstico - O Canadá é pra você?",
+      status_hotmart: "APPROVED",
+      purchase_date: "2026-08-02T02:12:15.000Z",
+    });
 
     expect(result.purchase_date).toBe("2026-08-02T02:12:15.000Z");
+    expect(result.last_event).toBe("APPROVED");
+    expect(result.purchase_verified).toBe(true);
+  });
+
+  it("não considera masterclass como compra válida do simulador", () => {
+    expect(isDiagnosticProductPurchase({
+      product_name: "Masterclass Canadá Sem Filtro",
+      status_hotmart: "APPROVED",
+    })).toBe(false);
+  });
+
+  it("bloqueia janela de compra quando o acesso veio de produto que não é o simulador", () => {
+    const row: AllowedEmailEventRow = {
+      email: "cliente@example.com",
+      last_event: "PURCHASE_APPROVED",
+      updated_at: "2026-08-09T12:31:51.988Z",
+      last_event_at: "2026-08-09T12:31:49.779Z",
+      active: true,
+    };
+
+    const attached = attachPurchaseRecord(row, {
+      product_name: "Masterclass Canadá Sem Filtro",
+      status_hotmart: "APPROVED",
+      purchase_date: "2026-08-02T02:12:15.000Z",
+    });
+    const result = buildPurchaseWindow(attached, new Date("2026-08-11T12:00:00.000Z"));
+
+    expect(result.eligibleToSend).toBe(false);
+    expect(result.purchaseDate).toBeNull();
   });
 
   it("usa o evento mais recente por e-mail", () => {
