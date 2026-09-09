@@ -102,6 +102,13 @@ describe("janela de compra para entrega", () => {
     })).toBe(false);
   });
 
+  it("não considera nome genérico com diagnóstico como produto válido", () => {
+    expect(isDiagnosticProductPurchase({
+      product_name: "Masterclass + Diagnóstico Canadá Sem Filtro",
+      status_hotmart: "APPROVED",
+    })).toBe(false);
+  });
+
   it("bloqueia janela de compra quando o acesso veio de produto que não é o simulador", () => {
     const row: AllowedEmailEventRow = {
       email: "cliente@example.com",

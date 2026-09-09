@@ -6,10 +6,8 @@ export const approvedPurchaseEvents = ["APPROVED", "PURCHASE_COMPLETE", "PURCHAS
 
 const purchaseEvents = new Set<string>(approvedPurchaseEvents);
 const dayInMs = 24 * 60 * 60 * 1000;
-const diagnosticProductKeywords = [
-  "diagnostico",
-  "simulador",
-  "o canada e pra voce",
+const diagnosticProductNames = [
+  "7 aulas + e-book + app + diagnostico - o canada e pra voce?",
 ];
 const nonDiagnosticProductKeywords = [
   "masterclass",
@@ -72,7 +70,7 @@ export function isDiagnosticProductPurchase(
   if (nonDiagnosticProductKeywords.some((keyword) => productName.includes(searchableText(keyword)))) {
     return false;
   }
-  return diagnosticProductKeywords.some((keyword) => productName.includes(searchableText(keyword)));
+  return diagnosticProductNames.some((allowedProduct) => productName === searchableText(allowedProduct));
 }
 
 function parseDate(value: string | null) {
