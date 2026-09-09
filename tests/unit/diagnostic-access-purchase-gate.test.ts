@@ -81,10 +81,11 @@ describe("validação de compra para acesso ao simulador", () => {
     hasPurchasedAccessForEmail.mockResolvedValue(false);
 
     const response = await startDiagnostic(request("/api/diagnostics/start", validStartPayload));
-    const body = await response.json() as { message: string };
+    const body = await response.json() as { code: string; error: string };
 
-    expect(response.status).toBe(200);
-    expect(body.message).toContain("Se os dados puderem ser processados");
+    expect(response.status).toBe(403);
+    expect(body.code).toBe("PURCHASE_REQUIRED");
+    expect(body.error).toContain("compra confirmada");
     expect(hasPurchasedAccessForEmail).toHaveBeenCalledWith(admin, "cliente@example.com");
     expect(upsertCentralClient).not.toHaveBeenCalled();
     expect(sendContinuationEmail).not.toHaveBeenCalled();
@@ -100,10 +101,11 @@ describe("validação de compra para acesso ao simulador", () => {
     hasPurchasedAccessForEmail.mockResolvedValue(false);
 
     const response = await resumeLink(request("/api/diagnostics/resume-link", { email: "cliente@example.com" }));
-    const body = await response.json() as { message: string };
+    const body = await response.json() as { code: string; error: string };
 
-    expect(response.status).toBe(200);
-    expect(body.message).toContain("Se encontrarmos um simulador em andamento");
+    expect(response.status).toBe(403);
+    expect(body.code).toBe("PURCHASE_REQUIRED");
+    expect(body.error).toContain("compra confirmada");
     expect(hasPurchasedAccessForEmail).toHaveBeenCalledWith(admin, "cliente@example.com");
     expect(sendContinuationEmail).not.toHaveBeenCalled();
     expect(admin.from).not.toHaveBeenCalledWith("clients");

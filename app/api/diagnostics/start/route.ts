@@ -9,6 +9,7 @@ import { upsertCentralClient } from "../../../../lib/central-client";
 import { hasPurchasedAccessForEmail } from "../../../../lib/purchase-window";
 
 const neutralMessage = "Se os dados puderem ser processados, você receberá um link pessoal para continuar. Confira também a pasta de spam.";
+const purchaseRequiredMessage = "Não encontramos uma compra confirmada do produto do simulador para este e-mail.";
 
 export async function POST(request: Request) {
   try {
@@ -23,7 +24,7 @@ export async function POST(request: Request) {
         action: "diagnostic.start_denied_without_purchase",
         metadata: { reason: "purchase_not_found" },
       });
-      return json({ message: neutralMessage });
+      return json({ error: purchaseRequiredMessage, code: "PURCHASE_REQUIRED" }, { status: 403 });
     }
     const operationalConfig = await getOperationalConfig(admin);
     const now = new Date().toISOString();

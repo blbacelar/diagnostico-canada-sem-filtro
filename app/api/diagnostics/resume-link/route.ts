@@ -7,6 +7,7 @@ import { getOperationalConfig } from "../../../../lib/operational-config.server"
 import { hasPurchasedAccessForEmail } from "../../../../lib/purchase-window";
 
 const neutralMessage = "Se encontrarmos um simulador em andamento para este e-mail, você receberá um link para continuar.";
+const purchaseRequiredMessage = "Não encontramos uma compra confirmada do produto do simulador para este e-mail.";
 
 export async function POST(request: Request) {
   try {
@@ -15,7 +16,7 @@ export async function POST(request: Request) {
     if (payload.website) return json({ message: neutralMessage });
     const admin = getAdminSupabase();
     const hasPurchase = await hasPurchasedAccessForEmail(admin, payload.email);
-    if (!hasPurchase) return json({ message: neutralMessage });
+    if (!hasPurchase) return json({ error: purchaseRequiredMessage, code: "PURCHASE_REQUIRED" }, { status: 403 });
     const { data: client } = await admin.from("clients").select("id,name,email").eq("email", payload.email).maybeSingle();
     if (!client) return json({ message: neutralMessage });
     const { data: diagnosticCase } = await admin.from("diagnostic_cases").select("id,case_number,status").eq("client_id", client.id).eq("status", "client_draft").order("created_at", { ascending: false }).limit(1).maybeSingle();
