@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { requireConsultant, getOperationalConfig, createFormToken, hashFormToken } = vi.hoisted(() => ({
+const { requireConsultant, getOperationalConfig, hasPurchasedAccessForEmail, createFormToken, hashFormToken } = vi.hoisted(() => ({
   requireConsultant: vi.fn(),
   getOperationalConfig: vi.fn(),
+  hasPurchasedAccessForEmail: vi.fn(),
   createFormToken: vi.fn(),
   hashFormToken: vi.fn(),
 }));
@@ -12,6 +13,7 @@ vi.mock("../../lib/api", async (importOriginal) => ({
   requireConsultant,
 }));
 vi.mock("../../lib/operational-config.server", () => ({ getOperationalConfig }));
+vi.mock("../../lib/purchase-window", () => ({ hasPurchasedAccessForEmail }));
 vi.mock("../../lib/tokens", () => ({ createFormToken, hashFormToken }));
 
 import { POST } from "../../app/api/dashboard/cases/[id]/form-token/route";
@@ -21,6 +23,7 @@ const targetCaseId = "00000000-0000-4000-8000-000000000001";
 beforeEach(() => {
   vi.clearAllMocks();
   getOperationalConfig.mockResolvedValue({ formLinkDays: 14 });
+  hasPurchasedAccessForEmail.mockResolvedValue(true);
   createFormToken.mockReturnValue("token/edit-consultant");
   hashFormToken.mockReturnValue("b".repeat(64));
 });
@@ -35,7 +38,7 @@ describe("geração de link de edição pelo consultor", () => {
       eq: vi.fn(() => casesQuery),
       is: vi.fn(() => casesQuery),
       maybeSingle: vi.fn().mockResolvedValue({
-        data: { id: targetCaseId, case_number: "DCF-001", status: "client_draft", source_metadata: {} },
+        data: { id: targetCaseId, case_number: "DCF-001", status: "client_draft", source_metadata: {}, clients: { email: "cliente@example.com" } },
         error: null,
       }),
       update: updateMock,
@@ -58,6 +61,7 @@ describe("geração de link de edição pelo consultor", () => {
     const body = await response.json() as { caseId: string; caseNumber: string; editUrl: string };
 
     expect(response.status).toBe(200);
+    expect(hasPurchasedAccessForEmail).toHaveBeenCalledWith(expect.anything(), "cliente@example.com");
     expect(body).toEqual({
       caseId: targetCaseId,
       caseNumber: "DCF-001",
@@ -78,7 +82,7 @@ describe("geração de link de edição pelo consultor", () => {
       eq: vi.fn(() => casesQuery),
       is: vi.fn(() => casesQuery),
       maybeSingle: vi.fn().mockResolvedValue({
-        data: { id: targetCaseId, case_number: "DCF-001", status: "sending", source_metadata: {} },
+        data: { id: targetCaseId, case_number: "DCF-001", status: "sending", source_metadata: {}, clients: { email: "cliente@example.com" } },
         error: null,
       }),
     };
@@ -92,5 +96,37 @@ describe("geração de link de edição pelo consultor", () => {
 
     expect(response.status).toBe(409);
     expect(body.code).toBe("CASE_IMMUTABLE");
+  });
+
+  it("não gera link de edição quando o cliente não tem compra confirmada", async () => {
+    hasPurchasedAccessForEmail.mockResolvedValue(false);
+    const insertMock = vi.fn().mockResolvedValue({ error: null });
+    const casesQuery = {
+      select: vi.fn(() => casesQuery),
+      eq: vi.fn(() => casesQuery),
+      is: vi.fn(() => casesQuery),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: { id: targetCaseId, case_number: "DCF-001", status: "client_draft", source_metadata: {}, clients: { email: "lead@example.com" } },
+        error: null,
+      }),
+    };
+    const tokensQuery = {
+      update: vi.fn(() => tokensQuery),
+      eq: vi.fn(() => tokensQuery),
+      is: vi.fn(() => tokensQuery),
+      insert: insertMock,
+    };
+    const from = vi.fn((table: string) => (table === "diagnostic_cases" ? casesQuery : tokensQuery));
+    requireConsultant.mockResolvedValue({ admin: { from }, user: { id: "consultant-1" } });
+
+    const response = await POST(
+      new Request(`http://localhost/api/dashboard/cases/${targetCaseId}/form-token`, { method: "POST" }),
+      { params: Promise.resolve({ id: targetCaseId }) },
+    );
+    const body = await response.json() as { code: string };
+
+    expect(response.status).toBe(409);
+    expect(body.code).toBe("PURCHASE_REQUIRED");
+    expect(insertMock).not.toHaveBeenCalled();
   });
 });

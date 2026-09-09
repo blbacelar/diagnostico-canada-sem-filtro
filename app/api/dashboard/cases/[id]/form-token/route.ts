@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ApiError, handleApiError, json, requireConsultant } from "../../../../../../lib/api";
 import { getOperationalConfig } from "../../../../../../lib/operational-config.server";
+import { hasPurchasedAccessForEmail } from "../../../../../../lib/purchase-window";
 import { createFormToken, hashFormToken } from "../../../../../../lib/tokens";
 
 const caseIdSchema = z.string().uuid();
@@ -13,13 +14,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     const { data: diagnosticCase, error: caseError } = await admin
       .from("diagnostic_cases")
-      .select("id,case_number,status,source_metadata")
+      .select("id,case_number,status,source_metadata,clients!inner(email)")
       .eq("id", caseId)
       .is("archived_at", null)
       .maybeSingle();
 
     if (caseError) throw caseError;
     if (!diagnosticCase) throw new ApiError(404, "Simulador não encontrado.", "CASE_NOT_FOUND");
+    const client = Array.isArray(diagnosticCase.clients) ? diagnosticCase.clients[0] : diagnosticCase.clients;
+    const hasPurchase = client?.email ? await hasPurchasedAccessForEmail(admin, client.email) : false;
+    if (!hasPurchase) {
+      throw new ApiError(
+        409,
+        "Este cliente não tem compra confirmada do produto do simulador.",
+        "PURCHASE_REQUIRED",
+      );
+    }
 
     const now = new Date().toISOString();
 

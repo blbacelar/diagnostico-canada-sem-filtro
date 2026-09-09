@@ -89,6 +89,7 @@ export function EmailTemplatesClient() {
 const auditLabels: Record<string, string> = {
   "diagnostic.started": "Simulador iniciado",
   "diagnostic.start_denied_without_purchase": "Início bloqueado por compra não confirmada",
+  "diagnostic.form_access_denied_without_purchase": "Acesso ao formulário bloqueado por compra não confirmada",
   "diagnostic.claimed": "Simulador assumido para revisão",
   "diagnostic.released": "Caso liberado para outra consultora",
   "form_link.renewed": "Link do formulário renovado",
