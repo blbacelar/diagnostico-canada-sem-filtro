@@ -2,7 +2,9 @@ import { getAdminSupabase } from "./supabase";
 
 export const DELIVERY_WAIT_DAYS = 7;
 
-const purchaseEvents = new Set(["PURCHASE_COMPLETE", "PURCHASE_APPROVED"]);
+export const approvedPurchaseEvents = ["PURCHASE_COMPLETE", "PURCHASE_APPROVED"] as const;
+
+const purchaseEvents = new Set<string>(approvedPurchaseEvents);
 const dayInMs = 24 * 60 * 60 * 1000;
 
 export type AllowedEmailEventRow = {
@@ -119,6 +121,64 @@ export function mapPurchaseWindowsByEmail(rows: AllowedEmailEventRow[], now = ne
 function isMissingPurchaseRelationError(error: { code?: string; message?: string } | null) {
   if (!error) return false;
   return error.code === "PGRST205" || /purchases|schema cache|column/i.test(error.message ?? "");
+}
+
+export async function hasPurchasedAccessForEmail(
+  admin: ReturnType<typeof getAdminSupabase>,
+  email: string,
+) {
+  const normalized = emailKey(email);
+  const { data: allowedRows, error: allowedError } = await admin
+    .from("allowed_emails")
+    .select("id,last_event,external_reference")
+    .eq("email", normalized)
+    .eq("active", true)
+    .order("last_event_at", { ascending: false })
+    .limit(10);
+
+  if (allowedError) throw allowedError;
+
+  if ((allowedRows ?? []).some((row) => row.last_event && purchaseEvents.has(row.last_event))) {
+    return true;
+  }
+
+  const transactionCodes = [...new Set((allowedRows ?? [])
+    .map((row) => row.external_reference)
+    .filter((value): value is string => Boolean(value)))];
+
+  if (transactionCodes.length > 0) {
+    const { data: purchaseByTransaction, error: transactionError } = await admin
+      .from("purchases")
+      .select("id")
+      .in("transaction_code", transactionCodes)
+      .in("status_hotmart", [...approvedPurchaseEvents])
+      .limit(1)
+      .maybeSingle();
+
+    if (transactionError && !isMissingPurchaseRelationError(transactionError)) throw transactionError;
+    if (purchaseByTransaction) return true;
+  }
+
+  const { data: client, error: clientError } = await admin
+    .from("clients")
+    .select("id")
+    .eq("email", normalized)
+    .limit(1)
+    .maybeSingle();
+
+  if (clientError) throw clientError;
+  if (!client?.id) return false;
+
+  const { data: purchase, error } = await admin
+    .from("purchases")
+    .select("id")
+    .eq("client_id", client.id)
+    .in("status_hotmart", [...approvedPurchaseEvents])
+    .limit(1)
+    .maybeSingle();
+
+  if (error && !isMissingPurchaseRelationError(error)) throw error;
+  return Boolean(purchase);
 }
 
 async function fetchPurchaseRecordForAllowedEmail(
