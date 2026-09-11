@@ -1,14 +1,19 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-export const publicSupabaseUrl =
+const resolvedPublicSupabaseUrl =
   process.env.NEXT_PUBLIC_SUPABASE_URL ??
-  process.env.VITE_SUPABASE_URL ??
-  "https://jtkebfgfmugbqglwaatn.supabase.co";
+  process.env.VITE_SUPABASE_URL;
 
-export const publicSupabaseAnonKey =
+const resolvedPublicSupabaseAnonKey =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-  process.env.VITE_SUPABASE_ANON_KEY ??
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0a2ViZmdmbXVnYnFnbHdhYXRuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3ODk2NDMsImV4cCI6MjA5NDM2NTY0M30.vFgcLn_jbh6MSQxWjym5R-XbKrVbVgjL5uhSnRj__f0";
+  process.env.VITE_SUPABASE_ANON_KEY;
+
+if (!resolvedPublicSupabaseUrl || !resolvedPublicSupabaseAnonKey) {
+  throw new Error("Variáveis públicas do Supabase não configuradas.");
+}
+
+export const publicSupabaseUrl = resolvedPublicSupabaseUrl;
+export const publicSupabaseAnonKey = resolvedPublicSupabaseAnonKey;
 
 let browserClient: SupabaseClient | null = null;
 
