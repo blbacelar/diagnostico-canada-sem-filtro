@@ -138,3 +138,69 @@ export async function getCentralClientById(admin: AdminClient, id: string) {
   if (legacyError) throw legacyError;
   return legacyData ? fromLegacyClient(legacyData) : null;
 }
+
+export async function getCentralClientsByIds(admin: AdminClient, ids: string[]) {
+  const uniqueIds = [...new Set(ids)].filter(Boolean);
+  if (!uniqueIds.length) return new Map<string, CentralClient>();
+
+  const { data, error } = await admin
+    .from("clients")
+    .select("id,name,email,created_at,updated_at")
+    .in("id", uniqueIds);
+  if (error && !isMissingCentralClientsTable(error)) throw error;
+  if (!error) return new Map(((data ?? []) as CentralClient[]).map((client) => [client.id, client]));
+
+  const { data: legacyData, error: legacyError } = await admin
+    .from("diagnostic_clients")
+    .select("id,full_name,email_normalized,email_display,source,created_at,updated_at")
+    .in("id", uniqueIds);
+  if (legacyError) throw legacyError;
+  return new Map((legacyData ?? []).map((client) => {
+    const normalized = fromLegacyClient(client);
+    return [normalized.id, normalized];
+  }));
+}
+
+export async function searchCentralClients(admin: AdminClient, search: string, limit = 100) {
+  const pattern = `%${search}%`;
+  const [nameResult, emailResult] = await Promise.all([
+    admin.from("clients").select("id,name,email,created_at,updated_at").ilike("name", pattern).order("updated_at", { ascending: false }).limit(limit),
+    admin.from("clients").select("id,name,email,created_at,updated_at").ilike("email", pattern.toLowerCase()).order("updated_at", { ascending: false }).limit(limit),
+  ]);
+  const centralMissing = isMissingCentralClientsTable(nameResult.error) || isMissingCentralClientsTable(emailResult.error);
+  if (!centralMissing) {
+    if (nameResult.error) throw nameResult.error;
+    if (emailResult.error) throw emailResult.error;
+    return [...new Map([...(nameResult.data ?? []), ...(emailResult.data ?? [])].map((client) => [client.id, client as CentralClient])).values()].slice(0, limit);
+  }
+
+  const [legacyNameResult, legacyEmailResult] = await Promise.all([
+    admin.from("diagnostic_clients").select("id,full_name,email_normalized,email_display,source,created_at,updated_at").ilike("full_name", pattern).order("updated_at", { ascending: false }).limit(limit),
+    admin.from("diagnostic_clients").select("id,full_name,email_normalized,email_display,source,created_at,updated_at").ilike("email_normalized", pattern.toLowerCase()).order("updated_at", { ascending: false }).limit(limit),
+  ]);
+  if (legacyNameResult.error) throw legacyNameResult.error;
+  if (legacyEmailResult.error) throw legacyEmailResult.error;
+  return [...new Map([...(legacyNameResult.data ?? []), ...(legacyEmailResult.data ?? [])]
+    .map((client) => {
+      const normalized = fromLegacyClient(client);
+      return [normalized.id, normalized];
+    })).values()].slice(0, limit);
+}
+
+export async function listCentralClients(admin: AdminClient, limit = 100) {
+  const { data, error } = await admin
+    .from("clients")
+    .select("id,name,email,source,created_at,updated_at")
+    .order("updated_at", { ascending: false })
+    .limit(limit);
+  if (error && !isMissingCentralClientsTable(error)) throw error;
+  if (!error) return (data ?? []) as CentralClient[];
+
+  const { data: legacyData, error: legacyError } = await admin
+    .from("diagnostic_clients")
+    .select("id,full_name,email_normalized,email_display,source,created_at,updated_at")
+    .order("updated_at", { ascending: false })
+    .limit(limit);
+  if (legacyError) throw legacyError;
+  return (legacyData ?? []).map(fromLegacyClient);
+}

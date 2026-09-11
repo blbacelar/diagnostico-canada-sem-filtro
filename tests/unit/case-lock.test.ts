@@ -9,23 +9,19 @@ type CaseRow = {
   submitted_at: string | null;
   updated_at: string;
   assigned_consultant_id: string | null;
+  locked_at?: string | null;
+  lock_expires_at?: string | null;
   client_id: string;
 };
 
 function adminStub(input: { current: CaseRow; claimed?: CaseRow | null; ownerName?: string }) {
-  const update = vi.fn(() => ({
-    eq: () => ({
-      eq: () => {
-        const result = {
-          is: () => ({
-            select: () => ({ maybeSingle: vi.fn().mockResolvedValue({ data: input.claimed ?? null, error: null }) }),
-          }),
-          select: () => ({ maybeSingle: vi.fn().mockResolvedValue({ data: input.claimed ?? null, error: null }) }),
-        };
-        return result;
-      },
-    }),
-  }));
+  const updateQuery = {
+    eq: vi.fn(() => updateQuery),
+    is: vi.fn(() => updateQuery),
+    select: vi.fn(() => updateQuery),
+    maybeSingle: vi.fn().mockResolvedValue({ data: input.claimed ?? null, error: null }),
+  };
+  const update = vi.fn(() => updateQuery);
   const historyInsert = vi.fn().mockResolvedValue({ error: null });
   const auditInsert = vi.fn().mockResolvedValue({ error: null });
   const admin = {
@@ -67,13 +63,18 @@ describe("reserva exclusiva de diagnóstico", () => {
     const result = await claimCaseForReview(admin as never, availableCase.id, "consultant-a");
 
     expect(result).toEqual(claimed);
-    expect(update).toHaveBeenCalledWith({ assigned_consultant_id: "consultant-a", status: "in_review" });
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({
+      assigned_consultant_id: "consultant-a",
+      status: "in_review",
+      locked_at: expect.any(String),
+      lock_expires_at: expect.any(String),
+    }));
     expect(historyInsert).toHaveBeenCalledWith(expect.objectContaining({ from_status: "awaiting_triage", to_status: "in_review", actor_user_id: "consultant-a" }));
     expect(auditInsert).toHaveBeenCalledWith(expect.objectContaining({ action: "diagnostic.claimed", actor_user_id: "consultant-a" }));
   });
 
   it("bloqueia a segunda consultora antes de devolver os dados do caso", async () => {
-    const ownedCase = { ...availableCase, status: "in_review", assigned_consultant_id: "consultant-b" };
+    const ownedCase = { ...availableCase, status: "in_review", assigned_consultant_id: "consultant-b", lock_expires_at: "2999-01-01T00:00:00Z" };
     const { admin, update } = adminStub({ current: ownedCase, ownerName: "Maria Consultora" });
 
     await expect(claimCaseForReview(admin as never, ownedCase.id, "consultant-a")).rejects.toMatchObject({
@@ -84,8 +85,20 @@ describe("reserva exclusiva de diagnóstico", () => {
     expect(update).not.toHaveBeenCalled();
   });
 
+  it("permite assumir caso com reserva expirada por outra consultora", async () => {
+    const staleCase = { ...availableCase, status: "in_review", assigned_consultant_id: "consultant-b", lock_expires_at: "2000-01-01T00:00:00Z" };
+    const claimed = { ...staleCase, assigned_consultant_id: "consultant-a", locked_at: "2026-08-04T03:10:00Z", lock_expires_at: "2026-08-04T03:15:00Z" };
+    const { admin, update, auditInsert } = adminStub({ current: staleCase, claimed });
+
+    const result = await claimCaseForReview(admin as never, staleCase.id, "consultant-a");
+
+    expect(result).toEqual(claimed);
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({ assigned_consultant_id: "consultant-a" }));
+    expect(auditInsert).toHaveBeenCalledWith(expect.objectContaining({ action: "diagnostic.claimed", actor_user_id: "consultant-a" }));
+  });
+
   it("marca na lista os casos que pertencem a outra consultora", async () => {
-    const ownedCase = { ...availableCase, status: "in_review", assigned_consultant_id: "consultant-b" };
+    const ownedCase = { ...availableCase, status: "in_review", assigned_consultant_id: "consultant-b", lock_expires_at: "2999-01-01T00:00:00Z" };
     const { admin } = adminStub({ current: ownedCase, ownerName: "Maria Consultora" });
 
     const [decorated] = await decorateCaseLocks(admin as never, [ownedCase], "consultant-a");
@@ -101,7 +114,7 @@ describe("reserva exclusiva de diagnóstico", () => {
     const result = await releaseCaseLock(admin as never, ownedCase.id, "consultant-a");
 
     expect(result).toEqual(releasedCase);
-    expect(update).toHaveBeenCalledWith({ assigned_consultant_id: null });
+    expect(update).toHaveBeenCalledWith({ assigned_consultant_id: null, locked_at: null, lock_expires_at: null });
     expect(auditInsert).toHaveBeenCalledWith(expect.objectContaining({ action: "diagnostic.released", actor_user_id: "consultant-a" }));
   });
 

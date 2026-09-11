@@ -1,5 +1,6 @@
 import { handleApiError, json, requireConsultant } from "../../../../lib/api";
 import { buildClientList, type ClientCaseRecord, type ClientRecord } from "../../../../lib/clients";
+import { listCentralClients, searchCentralClients, type CentralClient } from "../../../../lib/central-client";
 import {
   attachPurchaseRecord,
   mapPurchaseWindowsByEmail,
@@ -7,23 +8,15 @@ import {
   type PurchaseRecordRow,
 } from "../../../../lib/purchase-window";
 
-const clientColumns = "id,name,email,created_at,updated_at";
-
-type CentralClientRow = {
-  id: string;
-  name: string;
-  email: string;
-  created_at: string;
-  updated_at: string;
-};
-
-function toLegacyClient(client: CentralClientRow): ClientRecord {
+function toLegacyClient(client: CentralClient): ClientRecord {
   return {
-    ...client,
+    id: client.id,
     full_name: client.name,
     email_normalized: client.email,
     email_display: client.email,
-    source: "diagnostic",
+    source: client.source ?? "diagnostic",
+    created_at: client.created_at ?? "",
+    updated_at: client.updated_at ?? "",
   } as ClientRecord;
 }
 
@@ -36,18 +29,9 @@ export async function GET(request: Request) {
     let clients: ClientRecord[] = [];
 
     if (search) {
-      const pattern = `%${search}%`;
-      const [nameResult, emailResult] = await Promise.all([
-        admin.from("clients").select(clientColumns).ilike("name", pattern).order("updated_at", { ascending: false }).limit(100),
-        admin.from("clients").select(clientColumns).ilike("email", pattern.toLowerCase()).order("updated_at", { ascending: false }).limit(100),
-      ]);
-      if (nameResult.error) throw nameResult.error;
-      if (emailResult.error) throw emailResult.error;
-      clients = [...new Map([...(nameResult.data ?? []), ...(emailResult.data ?? [])].map((client) => [client.id, toLegacyClient(client)])).values()].slice(0, 100);
+      clients = (await searchCentralClients(admin, search, 100)).map(toLegacyClient);
     } else {
-      const result = await admin.from("clients").select(clientColumns).order("updated_at", { ascending: false }).limit(100);
-      if (result.error) throw result.error;
-      clients = (result.data ?? []).map(toLegacyClient);
+      clients = (await listCentralClients(admin, 100)).map(toLegacyClient);
     }
 
     if (!clients.length) return json({ items: [] });
@@ -77,7 +61,7 @@ export async function GET(request: Request) {
       .in("client_id", clients.map((client) => client.id))
       .order("purchase_date", { ascending: true })
       .limit(500);
-    if (purchaseRecordsError) throw purchaseRecordsError;
+    if (purchaseRecordsError && purchaseRecordsError.code !== "PGRST205") throw purchaseRecordsError;
 
     const earliestPurchaseByClientId = new Map<string, PurchaseRecordRow>();
     const purchaseByTransaction = new Map<string, PurchaseRecordRow>();

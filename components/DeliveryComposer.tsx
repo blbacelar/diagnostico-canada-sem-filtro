@@ -10,6 +10,7 @@ import { getDeliveryStatusMessage } from "../lib/status-labels";
 import { detailFetch, type CaseDetailData } from "./DiagnosticDetail";
 import { DashboardError } from "./DashboardData";
 import { Button } from "./ui/button";
+import { useCaseLockLifecycle } from "./useCaseLockLifecycle";
 
 const purchaseDateFormatter = new Intl.DateTimeFormat("pt-BR", {
   day: "2-digit",
@@ -35,6 +36,8 @@ export function DeliveryComposer({ caseId }: { caseId: string }) {
 
   const deliveryWindow = detail?.delivery_window;
   const deliveryUnlocked = deliveryWindow?.eligible_to_send ?? true;
+
+  useCaseLockLifecycle(caseId);
 
   useEffect(() => {
     detailFetch<CaseDetailData>(`/api/dashboard/cases/${caseId}`)

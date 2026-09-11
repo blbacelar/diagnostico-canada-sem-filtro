@@ -17,7 +17,7 @@ import { sendSubmissionConfirmation } from "../../../../lib/email";
 import { getOperationalConfig } from "../../../../lib/operational-config.server";
 import { diagnosticSubmissionAnswersSchema } from "../../../../lib/diagnostic-validation";
 import { notifyDashboardUsersOfSubmission } from "../../../../lib/dashboard-notifications";
-import { upsertCentralClient } from "../../../../lib/central-client";
+import { getCentralClientById, upsertCentralClient } from "../../../../lib/central-client";
 
 const expectedTime = "até 5 dias úteis";
 
@@ -57,16 +57,11 @@ export async function POST(request: Request) {
 
     // O simulador e o CRM compartilham o mesmo cadastro. O upsert acontece
     // antes da submissão imutável e mantém o e-mail como identidade única.
-    const { data: existingClient, error: clientReadError } = await admin
-      .from("clients")
-      .select("id,name,email,phone")
-      .eq("id", caseRow.client_id)
-      .single();
-    if (clientReadError || !existingClient) throw clientReadError ?? new ApiError(404, "Cliente não encontrado.", "CLIENT_NOT_FOUND");
+    const existingClient = await getCentralClientById(admin, caseRow.client_id);
+    if (!existingClient) throw new ApiError(404, "Cliente não encontrado.", "CLIENT_NOT_FOUND");
     const client = await upsertCentralClient(admin, {
       name: existingClient.name,
       email: existingClient.email,
-      phone: existingClient.phone,
       statusJourney: "diagnostico_enviado",
       source: "diagnostic",
     });

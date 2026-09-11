@@ -7,6 +7,7 @@ import type { ReportData } from "../lib/report";
 import { DashboardError, DashboardLoading } from "./DashboardData";
 import { detailFetch, type CaseDetailData } from "./DiagnosticDetail";
 import { ReportDocument } from "./ReportDocument";
+import { useCaseLockLifecycle } from "./useCaseLockLifecycle";
 
 type Review = ReportData["review"] & { status: string };
 
@@ -14,6 +15,8 @@ export function ReportPreviewClient({ caseId }: { caseId: string }) {
   const [detail, setDetail] = useState<CaseDetailData | null>(null);
   const [review, setReview] = useState<Review | null>(null);
   const [error, setError] = useState("");
+
+  useCaseLockLifecycle(caseId);
 
   useEffect(() => {
     Promise.all([

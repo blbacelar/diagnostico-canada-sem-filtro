@@ -8,6 +8,7 @@ import { ArrowLeft, Check, Eye, FileText, Save } from "lucide-react";
 import { detailFetch, type CaseDetailData } from "./DiagnosticDetail";
 import { DashboardError } from "./DashboardData";
 import { isReviewImmutable } from "../lib/case-lifecycle";
+import { useCaseLockLifecycle } from "./useCaseLockLifecycle";
 
 const fields = [
   ["coherentPath", "Caminho mais coerente", "Descreva o caminho que melhor combina com perfil e prazo."],
@@ -69,6 +70,8 @@ export function ReviewEditor({ caseId }: { caseId: string }) {
   const initialized = useRef(false);
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveChain = useRef<Promise<void>>(Promise.resolve());
+
+  useCaseLockLifecycle(caseId);
 
   useEffect(() => {
     detailFetch<CaseDetailData>(`/api/dashboard/cases/${caseId}`)

@@ -1,6 +1,7 @@
 import { ApiError, handleApiError, json, requireConsultant, writeAudit } from "../../../../../lib/api";
 import { claimCaseForReview } from "../../../../../lib/case-lock";
 import { getPurchaseWindowForEmail } from "../../../../../lib/purchase-window";
+import { getCentralClientById } from "../../../../../lib/central-client";
 
 export async function GET(
   request: Request,
@@ -12,13 +13,9 @@ export async function GET(
     const diagnosticCase = await claimCaseForReview(admin, id, user.id);
     if (!diagnosticCase) throw new ApiError(404, "Simulador não encontrado.");
 
-    const [{ data: client }, { data: submission }, { data: assessment }, { data: review }, { data: history }] =
+    const [client, { data: submission }, { data: assessment }, { data: review }, { data: history }] =
       await Promise.all([
-        admin
-          .from("clients")
-          .select("name,email")
-          .eq("id", diagnosticCase.client_id)
-          .single(),
+        getCentralClientById(admin, diagnosticCase.client_id),
         admin
           .from("diagnostic_submissions")
           .select("answers_snapshot")

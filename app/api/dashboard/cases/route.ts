@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- Supabase infers nested relation payloads at runtime. */
 import { handleApiError, json, requireConsultant } from "../../../../lib/api";
 import { decorateCaseLocks } from "../../../../lib/case-lock";
+import { getCentralClientsByIds, searchCentralClients } from "../../../../lib/central-client";
 
 const DEFAULT_PAGE_SIZE = 10;
 const MAX_PAGE_SIZE = 50;
@@ -40,13 +41,8 @@ export async function GET(request: Request) {
 
     let clientIds: string[] = [];
     if (search) {
-      const { data: clients, error: clientsError } = await admin
-        .from("clients")
-        .select("id")
-        .or(`name.ilike.%${search}%,email.ilike.%${search}%`)
-        .limit(50);
-      if (clientsError) throw clientsError;
-      clientIds = (clients ?? []).map((item) => item.id);
+      const clients = await searchCentralClients(admin, search, 50);
+      clientIds = clients.map((item) => item.id);
     }
 
     const countQuery = applyFilters(
@@ -64,7 +60,7 @@ export async function GET(request: Request) {
     const dataQuery = applyFilters(
       admin
         .from("diagnostic_cases")
-        .select("id,case_number,status,objective,submitted_at,updated_at,assigned_consultant_id,clients(name,email),diagnostic_ai_assessments(version,structured_result,status)")
+        .select("id,case_number,status,objective,submitted_at,updated_at,assigned_consultant_id,client_id,diagnostic_ai_assessments(version,structured_result,status)")
         .is("archived_at", null)
         .order("updated_at", { ascending: false })
         .range(offset, offset + pageSize - 1),
@@ -75,9 +71,12 @@ export async function GET(request: Request) {
     const { data, error } = await dataQuery;
     if (error) throw error;
 
+    const clientsById = await getCentralClientsByIds(admin, (data ?? []).map((item: any) => item.client_id));
     const decorated = await decorateCaseLocks(admin, (data ?? []).map((item: any) => ({
       ...item,
-      diagnostic_clients: item.clients ? { full_name: item.clients.name, email_display: item.clients.email } : null,
+      diagnostic_clients: clientsById.has(item.client_id)
+        ? { full_name: clientsById.get(item.client_id)?.name ?? "", email_display: clientsById.get(item.client_id)?.email ?? "" }
+        : null,
     })), user.id);
     const items = decorated.map((item: any) => ({
       ...item,

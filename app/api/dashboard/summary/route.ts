@@ -3,20 +3,24 @@ import { handleApiError, json, requireConsultant } from "../../../../lib/api";
 import { buildDashboardSummary } from "../../../../lib/dashboard-summary";
 import { getOperationalConfig } from "../../../../lib/operational-config.server";
 import { decorateCaseLocks } from "../../../../lib/case-lock";
+import { getCentralClientsByIds } from "../../../../lib/central-client";
 
 export async function GET(request: Request) {
   try {
     const { admin, user } = await requireConsultant(request);
     const [casesResult, historyResult, config] = await Promise.all([
-      admin.from("diagnostic_cases").select("id,case_number,status,objective,submitted_at,updated_at,assigned_consultant_id,clients(name,email),diagnostic_ai_assessments(version,structured_result,status)").is("archived_at", null).order("updated_at", { ascending: false }).limit(100),
+      admin.from("diagnostic_cases").select("id,case_number,status,objective,submitted_at,updated_at,assigned_consultant_id,client_id,diagnostic_ai_assessments(version,structured_result,status)").is("archived_at", null).order("updated_at", { ascending: false }).limit(100),
       admin.from("diagnostic_status_history").select("case_id,to_status,created_at,diagnostic_cases(submitted_at)").eq("to_status", "in_review").order("created_at", { ascending: false }).limit(100),
       getOperationalConfig(admin),
     ]);
     if (casesResult.error) throw casesResult.error;
     if (historyResult.error) throw historyResult.error;
+    const clientsById = await getCentralClientsByIds(admin, (casesResult.data ?? []).map((item: any) => item.client_id));
     const cases = await decorateCaseLocks(admin, (casesResult.data ?? []).map((item: any) => ({
       ...item,
-      diagnostic_clients: item.clients ? { full_name: item.clients.name, email_display: item.clients.email } : null,
+      diagnostic_clients: clientsById.has(item.client_id)
+        ? { full_name: clientsById.get(item.client_id)?.name ?? "", email_display: clientsById.get(item.client_id)?.email ?? "" }
+        : null,
     })), user.id);
     const summary = buildDashboardSummary(cases);
     const recent = summary.recent

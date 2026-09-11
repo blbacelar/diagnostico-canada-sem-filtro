@@ -1,4 +1,5 @@
 import { ApiError, handleApiError, json, requireConsultant } from "../../../../../lib/api";
+import { getCentralClientById } from "../../../../../lib/central-client";
 
 type DiagnosticCaseRow = {
   id: string;
@@ -76,21 +77,24 @@ export async function GET(
 
       if (diagnosticCase?.client_id) {
         const [clientResult, purchasesResult] = await Promise.all([
-          admin
-            .from("clients")
-            .select("id,name,email,phone,document,country,zip_code,city,state,address,district,number,complement,status_journey,created_at,updated_at")
-            .eq("id", diagnosticCase.client_id)
-            .maybeSingle(),
+          getCentralClientById(admin, diagnosticCase.client_id),
           admin
             .from("purchases")
             .select("id,transaction_code,product_name,price_gross,price_net,status_hotmart,purchase_date,created_at")
             .eq("client_id", diagnosticCase.client_id)
             .order("purchase_date", { ascending: false }),
         ]);
-        if (clientResult.error) throw clientResult.error;
-        if (purchasesResult.error) throw purchasesResult.error;
-        client = clientResult.data ?? null;
-        purchases = purchasesResult.data ?? [];
+        if (purchasesResult.error && purchasesResult.error.code !== "PGRST205") throw purchasesResult.error;
+        client = clientResult
+          ? {
+              id: clientResult.id,
+              name: clientResult.name,
+              email: clientResult.email,
+              created_at: clientResult.created_at,
+              updated_at: clientResult.updated_at,
+            }
+          : null;
+        purchases = purchasesResult.error ? [] : purchasesResult.data ?? [];
       }
     }
 
