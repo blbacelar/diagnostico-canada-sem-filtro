@@ -23,6 +23,8 @@ export type AllowedEmailEventRow = {
   updated_at: string | null;
   last_event_at: string | null;
   external_reference?: string | null;
+  source?: string | null;
+  notes?: string | null;
   purchase_date?: string | null;
   active: boolean | null;
   purchase_verified?: boolean;
@@ -71,6 +73,20 @@ export function isDiagnosticProductPurchase(
     return false;
   }
   return diagnosticProductNames.some((allowedProduct) => productName === searchableText(allowedProduct));
+}
+
+function hasNonDiagnosticProductSignal(value: string | null | undefined) {
+  const text = searchableText(value);
+  return Boolean(text && nonDiagnosticProductKeywords.some((keyword) => text.includes(searchableText(keyword))));
+}
+
+export function isAllowedEmailAccessActive(
+  row: Pick<AllowedEmailEventRow, "active" | "last_event" | "source" | "notes"> | null | undefined,
+) {
+  if (!row?.active) return false;
+  if (hasNonDiagnosticProductSignal(row.source) || hasNonDiagnosticProductSignal(row.notes)) return false;
+  if (!row.last_event) return true;
+  return isApprovedPurchaseStatus(row.last_event);
 }
 
 function parseDate(value: string | null) {
@@ -167,7 +183,7 @@ export async function hasPurchasedAccessForEmail(
   const normalized = emailKey(email);
   const { data: allowedRows, error: allowedError } = await admin
     .from("allowed_emails")
-    .select("id,last_event,external_reference")
+    .select("id,last_event,external_reference,source,notes,active")
     .eq("email", normalized)
     .eq("active", true)
     .order("last_event_at", { ascending: false })
@@ -182,14 +198,28 @@ export async function hasPurchasedAccessForEmail(
   if (transactionCodes.length > 0) {
     const { data: purchasesByTransaction, error: transactionError } = await admin
       .from("purchases")
-      .select("id,product_name,status_hotmart,purchase_date,created_at")
+      .select("id,transaction_code,product_name,status_hotmart,purchase_date,created_at")
       .in("transaction_code", transactionCodes)
-      .in("status_hotmart", [...approvedPurchaseEvents])
       .limit(20);
 
     if (transactionError && !isMissingPurchaseRelationError(transactionError)) throw transactionError;
     if ((purchasesByTransaction ?? []).some(isDiagnosticProductPurchase)) return true;
+
+    const transactionCodesWithPurchaseRows = new Set(
+      (purchasesByTransaction ?? [])
+        .map((purchase) => purchase.transaction_code)
+        .filter((value): value is string => Boolean(value)),
+    );
+    const hasOnlyReferencedPurchaseRows =
+      transactionCodesWithPurchaseRows.size > 0 &&
+      (allowedRows ?? [])
+        .filter((row) => row.external_reference)
+        .every((row) => transactionCodesWithPurchaseRows.has(row.external_reference as string));
+
+    if (hasOnlyReferencedPurchaseRows) return false;
   }
+
+  if ((allowedRows ?? []).some(isAllowedEmailAccessActive)) return true;
 
   const { data: client, error: clientError } = await admin
     .from("clients")

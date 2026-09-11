@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   attachPurchaseRecord,
   buildPurchaseWindow,
+  isAllowedEmailAccessActive,
   isDiagnosticProductPurchase,
   mapPurchaseWindowsByEmail,
   type AllowedEmailEventRow,
@@ -106,6 +107,33 @@ describe("janela de compra para entrega", () => {
     expect(isDiagnosticProductPurchase({
       product_name: "Masterclass + Diagnóstico Canadá Sem Filtro",
       status_hotmart: "APPROVED",
+    })).toBe(false);
+  });
+
+  it("considera allowed_emails manual ativo como acesso liberado", () => {
+    expect(isAllowedEmailAccessActive({
+      active: true,
+      last_event: null,
+      source: "manual",
+      notes: null,
+    })).toBe(true);
+  });
+
+  it("não considera allowed_emails com reembolso como acesso liberado", () => {
+    expect(isAllowedEmailAccessActive({
+      active: true,
+      last_event: "PURCHASE_REFUNDED",
+      source: "hotmart",
+      notes: null,
+    })).toBe(false);
+  });
+
+  it("não considera allowed_emails de masterclass como acesso ao simulador", () => {
+    expect(isAllowedEmailAccessActive({
+      active: true,
+      last_event: "PURCHASE_APPROVED",
+      source: "hotmart",
+      notes: "Inscrição na masterclass, sem compra do simulador.",
     })).toBe(false);
   });
 
