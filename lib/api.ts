@@ -2,6 +2,7 @@ import { ZodError, type ZodType } from "zod";
 import { getAdminSupabase, getSupabaseForAccessToken } from "./supabase";
 import { formTokenFromRequest, hashFormToken, hashIp } from "./tokens";
 import { hasPurchasedAccessForEmail } from "./purchase-window";
+import { getCentralClientById } from "./central-client";
 
 export class ApiError extends Error {
   constructor(
@@ -93,17 +94,22 @@ export async function requireFormCase(request: Request) {
   const tokenHash = hashFormToken(token);
   const { data, error } = await admin
     .from("diagnostic_access_tokens")
-    .select("id, case_id, expires_at, revoked_at, diagnostic_cases!inner(id, case_number, status, client_id, submitted_at, source_metadata, archived_at, clients!inner(email))")
+    .select("id, case_id, expires_at, revoked_at")
     .eq("token_hash", tokenHash)
     .maybeSingle();
   if (error) throw error;
   if (!data || data.revoked_at || new Date(data.expires_at) <= new Date()) throw new ApiError(401, "O link é inválido, expirou ou foi revogado.", "INVALID_FORM_TOKEN");
-  const caseRow = Array.isArray(data.diagnostic_cases) ? data.diagnostic_cases[0] : data.diagnostic_cases;
+  const { data: caseRow, error: caseError } = await admin
+    .from("diagnostic_cases")
+    .select("id, case_number, status, client_id, submitted_at, source_metadata, archived_at")
+    .eq("id", data.case_id)
+    .maybeSingle();
+  if (caseError) throw caseError;
   if (!caseRow || caseRow.archived_at) {
     await admin.from("diagnostic_access_tokens").update({ revoked_at: new Date().toISOString() }).eq("id", data.id).is("revoked_at", null);
     throw new ApiError(401, "O link é inválido, expirou ou foi revogado.", "INVALID_FORM_TOKEN");
   }
-  const client = Array.isArray(caseRow.clients) ? caseRow.clients[0] : caseRow.clients;
+  const client = await getCentralClientById(admin, caseRow.client_id);
   const hasPurchase = client?.email ? await hasPurchasedAccessForEmail(admin, client.email) : false;
   if (!hasPurchase) {
     await admin.from("diagnostic_access_tokens").update({ revoked_at: new Date().toISOString() }).eq("id", data.id).is("revoked_at", null);

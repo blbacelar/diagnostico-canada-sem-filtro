@@ -173,7 +173,7 @@ export function mapPurchaseWindowsByEmail(rows: AllowedEmailEventRow[], now = ne
 
 function isMissingPurchaseRelationError(error: { code?: string; message?: string } | null) {
   if (!error) return false;
-  return error.code === "PGRST205" || /purchases|schema cache|column/i.test(error.message ?? "");
+  return error.code === "PGRST205" || /purchases|clients|schema cache|column/i.test(error.message ?? "");
 }
 
 export async function hasPurchasedAccessForEmail(
@@ -228,6 +228,7 @@ export async function hasPurchasedAccessForEmail(
     .limit(1)
     .maybeSingle();
 
+  if (clientError && isMissingPurchaseRelationError(clientError)) return false;
   if (clientError) throw clientError;
   if (!client?.id) return false;
 
@@ -267,6 +268,7 @@ async function fetchPurchaseRecordForAllowedEmail(
     .limit(1)
     .maybeSingle();
 
+  if (clientError && isMissingPurchaseRelationError(clientError)) return null;
   if (clientError) throw clientError;
   if (!client?.id) return null;
 

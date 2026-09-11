@@ -4,6 +4,7 @@ const {
   admin,
   formTokenFromRequest,
   getAdminSupabase,
+  getCentralClientById,
   hasPurchasedAccessForEmail,
   hashFormToken,
   auditInsert,
@@ -12,6 +13,7 @@ const {
   admin: { from: vi.fn() },
   formTokenFromRequest: vi.fn(),
   getAdminSupabase: vi.fn(),
+  getCentralClientById: vi.fn(),
   hasPurchasedAccessForEmail: vi.fn(),
   hashFormToken: vi.fn(),
   auditInsert: vi.fn(),
@@ -30,6 +32,7 @@ vi.mock("../../lib/tokens", () => ({
 }));
 
 vi.mock("../../lib/purchase-window", () => ({ hasPurchasedAccessForEmail }));
+vi.mock("../../lib/central-client", () => ({ getCentralClientById }));
 
 import { ApiError, requireFormCase } from "../../lib/api";
 
@@ -54,9 +57,19 @@ beforeEach(() => {
   formTokenFromRequest.mockReturnValue("token-de-formulario-com-tamanho-suficiente");
   hashFormToken.mockReturnValue("a".repeat(64));
   getAdminSupabase.mockReturnValue(admin);
+  getCentralClientById.mockResolvedValue({ id: "client-1", name: "Lead Teste", email: "lead@example.com" });
   hasPurchasedAccessForEmail.mockResolvedValue(true);
   tokenUpdate.mockReturnValue(tokenUpdateQuery);
   auditInsert.mockResolvedValue({ error: null });
+  tokenQueryResult.maybeSingle.mockResolvedValue({
+    data: {
+      id: "token-1",
+      case_id: "case-1",
+      expires_at: "2999-01-01T00:00:00.000Z",
+      revoked_at: null,
+    },
+    error: null,
+  });
   admin.from.mockImplementation((table: string) => {
     if (table === "diagnostic_access_tokens") {
       return {
@@ -64,29 +77,30 @@ beforeEach(() => {
         update: tokenUpdate,
       };
     }
+    if (table === "diagnostic_cases") {
+      return {
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            maybeSingle: vi.fn(() => Promise.resolve({
+              data: {
+                id: "case-1",
+                case_number: "CSF-2026-TESTE",
+                status: "client_draft",
+                client_id: "client-1",
+                submitted_at: null,
+                source_metadata: {},
+                archived_at: null,
+              },
+              error: null,
+            })),
+          })),
+        })),
+      };
+    }
     if (table === "diagnostic_audit_logs") {
       return { insert: auditInsert };
     }
     return {};
-  });
-  tokenQueryResult.maybeSingle.mockResolvedValue({
-    data: {
-      id: "token-1",
-      case_id: "case-1",
-      expires_at: "2999-01-01T00:00:00.000Z",
-      revoked_at: null,
-      diagnostic_cases: {
-        id: "case-1",
-        case_number: "CSF-2026-TESTE",
-        status: "client_draft",
-        client_id: "client-1",
-        submitted_at: null,
-        source_metadata: {},
-        archived_at: null,
-        clients: { email: "lead@example.com" },
-      },
-    },
-    error: null,
   });
 });
 

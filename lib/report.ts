@@ -2,6 +2,7 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import type { AiAssessment } from "./types";
 import type { getAdminSupabase } from "./supabase";
 import { ApiError } from "./api";
+import { getCentralClientById } from "./central-client";
 
 export type ReportData = {
   caseId: string; caseNumber: string; generatedAt: string; clientName: string; objective: string;
@@ -12,8 +13,8 @@ export type ReportData = {
 export async function getReportData(admin: ReturnType<typeof getAdminSupabase>, caseId: string): Promise<ReportData> {
   const { data: diagnosticCase, error } = await admin.from("diagnostic_cases").select("id,case_number,objective,client_id,status").eq("id", caseId).single();
   if (error || !diagnosticCase) throw new ApiError(404, "Relatório não encontrado.");
-  const [{ data: client }, { data: assessment }, { data: review }] = await Promise.all([
-    admin.from("clients").select("name").eq("id", diagnosticCase.client_id).single(),
+  const [client, { data: assessment }, { data: review }] = await Promise.all([
+    getCentralClientById(admin, diagnosticCase.client_id),
     admin.from("diagnostic_ai_assessments").select("structured_result").eq("case_id", caseId).eq("status", "completed").order("version", { ascending: false }).limit(1).maybeSingle(),
     admin.from("diagnostic_reviews").select("coherent_path,assumptions_to_review,likely_mistakes,immediate_focus,study_strategy,validation_risks,next_steps,additional_notes,recommended_resources,version,approved_at,status").eq("case_id", caseId).eq("status", "approved").order("version", { ascending: false }).limit(1).maybeSingle(),
   ]);
