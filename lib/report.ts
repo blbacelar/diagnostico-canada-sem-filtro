@@ -45,9 +45,18 @@ export async function generateReportPdf(report: ReportData) {
 
   const safe = (value: string) =>
     value
+      .replace(/\u00a0/g, " ")
       .replace(/[–—]/g, "-")
       .replace(/[“”]/g, '"')
-      .replace(/[‘’]/g, "'");
+      .replace(/[‘’]/g, "'")
+      .replace(/…/g, "...")
+      .replace(/→/g, "->")
+      .replace(/←/g, "<-")
+      .replace(/↔/g, "<->")
+      .replace(/≥/g, ">=")
+      .replace(/≤/g, "<=")
+      .replace(/≠/g, "!=")
+      .replace(/[^\x09\x0a\x0d\x20-\x7e\u00a0-\u00ff]/g, "");
 
   const footerLabel = `${report.caseNumber}  |  Versao ${report.review.version}  |  ${new Date(report.generatedAt).toLocaleDateString("pt-BR")}`;
 
@@ -182,7 +191,7 @@ export async function generateReportPdf(report: ReportData) {
       font: italicFont,
       color: burgundy,
     });
-    page.drawText(report.clientName, {
+    page.drawText(safe(report.clientName), {
       x: titleX,
       y: titleBaseY - 122,
       size: 44,
