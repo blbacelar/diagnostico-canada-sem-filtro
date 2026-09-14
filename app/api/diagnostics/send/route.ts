@@ -8,6 +8,16 @@ import { getOperationalConfig } from "../../../../lib/operational-config.server"
 import { claimCaseForReview } from "../../../../lib/case-lock";
 import { getPurchaseWindowForEmail } from "../../../../lib/purchase-window";
 
+function deliveryErrorCode(error: unknown) {
+  if (error instanceof Error && error.name) return error.name;
+  return "DELIVERY_EXCEPTION";
+}
+
+function deliveryErrorMessage(error: unknown) {
+  if (error instanceof Error && error.message) return error.message.slice(0, 500);
+  return String(error ?? "Erro desconhecido no envio.").slice(0, 500);
+}
+
 export async function POST(request: Request) {
   try {
     await enforceRateLimit(request, "diagnostic_send_final", 20, 15);
@@ -65,17 +75,43 @@ export async function POST(request: Request) {
     await admin.from("diagnostic_report_tokens").insert({ case_id: payload.caseId, review_id: effectiveReview.id, token_hash: hashFormToken(reportToken), expires_at: new Date(Date.now() + config.reportLinkDays * 24 * 60 * 60 * 1000).toISOString() });
     const reportUrl = `${process.env.APP_URL ?? "http://localhost:3000"}/relatorio/${encodeURIComponent(reportToken)}`;
     await admin.from("diagnostic_cases").update({ status: "sending" }).eq("id", payload.caseId).eq("assigned_consultant_id", user.id);
-    let pdf: Uint8Array | undefined;
-    if (payload.deliveryMethod === "pdf") pdf = await generateReportPdf(await getReportData(admin, payload.caseId));
-    const result = await sendFinalDiagnosticWithPdf({ to: target.client.email_normalized, subject: payload.subject, body: payload.body, reportUrl, pdf, caseNumber: target.case.case_number });
-    const status = result.error ? "failed" : "sent";
-    const { data: delivery, error } = await admin.from("diagnostic_email_deliveries").insert({ case_id: payload.caseId, delivery_type: "final_diagnostic", recipient: target.client.email_normalized, subject: payload.subject, body_snapshot: payload.body, status, provider_id: result.data?.id ?? null, error_code: result.error?.name ?? null, sent_at: result.error ? null : new Date().toISOString(), sent_by: user.id, idempotency_key: key, metadata: { deliveryMethod: payload.deliveryMethod, reportTokenId: "stored", reportLinkDays: config.reportLinkDays } }).select("id,status,provider_id").single();
-    if (error) throw error;
-    const nextStatus = result.error ? "approved" : "sent";
-    await admin.from("diagnostic_cases").update({ status: nextStatus }).eq("id", payload.caseId).eq("assigned_consultant_id", user.id);
-    await admin.from("diagnostic_status_history").insert({ case_id: payload.caseId, from_status: "sending", to_status: nextStatus, actor_type: "consultant", actor_user_id: user.id, note: result.error ? "Falha no envio; parecer aprovado preservado." : "Resultado final do simulador enviado." });
-    await writeAudit(admin, { caseId: payload.caseId, actorUserId: user.id, actorType: "consultant", action: "diagnostic.delivery", metadata: { deliveryId: delivery.id, status, deliveryMethod: payload.deliveryMethod, reportLinkDays: config.reportLinkDays } });
-    return json({ delivery }, { status: result.error ? 502 : 200 });
+    try {
+      let pdf: Uint8Array | undefined;
+      if (payload.deliveryMethod === "pdf") pdf = await generateReportPdf(await getReportData(admin, payload.caseId));
+      const result = await sendFinalDiagnosticWithPdf({ to: target.client.email_normalized, subject: payload.subject, body: payload.body, reportUrl, pdf, caseNumber: target.case.case_number });
+      const status = result.error ? "failed" : "sent";
+      const { data: delivery, error } = await admin.from("diagnostic_email_deliveries").insert({ case_id: payload.caseId, delivery_type: "final_diagnostic", recipient: target.client.email_normalized, subject: payload.subject, body_snapshot: payload.body, status, provider_id: result.data?.id ?? null, error_code: result.error?.name ?? null, sent_at: result.error ? null : new Date().toISOString(), sent_by: user.id, idempotency_key: key, metadata: { deliveryMethod: payload.deliveryMethod, reportTokenId: "stored", reportLinkDays: config.reportLinkDays } }).select("id,status,provider_id").single();
+      if (error) throw error;
+      const nextStatus = result.error ? "approved" : "sent";
+      await admin.from("diagnostic_cases").update({ status: nextStatus }).eq("id", payload.caseId).eq("assigned_consultant_id", user.id);
+      await admin.from("diagnostic_status_history").insert({ case_id: payload.caseId, from_status: "sending", to_status: nextStatus, actor_type: "consultant", actor_user_id: user.id, note: result.error ? "Falha no envio; parecer aprovado preservado." : "Resultado final do simulador enviado." });
+      await writeAudit(admin, { caseId: payload.caseId, actorUserId: user.id, actorType: "consultant", action: "diagnostic.delivery", metadata: { deliveryId: delivery.id, status, deliveryMethod: payload.deliveryMethod, reportLinkDays: config.reportLinkDays } });
+      return json({ delivery }, { status: result.error ? 502 : 200 });
+    } catch (deliveryError) {
+      await admin.from("diagnostic_cases").update({ status: "approved" }).eq("id", payload.caseId).eq("assigned_consultant_id", user.id);
+      await admin.from("diagnostic_email_deliveries").insert({
+        case_id: payload.caseId,
+        delivery_type: "final_diagnostic",
+        recipient: target.client.email_normalized,
+        subject: payload.subject,
+        body_snapshot: payload.body,
+        status: "failed",
+        provider_id: null,
+        error_code: deliveryErrorCode(deliveryError),
+        sent_at: null,
+        sent_by: user.id,
+        idempotency_key: key,
+        metadata: {
+          deliveryMethod: payload.deliveryMethod,
+          reportTokenId: "stored",
+          reportLinkDays: config.reportLinkDays,
+          errorMessage: deliveryErrorMessage(deliveryError),
+        },
+      });
+      await admin.from("diagnostic_status_history").insert({ case_id: payload.caseId, from_status: "sending", to_status: "approved", actor_type: "consultant", actor_user_id: user.id, note: "Falha no envio; parecer aprovado preservado." });
+      await writeAudit(admin, { caseId: payload.caseId, actorUserId: user.id, actorType: "consultant", action: "diagnostic.delivery_failed", metadata: { status: "failed", deliveryMethod: payload.deliveryMethod, errorCode: deliveryErrorCode(deliveryError) } });
+      throw new ApiError(502, "Não foi possível enviar o resultado final. O parecer aprovado foi preservado para nova tentativa.", "DELIVERY_FAILED");
+    }
   } catch (error) {
     return handleApiError(error);
   }
