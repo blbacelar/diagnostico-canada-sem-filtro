@@ -94,7 +94,7 @@ export function SimulatorSalesLanding() {
         <aside className="simulator-offer-card" aria-label="Oferta do Simulador Canadá Sem Filtro">
           <p className="eyebrow"><span /> Condição de hoje</p>
           <h2>Clareza antes do próximo investimento.</h2>
-          <div className="simulator-price"><span>De <s>R$ 147</s></span><strong>R$ 97</strong><small>pagamento único</small></div>
+          <div className="simulator-price"><span>De <s>R$ 147</s></span><strong>R$ 97</strong><small>À vista ou 12x R$10.03</small></div>
           <div className="simulator-offer-card__rule" />
           <p>Você responde sobre sua realidade. Nós devolvemos uma leitura organizada para você parar de caminhar no escuro.</p>
           <CheckoutLink>Garantir minha condição</CheckoutLink>
