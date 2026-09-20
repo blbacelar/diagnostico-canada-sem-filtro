@@ -122,14 +122,22 @@ export function SimulatorSalesLanding() {
           <p>Não é só sobre um visto. É sobre a sua realidade: tempo, família, profissão, idioma, dinheiro e as escolhas que precisam fazer sentido juntos.</p>
           <div className="simulator-preview-points"><span><CircleHelp aria-hidden="true" /> Mais de 60 perguntas organizadas</span><span><Mail aria-hidden="true" /> Link pessoal para preencher com calma</span></div>
         </div>
-        <div className="simulator-form-preview" aria-label="Exemplo visual das perguntas do simulador">
-          <div className="simulator-form-preview__top"><span>SEÇÃO 01 DE 11</span><span>CSF / 01</span></div>
-          <h3>Perfil pessoal</h3><p>O ponto de partida para entender sua realidade familiar e o contexto atual.</p>
-          <div className="preview-question"><label>Qual é a sua idade? <b>*</b></label><div>36</div></div>
-          <div className="preview-question"><label>Qual é a sua nacionalidade? <b>*</b></label><div>Brasileira</div></div>
-          <div className="preview-question"><label>Qual é o seu estado civil? <b>*</b></label><div>Casado(a) <span>⌄</span></div></div>
-          <div className="preview-progress"><span /><small>Você pode salvar e continuar depois</small></div>
-        </div>
+        <figure className="simulator-demo-video-frame">
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            controls
+            preload="metadata"
+            poster="/videos/simulador-preenchimento-poster.jpg"
+            aria-label="Demonstração do preenchimento do Simulador Canadá Sem Filtro"
+          >
+            <source src="/videos/simulador-preenchimento.mp4" type="video/mp4" />
+            Seu navegador não suporta a reprodução deste vídeo.
+          </video>
+          <figcaption>Demonstração ilustrativa: preencha no seu ritmo e salve para continuar depois.</figcaption>
+        </figure>
       </section>
 
       <section id="o-que-recebe" className="simulator-section simulator-report-section" aria-labelledby="report-title">
