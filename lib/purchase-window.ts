@@ -104,7 +104,13 @@ export function attachPurchaseRecord(
   row: AllowedEmailEventRow,
   purchase: Pick<PurchaseRecordRow, "product_name" | "purchase_date" | "status_hotmart"> | null | undefined,
 ): AllowedEmailEventRow {
-  const purchaseVerified = isDiagnosticProductPurchase(purchase);
+  // Some historical Hotmart events were migrated before the `purchases`
+  // relation existed. In those cases, `allowed_emails` is the authoritative
+  // record of the approved purchase. Keep accepting that record, while still
+  // rejecting access explicitly marked as a masterclass or a refund.
+  const purchaseVerified = purchase
+    ? isDiagnosticProductPurchase(purchase)
+    : isAllowedEmailAccessActive(row);
   return {
     ...row,
     last_event: purchaseVerified ? (purchase?.status_hotmart ?? row.last_event) : null,
@@ -292,7 +298,7 @@ export async function getPurchaseWindowForEmail(
   const normalized = emailKey(email);
   const { data, error } = await admin
     .from("allowed_emails")
-    .select("email,last_event,created_at,updated_at,last_event_at,external_reference,active")
+    .select("email,last_event,created_at,updated_at,last_event_at,external_reference,source,notes,active")
     .eq("email", normalized)
     .eq("active", true)
     .order("last_event_at", { ascending: false })

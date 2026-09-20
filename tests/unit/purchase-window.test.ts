@@ -96,6 +96,45 @@ describe("janela de compra para entrega", () => {
     expect(result.purchase_verified).toBe(true);
   });
 
+  it("preserva um acesso Hotmart aprovado legado quando a relação purchases ainda não foi migrada", () => {
+    const row: AllowedEmailEventRow = {
+      email: "cliente@example.com",
+      last_event: "PURCHASE_COMPLETE",
+      created_at: "2026-08-01T22:12:34.226Z",
+      updated_at: "2026-08-09T12:31:51.988Z",
+      last_event_at: "2026-08-09T12:31:49.779Z",
+      source: "hotmart",
+      notes: "Access granted by Hotmart webhook.",
+      active: true,
+    };
+
+    const attached = attachPurchaseRecord(row, null);
+    const result = buildPurchaseWindow(attached, new Date("2026-08-11T12:00:00.000Z"));
+
+    expect(attached.purchase_verified).toBe(true);
+    expect(result.purchaseDate).toBe("2026-08-01T22:12:34.226Z");
+    expect(result.eligibleToSend).toBe(true);
+  });
+
+  it("não usa o fallback legado para uma inscrição de masterclass", () => {
+    const row: AllowedEmailEventRow = {
+      email: "cliente@example.com",
+      last_event: "PURCHASE_APPROVED",
+      created_at: "2026-08-01T22:12:34.226Z",
+      updated_at: "2026-08-09T12:31:51.988Z",
+      last_event_at: "2026-08-09T12:31:49.779Z",
+      source: "hotmart",
+      notes: "Inscrição na masterclass, sem compra do simulador.",
+      active: true,
+    };
+
+    const attached = attachPurchaseRecord(row, null);
+    const result = buildPurchaseWindow(attached, new Date("2026-08-11T12:00:00.000Z"));
+
+    expect(attached.purchase_verified).toBe(false);
+    expect(result.eligibleToSend).toBe(false);
+  });
+
   it("não considera masterclass como compra válida do simulador", () => {
     expect(isDiagnosticProductPurchase({
       product_name: "Masterclass Canadá Sem Filtro",
