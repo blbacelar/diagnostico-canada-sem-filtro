@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { ArrowRight, Check, CircleHelp, Clock3, FileText, LockKeyhole, Mail, Sparkles } from "lucide-react";
 import { BrandMark } from "./BrandMark";
 
@@ -71,7 +70,6 @@ export function SimulatorSalesLanding() {
         <nav aria-label="Navegação principal">
           <a href="#como-funciona">Como funciona</a>
           <a href="#o-que-recebe">O que você recebe</a>
-          <Link href="/">Já comprei</Link>
         </nav>
         <CheckoutLink className="sales-header-cta">Quero por R$ 97</CheckoutLink>
       </header>
@@ -177,7 +175,7 @@ export function SimulatorSalesLanding() {
         <CheckoutLink>Quero meu simulador agora</CheckoutLink>
       </section>
       <section className="simulator-legal"><h2>Importante</h2><p>O Simulador Canadá Sem Filtro tem finalidade exclusivamente educativa e informativa. Não é consulta de imigração, não constitui aconselhamento jurídico e não garante elegibilidade, visto, residência permanente, emprego ou aprovação em programas.</p></section>
-      <footer className="simulator-sales-footer"><BrandMark compact /><span>© 2026 Canadá Sem Filtro</span><Link href="/">Já comprei o simulador</Link></footer>
+      <footer className="simulator-sales-footer"><BrandMark compact /><span>© 2026 Canadá Sem Filtro</span></footer>
     </main>
   );
 }
