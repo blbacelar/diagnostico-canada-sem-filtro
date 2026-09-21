@@ -14,7 +14,7 @@ test.beforeEach(async ({ page }) => {
 test("@smoke página de vendas apresenta promessa, limites e CTAs consistentes", async ({ page }) => {
   await page.goto("/simulador?utm_source=teste&utm_campaign=pagina-vendas");
 
-  await expect(page.getByRole("heading", { name: /antes de investir no seu projeto canadá/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /quer saber o que precisa ser organizado no seu perfil/i })).toBeVisible();
   await expect(page.getByRole("heading", { name: /este simulador é para você/i })).toBeVisible();
   await expect(page.getByRole("heading", { name: /o que o simulador não promete/i })).toBeVisible();
   await expect(page.getByText(/termina em|oferta especial de hoje|renovada diariamente/i)).toHaveCount(0);

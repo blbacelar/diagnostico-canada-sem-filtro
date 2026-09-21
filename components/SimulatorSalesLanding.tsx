@@ -73,7 +73,7 @@ export function SimulatorSalesLanding() {
       <section className="simulator-hero" aria-labelledby="simulator-title">
         <div className="simulator-hero__copy">
           <p className="eyebrow"><span /> Simulador Canadá Sem Filtro</p>
-          <h1 id="simulator-title">Antes de investir no seu projeto Canadá, descubra o que precisa ser <em>organizado no seu caso.</em></h1>
+          <h1 id="simulator-title">Quer saber o que precisa ser organizado no seu perfil antes de <em>imigrar para o Canadá?</em></h1>
           <p className="simulator-hero__lede">O Simulador organiza informações sobre família, idioma, profissão, recursos e objetivos em uma leitura personalizada, revisada por uma consultora, para você entender o que merece atenção antes do próximo investimento.</p>
           <ul className="simulator-checklist simulator-checklist--hero" aria-label="O que você encontra no simulador">
             <li><Check aria-hidden="true" /> Mais de 60 perguntas sobre o seu contexto</li><li><Check aria-hidden="true" /> Relatório personalizado</li><li><Check aria-hidden="true" /> Pontos fortes e pontos de atenção</li><li><Check aria-hidden="true" /> Prioridades para os próximos meses</li><li><Check aria-hidden="true" /> Revisão humana antes da entrega</li>
