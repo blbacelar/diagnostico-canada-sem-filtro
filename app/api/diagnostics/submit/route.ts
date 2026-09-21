@@ -18,8 +18,9 @@ import { getOperationalConfig } from "../../../../lib/operational-config.server"
 import { diagnosticSubmissionAnswersSchema } from "../../../../lib/diagnostic-validation";
 import { notifyDashboardUsersOfSubmission } from "../../../../lib/dashboard-notifications";
 import { getCentralClientById, upsertCentralClient } from "../../../../lib/central-client";
+import { simulatorSalesConfig } from "../../../../lib/simulator-sales";
 
-const expectedTime = "até 5 dias úteis";
+const expectedTime = simulatorSalesConfig.reviewEstimate;
 
 export async function POST(request: Request) {
   try {

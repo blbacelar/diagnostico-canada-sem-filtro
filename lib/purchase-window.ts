@@ -1,6 +1,7 @@
 import { getAdminSupabase } from "./supabase";
+import { simulatorSalesConfig } from "./simulator-sales";
 
-export const DELIVERY_WAIT_DAYS = 7;
+export const DELIVERY_WAIT_DAYS = simulatorSalesConfig.deliveryReleaseDays;
 
 export const approvedPurchaseEvents = ["APPROVED", "PURCHASE_COMPLETE", "PURCHASE_APPROVED"] as const;
 

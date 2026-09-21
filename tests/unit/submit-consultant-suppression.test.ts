@@ -6,12 +6,16 @@ const {
   sendSubmissionConfirmation,
   notifyDashboardUsersOfSubmission,
   processAssessment,
+  getCentralClientById,
+  upsertCentralClient,
 } = vi.hoisted(() => ({
   requireFormCase: vi.fn(),
   getOperationalConfig: vi.fn(),
   sendSubmissionConfirmation: vi.fn(),
   notifyDashboardUsersOfSubmission: vi.fn(),
   processAssessment: vi.fn(),
+  getCentralClientById: vi.fn(),
+  upsertCentralClient: vi.fn(),
 }));
 
 vi.mock("../../lib/api", async (importOriginal) => ({
@@ -23,6 +27,7 @@ vi.mock("../../lib/operational-config.server", () => ({ getOperationalConfig }))
 vi.mock("../../lib/email", () => ({ sendSubmissionConfirmation }));
 vi.mock("../../lib/dashboard-notifications", () => ({ notifyDashboardUsersOfSubmission }));
 vi.mock("../../lib/cases", () => ({ processAssessment }));
+vi.mock("../../lib/central-client", () => ({ getCentralClientById, upsertCentralClient }));
 
 import { POST } from "../../app/api/diagnostics/submit/route";
 
@@ -82,6 +87,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   getOperationalConfig.mockResolvedValue({ methodologyVersion: "1.0", promptVersion: "1.0", model: "openai/gpt-5.4" });
   processAssessment.mockResolvedValue(undefined);
+  getCentralClientById.mockResolvedValue({ id: "client-1", name: "Cliente Teste", email: "cliente@example.com" });
+  upsertCentralClient.mockResolvedValue({ id: "client-1", name: "Cliente Teste", email: "cliente@example.com" });
 });
 
 describe("submissão gerenciada por consultor", () => {
