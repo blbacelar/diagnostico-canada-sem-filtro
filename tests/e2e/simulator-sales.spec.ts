@@ -35,6 +35,14 @@ test("@smoke registra eventos sem exigir tracker externo", async ({ page }) => {
   expect(events?.find((event) => event.event === "simulator_checkout_started")).toMatchObject({ cta_placement: "hero", utm_source: "teste", utm_campaign: "pagina-vendas" });
 });
 
+test("@brand aplica a paleta oficial do manual de identidade", async ({ page }) => {
+  await page.goto("/simulador");
+
+  await expect.poll(() => page.locator(".simulator-offer-bar").evaluate((element) => getComputedStyle(element).backgroundColor)).toBe("rgb(22, 60, 114)");
+  await expect.poll(() => page.locator(".simulator-hero__copy h1").evaluate((element) => getComputedStyle(element).color)).toBe("rgb(22, 60, 114)");
+  await expect.poll(() => page.locator('[data-cta-placement="hero"]').evaluate((element) => getComputedStyle(element).backgroundColor)).toBe("rgb(200, 52, 50)");
+});
+
 test("@a11y não apresenta violações críticas ou graves", async ({ page }) => {
   await page.goto("/simulador");
   const results = await new AxeBuilder({ page }).include(".simulator-sales-page").analyze();

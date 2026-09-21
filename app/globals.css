@@ -16,41 +16,47 @@
 }
 
 :root {
+  --brand-ivory: #F5F0E6;
+  --brand-blue: #163C72;
+  --brand-maple: #C83432;
+  --brand-pine: #2F4F44;
+  --brand-sage: #9CA39A;
+  --brand-charcoal: #1F1B17;
   --font-display: "Instrument Serif", "Times New Roman", serif;
   --font-body: "Spectral", Georgia, serif;
   --font-sans: "IBM Plex Sans", "Segoe UI", sans-serif;
   --font-mono: "IBM Plex Mono", "SFMono-Regular", Menlo, monospace;
-  --paper: #edf3f5;
-  --paper-shade: #e3ecef;
-  --paper-light: #f6fafb;
-  --paper-edge: #cfdee3;
-  --ink: #17222b;
-  --ink-soft: #3e5160;
-  --ink-mute: #586c7a;
-  --accent: #b71c3d;
-  --accent-soft: #d45f79;
-  --success: #2f6655;
-  --warning: #916c2a;
-  --rule: rgba(23, 34, 43, .14);
-  --rule-strong: rgba(23, 34, 43, .26);
-  --shadow: 0 24px 70px rgba(23, 34, 43, .08);
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: #b71c3d;
-  --primary-foreground: #fff;
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent-foreground: #fff;
+  --paper: var(--brand-ivory);
+  --paper-shade: #E9E5DB;
+  --paper-light: #FBF8F1;
+  --paper-edge: var(--brand-sage);
+  --ink: var(--brand-charcoal);
+  --ink-soft: #3F4740;
+  --ink-mute: #62695F;
+  --accent: var(--brand-maple);
+  --accent-soft: #D96963;
+  --success: var(--brand-pine);
+  --warning: #805B2A;
+  --rule: rgba(31, 27, 23, .16);
+  --rule-strong: rgba(31, 27, 23, .3);
+  --shadow: 0 24px 70px rgba(31, 27, 23, .1);
+  --background: var(--brand-ivory);
+  --foreground: var(--brand-charcoal);
+  --card: var(--paper-light);
+  --card-foreground: var(--brand-charcoal);
+  --popover: var(--paper-light);
+  --popover-foreground: var(--brand-charcoal);
+  --primary: var(--brand-maple);
+  --primary-foreground: var(--brand-ivory);
+  --secondary: var(--paper-shade);
+  --secondary-foreground: var(--brand-charcoal);
+  --muted: var(--paper-shade);
+  --muted-foreground: var(--ink-mute);
+  --accent-foreground: var(--brand-ivory);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: #cfdee3;
-  --input: #cfdee3;
-  --ring: #b71c3d;
+  --border: var(--brand-sage);
+  --input: var(--brand-sage);
+  --ring: var(--brand-maple);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -191,6 +197,42 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 
 @media (max-width: 900px) { .simulator-audience-list, .simulator-limits-list { grid-template-columns: 1fr; } }
 @media (max-width: 640px) { .simulator-price-inline { padding-left: 0; border-left: 0; }.simulator-hero-price { width: 100%; }.simulator-audience-list, .simulator-limits-list { margin-top: 38px; }.simulator-audience-list li { min-height: 0; padding: 21px 18px; }.simulator-limits { padding: 78px 20px; }.simulator-limits-list li { min-height: 0; padding: 19px; }.simulator-delivery-note { margin-top: 25px; padding: 17px; } }
+
+/* Paleta oficial — Manual de Identidade Visual Canadá Sem Filtro */
+.simulator-sales-page { background: var(--brand-ivory); }
+.simulator-offer-bar { background: var(--brand-blue); color: var(--brand-ivory); }
+.simulator-offer-bar svg { color: var(--brand-ivory); }
+.simulator-price-inline { border-color: rgba(245, 240, 230, .4); color: var(--brand-ivory); }
+.simulator-sales-page h1, .simulator-sales-page h2, .simulator-sales-page h3 { color: var(--brand-blue); }
+.simulator-hero__copy h1 em { color: var(--brand-maple); }
+.sales-primary-button, .sales-header-cta { background: var(--brand-maple); color: var(--brand-ivory); }
+.sales-primary-button:hover, .sales-header-cta:hover { background: #A82726; }
+.simulator-offer-card { background: var(--brand-blue); color: var(--brand-ivory); box-shadow: 0 35px 80px rgba(22, 60, 114, .18); }
+.simulator-offer-card .eyebrow, .simulator-offer-card h2 { color: var(--brand-ivory); }
+.simulator-offer-card .simulator-price span, .simulator-offer-card .simulator-price small, .simulator-offer-card > small { color: #D7E0EC; }
+.simulator-offer-card .simulator-price strong { color: var(--brand-ivory); }
+.simulator-offer-card > p:not(.eyebrow) { color: #E7EDF5; }
+.simulator-audience-list { background: var(--brand-sage); }
+.simulator-audience-list li { background: var(--paper-light); }
+.simulator-preview-section { background: var(--paper-light); }
+.simulator-delivery-note { border-color: rgba(47, 79, 68, .45); background: #E8EFE9; color: var(--brand-pine); }
+.simulator-report-preview { background: var(--paper-light); }
+.simulator-limits { background: var(--brand-pine); color: var(--brand-ivory); }
+.simulator-limits .eyebrow, .simulator-limits h2 { color: var(--brand-ivory); }
+.simulator-limits .simulator-section-heading > p:not(.eyebrow) { color: #D8E5DD; }
+.simulator-limits-list { background: rgba(245, 240, 230, .3); }
+.simulator-limits-list li { background: #29463C; color: var(--brand-ivory); }
+.simulator-limits-list svg { color: #E5C0B7; }
+.simulator-testimonials { background: var(--paper-light); color: var(--brand-blue); }
+.simulator-testimonials .eyebrow { color: var(--brand-maple); }
+.simulator-testimonials .simulator-section-heading > p:not(.eyebrow) { color: var(--ink-soft); }
+.testimonial-screenshots figure { background: var(--brand-ivory); color: var(--brand-charcoal); box-shadow: 0 16px 40px rgba(31, 27, 23, .16); }
+.simulator-final-cta { background: var(--brand-blue); color: var(--brand-ivory); }
+.simulator-final-cta h2 { color: var(--brand-ivory); }
+.simulator-final-cta .eyebrow { color: #D7E0EC; }
+.simulator-final-cta > div > p:not(.eyebrow) { color: #E7EDF5; }
+.simulator-final-cta .sales-primary-button { background: var(--brand-maple); color: var(--brand-ivory); }
+.simulator-final-cta .sales-primary-button:hover { background: #A82726; }
 
 /* Formulário do cliente */
 .form-workspace { min-height: 100vh; background: linear-gradient(90deg, var(--paper-shade) 0 298px, var(--paper) 298px); }
