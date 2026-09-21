@@ -24,6 +24,7 @@ test("@smoke página de vendas apresenta promessa, limites e CTAs consistentes",
   await expect(ctas.first()).toHaveAttribute("href", "https://pay.hotmart.com/U107038059P?off=hyxqfyga");
   await expect(page.getByText(/demonstração ilustrativa/i).first()).toBeVisible();
   await expect.poll(() => page.locator(".testimonial-screenshots img").evaluateAll((images) => images.every((image) => (image as HTMLImageElement).naturalWidth > 0))).toBe(true);
+  await expect.poll(() => page.locator(".testimonial-screenshots img").first().evaluate((image) => getComputedStyle(image).objectFit)).toBe("contain");
 });
 
 test("@smoke registra eventos sem exigir tracker externo", async ({ page }) => {
@@ -38,9 +39,10 @@ test("@smoke registra eventos sem exigir tracker externo", async ({ page }) => {
 test("@brand aplica a paleta oficial do manual de identidade", async ({ page }) => {
   await page.goto("/simulador");
 
-  await expect.poll(() => page.locator(".simulator-offer-bar").evaluate((element) => getComputedStyle(element).backgroundColor)).toBe("rgb(22, 60, 114)");
+  await expect.poll(() => page.locator(".simulator-offer-bar").evaluate((element) => getComputedStyle(element).backgroundColor)).toBe("rgb(246, 184, 54)");
   await expect.poll(() => page.locator(".simulator-hero__copy h1").evaluate((element) => getComputedStyle(element).color)).toBe("rgb(22, 60, 114)");
   await expect.poll(() => page.locator('[data-cta-placement="hero"]').evaluate((element) => getComputedStyle(element).backgroundColor)).toBe("rgb(200, 52, 50)");
+  await expect.poll(() => page.locator(".simulator-hero-price strong").evaluate((element) => getComputedStyle(element).fontSize)).toBe("25px");
 });
 
 test("@a11y não apresenta violações críticas ou graves", async ({ page }) => {

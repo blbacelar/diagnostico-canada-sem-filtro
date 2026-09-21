@@ -60,7 +60,7 @@ export function SimulatorSalesLanding() {
   return (
     <main className="simulator-sales-page">
       <aside className="simulator-offer-bar" aria-label="Condição atual do Simulador Canadá Sem Filtro">
-        <span><Tag aria-hidden="true" /> Condição atual: de {simulatorSalesConfig.listPrice} por {simulatorSalesConfig.currentPrice}</span>
+        <span><Tag aria-hidden="true" /> Condição atual: de {simulatorSalesConfig.listPrice} por <strong>{simulatorSalesConfig.currentPrice}</strong></span>
         <span className="simulator-price-inline">À vista ou {simulatorSalesConfig.installmentPrice}</span>
       </aside>
 
@@ -78,7 +78,7 @@ export function SimulatorSalesLanding() {
           <ul className="simulator-checklist simulator-checklist--hero" aria-label="O que você encontra no simulador">
             <li><Check aria-hidden="true" /> Mais de 60 perguntas sobre o seu contexto</li><li><Check aria-hidden="true" /> Relatório personalizado</li><li><Check aria-hidden="true" /> Pontos fortes e pontos de atenção</li><li><Check aria-hidden="true" /> Prioridades para os próximos meses</li><li><Check aria-hidden="true" /> Revisão humana antes da entrega</li>
           </ul>
-          <div className="simulator-hero__actions"><CheckoutLink placement="hero">Quero entender meu ponto de partida</CheckoutLink><span className="simulator-hero-price">Por {simulatorSalesConfig.currentPrice} · {simulatorSalesConfig.installmentPrice}</span></div>
+          <div className="simulator-hero__actions"><CheckoutLink placement="hero">Quero entender meu ponto de partida</CheckoutLink><span className="simulator-hero-price"><span>Por</span> <strong>{simulatorSalesConfig.currentPrice}</strong><span>à vista · {simulatorSalesConfig.installmentPrice}</span></span></div>
           <p className="simulator-fine-print"><LockKeyhole aria-hidden="true" /> Compra segura pela Hotmart · acesso individual por e-mail</p>
         </div>
 
