@@ -58,7 +58,12 @@ export async function generateReportPdf(report: ReportData) {
       .replace(/≠/g, "!=")
       .replace(/[^\x09\x0a\x0d\x20-\x7e\u00a0-\u00ff]/g, "");
 
-  const footerLabel = `${report.caseNumber}  |  Versao ${report.review.version}  |  ${new Date(report.generatedAt).toLocaleDateString("pt-BR")}`;
+  const footerLabel = `${report.caseNumber}  |  Versão ${report.review.version}  |  ${new Date(report.generatedAt).toLocaleDateString("pt-BR")}`;
+  const readinessLabel = {
+    inicial: "Inicial",
+    intermediario: "Intermediário",
+    avancado: "Avançado",
+  }[report.assessment.readinessLevel];
 
   function footer() {
     page.drawLine({
@@ -116,23 +121,38 @@ export async function generateReportPdf(report: ReportData) {
     y -= paragraphGap;
   }
 
-  function heading(value: string) {
-    ensureSpace(56);
-    y -= 10;
-    text(value, 20, titleFont, ink);
-    ensureSpace(16);
+  function heading(value: string, contentGap = 18, minimumContentHeight = 18) {
+    const topGap = 14;
+    const ruleOffset = 12;
+    ensureSpace(topGap + ruleOffset + contentGap + minimumContentHeight + 20);
+    y -= topGap;
+    page.drawText(safe(value), {
+      x: margin,
+      y,
+      size: 20,
+      font: titleFont,
+      color: ink,
+    });
+    const ruleY = y - ruleOffset;
     page.drawLine({
-      start: { x: margin, y: y + 2 },
-      end: { x: width - margin, y: y + 2 },
+      start: { x: margin, y: ruleY },
+      end: { x: width - margin, y: ruleY },
       thickness: 0.7,
       color: rule,
     });
-    y -= 12;
+    y = ruleY - contentGap;
   }
 
   function bullets(items: string[]) {
     for (const item of items) {
-      text(`• ${item}`, 10, bodyFont, ink, 8);
+      ensureSpace(19);
+      page.drawCircle({
+        x: margin + 3,
+        y: y + 3.5,
+        size: 1.6,
+        color: burgundy,
+      });
+      text(item, 10, bodyFont, ink, 14);
     }
   }
 
@@ -207,8 +227,8 @@ export async function generateReportPdf(report: ReportData) {
   text(report.objective, 12, titleFont);
   text(report.assessment.executiveSummary);
 
-  heading("Nivel de preparo");
-  text(`${report.assessment.overallScore}/100 - ${report.assessment.readinessLevel}`, 24, titleFont, burgundy);
+  heading("Nível de preparo", 30, 42);
+  text(`${report.assessment.overallScore}/100 - ${readinessLabel}`, 24, titleFont, burgundy);
   text(report.assessment.scoreExplanation);
 
   heading("Pontos fortes");
@@ -235,17 +255,17 @@ export async function generateReportPdf(report: ReportData) {
   heading("Foco imediato");
   text(report.review.immediate_focus);
 
-  heading("Estudar no Canada como estrategia");
+  heading("Estudar no Canadá como estratégia");
   text(report.review.study_strategy);
 
-  heading("Proximos passos");
+  heading("Próximos passos");
   bullets(report.review.next_steps);
 
-  heading("Validacao profissional");
+  heading("Validação profissional");
   text(report.review.validation_risks);
 
   if (report.review.additional_notes) {
-    heading("Observacoes adicionais");
+    heading("Observações adicionais");
     text(report.review.additional_notes);
   }
 
