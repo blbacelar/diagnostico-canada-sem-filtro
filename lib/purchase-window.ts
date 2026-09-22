@@ -3,9 +3,10 @@ import { simulatorSalesConfig } from "./simulator-sales";
 
 export const DELIVERY_WAIT_DAYS = simulatorSalesConfig.deliveryReleaseDays;
 
-export const approvedPurchaseEvents = ["APPROVED", "PURCHASE_COMPLETE", "PURCHASE_APPROVED"] as const;
+export const approvedPurchaseEvents = ["APPROVED", "COMPLETE", "PURCHASE_COMPLETE", "PURCHASE_COMPLETED", "PURCHASE_APPROVED"] as const;
 
 const purchaseEvents = new Set<string>(approvedPurchaseEvents);
+const annualBundleProductId = 8575181;
 const dayInMs = 24 * 60 * 60 * 1000;
 const diagnosticProductNames = [
   "7 aulas + e-book + app + diagnostico - o canada e pra voce?",
@@ -27,6 +28,8 @@ export type AllowedEmailEventRow = {
   source?: string | null;
   notes?: string | null;
   purchase_date?: string | null;
+  access_product_id?: number | null;
+  access_expires_at?: string | null;
   active: boolean | null;
   purchase_verified?: boolean;
 };
@@ -44,6 +47,8 @@ export type PurchaseRecordRow = {
   client_id: string | null;
   transaction_code: string | null;
   product_name?: string | null;
+  product_id?: number | null;
+  access_expires_at?: string | null;
   status_hotmart: string | null;
   purchase_date: string | null;
   created_at: string | null;
@@ -65,9 +70,14 @@ export function isApprovedPurchaseStatus(status: string | null | undefined) {
 }
 
 export function isDiagnosticProductPurchase(
-  purchase: Pick<PurchaseRecordRow, "product_name" | "status_hotmart"> | null | undefined,
+  purchase: Pick<PurchaseRecordRow, "product_name" | "product_id" | "status_hotmart" | "access_expires_at"> | null | undefined,
+  now = new Date(),
 ) {
   if (!purchase || !isApprovedPurchaseStatus(purchase.status_hotmart)) return false;
+  if (purchase.product_id === annualBundleProductId) {
+    const expiresAt = parseDate(purchase.access_expires_at ?? null);
+    return Boolean(expiresAt && expiresAt > now);
+  }
   const productName = searchableText(purchase.product_name);
   if (!productName) return false;
   if (nonDiagnosticProductKeywords.some((keyword) => productName.includes(searchableText(keyword)))) {
@@ -82,9 +92,12 @@ function hasNonDiagnosticProductSignal(value: string | null | undefined) {
 }
 
 export function isAllowedEmailAccessActive(
-  row: Pick<AllowedEmailEventRow, "active" | "last_event" | "source" | "notes"> | null | undefined,
+  row: Pick<AllowedEmailEventRow, "active" | "last_event" | "source" | "notes" | "access_product_id" | "access_expires_at"> | null | undefined,
+  now = new Date(),
 ) {
   if (!row?.active) return false;
+  if (row.access_product_id === annualBundleProductId && !row.access_expires_at) return false;
+  if (row.access_expires_at && (parseDate(row.access_expires_at)?.getTime() ?? 0) <= now.getTime()) return false;
   if (hasNonDiagnosticProductSignal(row.source) || hasNonDiagnosticProductSignal(row.notes)) return false;
   if (!row.last_event) return true;
   return isApprovedPurchaseStatus(row.last_event);
@@ -103,25 +116,28 @@ function canonicalPurchaseDate(row: AllowedEmailEventRow) {
 
 export function attachPurchaseRecord(
   row: AllowedEmailEventRow,
-  purchase: Pick<PurchaseRecordRow, "product_name" | "purchase_date" | "status_hotmart"> | null | undefined,
+  purchase: Pick<PurchaseRecordRow, "product_name" | "product_id" | "purchase_date" | "status_hotmart" | "access_expires_at"> | null | undefined,
+  now = new Date(),
 ): AllowedEmailEventRow {
   // Some historical Hotmart events were migrated before the `purchases`
   // relation existed. In those cases, `allowed_emails` is the authoritative
   // record of the approved purchase. Keep accepting that record, while still
   // rejecting access explicitly marked as a masterclass or a refund.
   const purchaseVerified = purchase
-    ? isDiagnosticProductPurchase(purchase)
-    : isAllowedEmailAccessActive(row);
+    ? isDiagnosticProductPurchase(purchase, now)
+    : isAllowedEmailAccessActive(row, now);
   return {
     ...row,
     last_event: purchaseVerified ? (purchase?.status_hotmart ?? row.last_event) : null,
     purchase_date: purchaseVerified ? (purchase?.purchase_date ?? row.purchase_date ?? null) : null,
+    access_product_id: purchaseVerified && purchase ? (purchase.product_id ?? null) : row.access_product_id,
+    access_expires_at: purchaseVerified && purchase ? (purchase.access_expires_at ?? null) : row.access_expires_at,
     purchase_verified: purchaseVerified,
   };
 }
 
 export function buildPurchaseWindow(row: AllowedEmailEventRow | null, now = new Date()): PurchaseWindow {
-  if (!row || row.purchase_verified === false || !row.last_event || !purchaseEvents.has(row.last_event)) {
+  if (!row || row.purchase_verified === false || !isAllowedEmailAccessActive(row, now) || !row.last_event || !purchaseEvents.has(row.last_event)) {
     return {
       purchaseDate: null,
       purchaseEvent: row?.last_event ?? null,
@@ -190,7 +206,7 @@ export async function hasPurchasedAccessForEmail(
   const normalized = emailKey(email);
   const { data: allowedRows, error: allowedError } = await admin
     .from("allowed_emails")
-    .select("id,last_event,external_reference,source,notes,active")
+    .select("id,last_event,external_reference,source,notes,active,access_product_id,access_expires_at")
     .eq("email", normalized)
     .eq("active", true)
     .order("last_event_at", { ascending: false })
@@ -201,32 +217,24 @@ export async function hasPurchasedAccessForEmail(
   const transactionCodes = [...new Set((allowedRows ?? [])
     .map((row) => row.external_reference)
     .filter((value): value is string => Boolean(value)))];
+  let hasOnlyReferencedPurchaseRows = false;
 
   if (transactionCodes.length > 0) {
     const { data: purchasesByTransaction, error: transactionError } = await admin
       .from("purchases")
-      .select("id,transaction_code,product_name,status_hotmart,purchase_date,created_at")
+      .select("id,transaction_code,product_name,product_id,status_hotmart,purchase_date,created_at,access_expires_at")
       .in("transaction_code", transactionCodes)
       .limit(20);
 
     if (transactionError && !isMissingPurchaseRelationError(transactionError)) throw transactionError;
-    if ((purchasesByTransaction ?? []).some(isDiagnosticProductPurchase)) return true;
-
-    const transactionCodesWithPurchaseRows = new Set(
-      (purchasesByTransaction ?? [])
-        .map((purchase) => purchase.transaction_code)
-        .filter((value): value is string => Boolean(value)),
-    );
-    const hasOnlyReferencedPurchaseRows =
-      transactionCodesWithPurchaseRows.size > 0 &&
-      (allowedRows ?? [])
-        .filter((row) => row.external_reference)
-        .every((row) => transactionCodesWithPurchaseRows.has(row.external_reference as string));
-
-    if (hasOnlyReferencedPurchaseRows) return false;
+    if ((purchasesByTransaction ?? []).some((purchase) => isDiagnosticProductPurchase(purchase))) return true;
+    const foundCodes = new Set((purchasesByTransaction ?? [])
+      .map((purchase) => purchase.transaction_code)
+      .filter((value): value is string => Boolean(value)));
+    hasOnlyReferencedPurchaseRows = foundCodes.size > 0 && transactionCodes.every((code) => foundCodes.has(code));
   }
 
-  if ((allowedRows ?? []).some(isAllowedEmailAccessActive)) return true;
+  if (!hasOnlyReferencedPurchaseRows && (allowedRows ?? []).some((row) => isAllowedEmailAccessActive(row))) return true;
 
   const { data: client, error: clientError } = await admin
     .from("clients")
@@ -241,31 +249,32 @@ export async function hasPurchasedAccessForEmail(
 
   const { data: purchases, error } = await admin
     .from("purchases")
-    .select("id,product_name,status_hotmart,purchase_date,created_at")
+    .select("id,product_name,product_id,status_hotmart,purchase_date,created_at,access_expires_at")
     .eq("client_id", client.id)
     .in("status_hotmart", [...approvedPurchaseEvents])
     .limit(20);
 
   if (error && !isMissingPurchaseRelationError(error)) throw error;
-  return (purchases ?? []).some(isDiagnosticProductPurchase);
+  return (purchases ?? []).some((purchase) => isDiagnosticProductPurchase(purchase));
 }
 
 async function fetchPurchaseRecordForAllowedEmail(
   admin: ReturnType<typeof getAdminSupabase>,
   row: AllowedEmailEventRow,
 ) {
+  let referencedPurchase: PurchaseRecordRow | null = null;
   if (row.external_reference) {
     const { data, error } = await admin
       .from("purchases")
-      .select("client_id,transaction_code,product_name,status_hotmart,purchase_date,created_at")
+      .select("client_id,transaction_code,product_name,product_id,status_hotmart,purchase_date,created_at,access_expires_at")
       .eq("transaction_code", row.external_reference)
-      .in("status_hotmart", [...approvedPurchaseEvents])
       .order("purchase_date", { ascending: true })
       .limit(20);
 
     if (error && !isMissingPurchaseRelationError(error)) throw error;
-    const purchase = ((data ?? []) as PurchaseRecordRow[]).find(isDiagnosticProductPurchase);
+    const purchase = ((data ?? []) as PurchaseRecordRow[]).find((item) => isDiagnosticProductPurchase(item));
     if (purchase) return purchase;
+    referencedPurchase = ((data ?? []) as PurchaseRecordRow[])[0] ?? null;
   }
 
   const { data: client, error: clientError } = await admin
@@ -275,20 +284,20 @@ async function fetchPurchaseRecordForAllowedEmail(
     .limit(1)
     .maybeSingle();
 
-  if (clientError && isMissingPurchaseRelationError(clientError)) return null;
+  if (clientError && isMissingPurchaseRelationError(clientError)) return referencedPurchase;
   if (clientError) throw clientError;
-  if (!client?.id) return null;
+  if (!client?.id) return referencedPurchase;
 
   const { data, error } = await admin
     .from("purchases")
-    .select("client_id,transaction_code,product_name,status_hotmart,purchase_date,created_at")
+    .select("client_id,transaction_code,product_name,product_id,status_hotmart,purchase_date,created_at,access_expires_at")
     .eq("client_id", client.id)
     .in("status_hotmart", [...approvedPurchaseEvents])
     .order("purchase_date", { ascending: true })
     .limit(20);
 
   if (error && !isMissingPurchaseRelationError(error)) throw error;
-  return (((data ?? []) as PurchaseRecordRow[]).find(isDiagnosticProductPurchase) ?? null) as PurchaseRecordRow | null;
+  return ((data ?? []) as PurchaseRecordRow[]).find((item) => isDiagnosticProductPurchase(item)) ?? referencedPurchase;
 }
 
 export async function getPurchaseWindowForEmail(
@@ -299,7 +308,7 @@ export async function getPurchaseWindowForEmail(
   const normalized = emailKey(email);
   const { data, error } = await admin
     .from("allowed_emails")
-    .select("email,last_event,created_at,updated_at,last_event_at,external_reference,source,notes,active")
+    .select("email,last_event,created_at,updated_at,last_event_at,external_reference,source,notes,active,access_product_id,access_expires_at")
     .eq("email", normalized)
     .eq("active", true)
     .order("last_event_at", { ascending: false })
@@ -312,7 +321,7 @@ export async function getPurchaseWindowForEmail(
   const purchaseRecord = allowedEmailRow ? await fetchPurchaseRecordForAllowedEmail(admin, allowedEmailRow) : null;
 
   return buildPurchaseWindow(
-    allowedEmailRow ? attachPurchaseRecord(allowedEmailRow, purchaseRecord) : null,
+    allowedEmailRow ? attachPurchaseRecord(allowedEmailRow, purchaseRecord, now) : null,
     now,
   );
 }
