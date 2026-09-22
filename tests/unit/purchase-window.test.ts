@@ -149,6 +149,38 @@ describe("janela de compra para entrega", () => {
     })).toBe(false);
   });
 
+  it("aceita o bundle 8575181 enquanto a compra aprovada não expirou", () => {
+    expect(isDiagnosticProductPurchase({
+      product_id: 8575181,
+      product_name: "Simulador + Diário de Bordo",
+      status_hotmart: "PURCHASE_APPROVED",
+      access_expires_at: "2027-09-22T12:00:00.000Z",
+    }, new Date("2026-09-22T12:00:00.000Z"))).toBe(true);
+  });
+
+  it("nega o bundle expirado, pendente ou estornado", () => {
+    const bundle = {
+      product_id: 8575181,
+      product_name: "Simulador + Diário de Bordo",
+      access_expires_at: "2027-09-22T12:00:00.000Z",
+    };
+    const now = new Date("2027-09-22T12:00:00.000Z");
+
+    expect(isDiagnosticProductPurchase({ ...bundle, status_hotmart: "PURCHASE_APPROVED" }, now)).toBe(false);
+    expect(isDiagnosticProductPurchase({ ...bundle, status_hotmart: "PURCHASE_PENDING" }, now)).toBe(false);
+    expect(isDiagnosticProductPurchase({ ...bundle, status_hotmart: "PURCHASE_REFUNDED" }, now)).toBe(false);
+    expect(isDiagnosticProductPurchase({ ...bundle, status_hotmart: "PURCHASE_APPROVED", access_expires_at: null }, now)).toBe(false);
+  });
+
+  it("não aceita outro produto mesmo que tenha uma validade anual", () => {
+    expect(isDiagnosticProductPurchase({
+      product_id: 1234567,
+      product_name: "Diário de Bordo",
+      status_hotmart: "PURCHASE_APPROVED",
+      access_expires_at: "2027-09-22T12:00:00.000Z",
+    }, new Date("2026-09-22T12:00:00.000Z"))).toBe(false);
+  });
+
   it("considera allowed_emails manual ativo como acesso liberado", () => {
     expect(isAllowedEmailAccessActive({
       active: true,
@@ -174,6 +206,35 @@ describe("janela de compra para entrega", () => {
       source: "hotmart",
       notes: "Inscrição na masterclass, sem compra do simulador.",
     })).toBe(false);
+  });
+
+  it("não usa allowed_emails do bundle após o vencimento", () => {
+    const row = {
+      active: true,
+      last_event: "PURCHASE_APPROVED",
+      source: "hotmart",
+      notes: null,
+      access_product_id: 8575181,
+      access_expires_at: "2027-09-22T12:00:00.000Z",
+    };
+    expect(isAllowedEmailAccessActive(row, new Date("2027-09-22T11:59:59.000Z"))).toBe(true);
+    expect(isAllowedEmailAccessActive(row, new Date("2027-09-22T12:00:00.000Z"))).toBe(false);
+    expect(isAllowedEmailAccessActive({ ...row, access_expires_at: null })).toBe(false);
+  });
+
+  it("bloqueia a entrega do simulador quando o bundle expirou", () => {
+    const row: AllowedEmailEventRow = {
+      email: "cliente@example.com",
+      last_event: "PURCHASE_APPROVED",
+      purchase_date: "2026-09-22T12:00:00.000Z",
+      updated_at: "2026-09-22T12:00:00.000Z",
+      last_event_at: "2026-09-22T12:00:00.000Z",
+      active: true,
+      access_product_id: 8575181,
+      access_expires_at: "2027-09-22T12:00:00.000Z",
+    };
+    expect(buildPurchaseWindow(row, new Date("2026-10-01T12:00:00.000Z")).eligibleToSend).toBe(true);
+    expect(buildPurchaseWindow(row, new Date("2027-09-22T12:00:00.000Z")).eligibleToSend).toBe(false);
   });
 
   it("bloqueia janela de compra quando o acesso veio de produto que não é o simulador", () => {
