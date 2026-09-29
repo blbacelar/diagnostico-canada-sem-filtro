@@ -5,6 +5,7 @@ import {
   isAllowedEmailAccessActive,
   isDiagnosticProductPurchase,
   mapPurchaseWindowsByEmail,
+  shouldIncludeMapaOffer,
   type AllowedEmailEventRow,
 } from "../../lib/purchase-window";
 
@@ -156,6 +157,37 @@ describe("janela de compra para entrega", () => {
       status_hotmart: "PURCHASE_APPROVED",
       access_expires_at: "2027-09-22T12:00:00.000Z",
     }, new Date("2026-09-22T12:00:00.000Z"))).toBe(true);
+  });
+
+  it("reconhece a compra atual do Simulador Canadá Sem Filtro", () => {
+    expect(isDiagnosticProductPurchase({
+      product_id: 8259553,
+      product_name: "Simulador Canadá Sem Filtro",
+      status_hotmart: "PURCHASE_APPROVED",
+    })).toBe(true);
+  });
+
+  it("inclui a oferta do Meu Mapa somente para quem comprou apenas o Simulador", () => {
+    expect(shouldIncludeMapaOffer([{
+      product_id: 8259553,
+      product_name: "Simulador Canadá Sem Filtro",
+      status_hotmart: "PURCHASE_APPROVED",
+    }])).toBe(true);
+  });
+
+  it("omite a oferta do Meu Mapa para quem já possui o Meu Mapa Canadá", () => {
+    expect(shouldIncludeMapaOffer([
+      { product_id: 8259553, product_name: "Simulador Canadá Sem Filtro", status_hotmart: "PURCHASE_APPROVED" },
+      { product_id: 7957233, product_name: "O Meu Mapa Canadá", status_hotmart: "PURCHASE_APPROVED" },
+    ])).toBe(false);
+  });
+
+  it("omite a oferta do Meu Mapa para quem comprou o bundle", () => {
+    expect(shouldIncludeMapaOffer([{
+      product_id: 8575181,
+      product_name: "Simulador + Diário de Bordo",
+      status_hotmart: "PURCHASE_APPROVED",
+    }])).toBe(false);
   });
 
   it("nega o bundle expirado, pendente ou estornado", () => {

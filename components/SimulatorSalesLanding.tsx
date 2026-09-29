@@ -3,8 +3,11 @@
 import { useEffect } from "react";
 import Image from "next/image";
 import { ArrowRight, Check, CircleHelp, ClipboardCheck, FileText, LockKeyhole, Mail, ShieldCheck, Tag, UserRoundCheck, X } from "lucide-react";
+import { sendGTMEvent } from "@next/third-parties/google";
 import { simulatorDeliveryReleaseText, simulatorSalesConfig } from "../lib/simulator-sales";
+import { canadaSemFiltroTracking } from "../lib/marketing-tracking";
 import { BrandMark } from "./BrandMark";
+import { trackSimulatorMetaEvent } from "./SimulatorMetaPixel";
 
 type CtaPlacement = "header" | "hero" | "offer-card" | "report" | "final";
 type FunnelPayload = Record<string, string> & { event: string };
@@ -35,8 +38,25 @@ function sendFunnelEvent(event: string, detail: Record<string, string> = {}) {
     ...currentUtm(),
     ...detail,
   };
-  const trackingWindow = window as Window & { dataLayer?: FunnelPayload[] };
-  trackingWindow.dataLayer?.push(payload);
+  sendGTMEvent(payload);
+  if (event === "simulator_page_view") {
+    trackSimulatorMetaEvent("ViewContent", {
+      content_name: canadaSemFiltroTracking.productName,
+      content_type: "product",
+      content_ids: [canadaSemFiltroTracking.productId],
+      value: canadaSemFiltroTracking.productPrice,
+      currency: canadaSemFiltroTracking.currency,
+    }, "csf_simulator_view_content");
+  }
+  if (event === "simulator_checkout_started") {
+    trackSimulatorMetaEvent("InitiateCheckout", {
+      content_name: canadaSemFiltroTracking.productName,
+      content_type: "product",
+      content_ids: [canadaSemFiltroTracking.productId],
+      value: canadaSemFiltroTracking.productPrice,
+      currency: canadaSemFiltroTracking.currency,
+    });
+  }
   window.dispatchEvent(new CustomEvent("simulator:analytics", { detail: payload }));
 }
 
@@ -73,17 +93,17 @@ export function SimulatorSalesLanding() {
       <section className="simulator-hero" aria-labelledby="simulator-title">
         <div className="simulator-hero__copy">
           <p className="eyebrow"><span /> Simulador Canadá Sem Filtro</p>
-          <h1 id="simulator-title">Quer saber o que precisa ser organizado no seu perfil antes de <em>imigrar para o Canadá?</em></h1>
-          <p className="simulator-hero__lede">O Simulador organiza informações sobre família, idioma, profissão, recursos e objetivos em uma leitura personalizada, revisada por uma consultora, para você entender o que merece atenção antes do próximo investimento.</p>
-          <ul className="simulator-checklist simulator-checklist--hero" aria-label="O que você encontra no simulador">
-            <li><Check aria-hidden="true" /> Mais de 60 perguntas sobre o seu contexto</li><li><Check aria-hidden="true" /> Relatório personalizado</li><li><Check aria-hidden="true" /> Pontos fortes e pontos de atenção</li><li><Check aria-hidden="true" /> Prioridades para os próximos meses</li><li><Check aria-hidden="true" /> Revisão humana antes da entrega</li>
-          </ul>
+          <h1 id="simulator-title">Antes de investir no seu plano Canadá, organize o que seu perfil precisa <em>desenvolver.</em></h1>
+          <p className="simulator-hero__lede">O Simulador reúne informações sobre família, idioma, profissão, recursos e objetivos em uma leitura educativa, revisada por uma consultora, para mostrar o que merece atenção antes de decisões maiores.</p>
           <div className="simulator-hero__actions"><CheckoutLink placement="hero">Quero entender meu ponto de partida</CheckoutLink><span className="simulator-hero-price"><span>Por</span> <strong>{simulatorSalesConfig.currentPrice}</strong><span>à vista · {simulatorSalesConfig.installmentPrice}</span></span></div>
+          <ul className="simulator-checklist simulator-checklist--hero" aria-label="O que você encontra no simulador">
+            <li><Check aria-hidden="true" /> Mais de 60 perguntas para olhar seu contexto por inteiro</li><li><Check aria-hidden="true" /> Relatório personalizado, com revisão humana</li><li><Check aria-hidden="true" /> Pontos fortes e pontos que merecem desenvolvimento</li><li><Check aria-hidden="true" /> Prioridades para organizar os próximos meses</li><li><Check aria-hidden="true" /> Perguntas mais claras para uma futura consulta profissional</li>
+          </ul>
           <p className="simulator-fine-print"><LockKeyhole aria-hidden="true" /> Compra segura pela Hotmart · acesso individual por e-mail</p>
         </div>
 
         <aside className="simulator-offer-card" aria-label="Oferta do Simulador Canadá Sem Filtro">
-          <p className="eyebrow"><span /> Condição atual</p><h2>Clareza antes do próximo investimento.</h2>
+          <p className="eyebrow"><span /> Condição atual</p><h2>Mais clareza antes de investir tempo e dinheiro.</h2>
           <div className="simulator-price"><span>De <s>{simulatorSalesConfig.listPrice}</s></span><strong>{simulatorSalesConfig.currentPrice}</strong><small>À vista ou {simulatorSalesConfig.installmentPrice}</small></div>
           <div className="simulator-offer-card__rule" /><p>Você responde sobre a sua realidade. O material organiza contexto, pontos de atenção e perguntas que merecem aprofundamento.</p>
           <CheckoutLink placement="offer-card">Quero entender meu ponto de partida</CheckoutLink><small>Conteúdo educativo e informativo, com acesso individual.</small>
@@ -99,6 +119,17 @@ export function SimulatorSalesLanding() {
           <li><CircleHelp aria-hidden="true" /><span>quer identificar pontos que precisam ser desenvolvidos antes de investir;</span></li>
           <li><CircleHelp aria-hidden="true" /><span>deseja chegar a uma futura consulta profissional com perguntas mais claras.</span></li>
         </ul>
+      </section>
+
+      <section className="simulator-section simulator-outcomes" aria-labelledby="outcomes-title">
+        <div className="simulator-section-heading"><p className="eyebrow"><span /> O que muda na prática</p><h2 id="outcomes-title">Ao concluir, você entende melhor o que organizar antes do próximo passo.</h2><p>Não é uma resposta pronta sobre imigração. É uma base mais clara para sair do excesso de informação e conduzir seu planejamento com perguntas mais úteis.</p></div>
+        <div className="simulator-outcomes-list">
+          <article><Check aria-hidden="true" /><h3>Olhar o conjunto</h3><p>Família, idioma, profissão, recursos e objetivos deixam de ser decisões isoladas.</p></article>
+          <article><Check aria-hidden="true" /><h3>Reconhecer o que já existe</h3><p>Você visualiza pontos fortes do contexto que informou.</p></article>
+          <article><Check aria-hidden="true" /><h3>Dar nome aos pontos de atenção</h3><p>Entenda o que pede mais preparo, pesquisa ou validação profissional.</p></article>
+          <article><Check aria-hidden="true" /><h3>Organizar prioridades</h3><p>Tenha uma leitura de prioridades para os próximos 3, 6 e 12 meses.</p></article>
+          <article><Check aria-hidden="true" /><h3>Chegar com perguntas melhores</h3><p>Se optar por uma consulta profissional depois, você leva um contexto mais organizado.</p></article>
+        </div>
       </section>
 
       <section id="como-funciona" className="simulator-section simulator-how" aria-labelledby="how-title">
@@ -135,6 +166,7 @@ export function SimulatorSalesLanding() {
         <div className="simulator-section-heading"><p className="eyebrow"><span /> Antes de começar</p><h2 id="faq-title">Dúvidas frequentes</h2></div>
         <div className="simulator-faq-list">
           <details open><summary>O Simulador Canadá Sem Filtro é uma consulta de imigração?<span>+</span></summary><p>Não. É um conteúdo educativo e informativo criado para organizar seu contexto e suas perguntas. Não analisa elegibilidade, não garante aprovação e não substitui uma consulta profissional individual.</p></details>
+          <details><summary>Preciso já ter tudo definido para começar?<span>+</span></summary><p>Não. O Simulador serve justamente para reunir o que você já sabe sobre sua realidade e identificar os temas que ainda precisam de atenção, pesquisa ou validação.</p></details>
           <details><summary>Quanto tempo leva para responder?<span>+</span></summary><p>O preenchimento leva, em média, {simulatorSalesConfig.completionEstimate}. Você pode salvar as respostas e continuar depois usando o seu link pessoal.</p></details>
           <details><summary>Em quanto tempo receberei meu relatório?<span>+</span></summary><p>Depois que você envia as respostas, o prazo estimado para a revisão é de {simulatorSalesConfig.reviewEstimate}. A entrega por e-mail é liberada {simulatorDeliveryReleaseText}.</p></details>
           <details><summary>Uma consultora realmente revisa o material?<span>+</span></summary><p>Sim. O material passa por revisão profissional antes da entrega. Essa revisão não transforma o Simulador em consulta de imigração nem em análise individual de elegibilidade.</p></details>

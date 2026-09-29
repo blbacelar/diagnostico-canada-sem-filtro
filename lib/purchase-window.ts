@@ -7,9 +7,12 @@ export const approvedPurchaseEvents = ["APPROVED", "COMPLETE", "PURCHASE_COMPLET
 
 const purchaseEvents = new Set<string>(approvedPurchaseEvents);
 const annualBundleProductId = 8575181;
+const simulatorProductId = 8259553;
+const mapaCanadaProductId = 7957233;
 const dayInMs = 24 * 60 * 60 * 1000;
 const diagnosticProductNames = [
   "7 aulas + e-book + app + diagnostico - o canada e pra voce?",
+  "simulador canada sem filtro",
 ];
 const nonDiagnosticProductKeywords = [
   "masterclass",
@@ -74,6 +77,7 @@ export function isDiagnosticProductPurchase(
   now = new Date(),
 ) {
   if (!purchase || !isApprovedPurchaseStatus(purchase.status_hotmart)) return false;
+  if (purchase.product_id === simulatorProductId) return true;
   if (purchase.product_id === annualBundleProductId) {
     const expiresAt = parseDate(purchase.access_expires_at ?? null);
     return Boolean(expiresAt && expiresAt > now);
@@ -84,6 +88,34 @@ export function isDiagnosticProductPurchase(
     return false;
   }
   return diagnosticProductNames.some((allowedProduct) => productName === searchableText(allowedProduct));
+}
+
+function isMapaCanadaOrBundlePurchase(
+  purchase: Pick<PurchaseRecordRow, "product_name" | "product_id" | "status_hotmart">,
+) {
+  if (!isApprovedPurchaseStatus(purchase.status_hotmart)) return false;
+  if (purchase.product_id === mapaCanadaProductId || purchase.product_id === annualBundleProductId) return true;
+
+  const productName = searchableText(purchase.product_name);
+  return productName.includes("meu mapa canada")
+    || (productName.includes("simulador") && productName.includes("diario de bordo"));
+}
+
+function isStandaloneSimulatorPurchase(
+  purchase: Pick<PurchaseRecordRow, "product_name" | "product_id" | "status_hotmart">,
+) {
+  if (!isApprovedPurchaseStatus(purchase.status_hotmart) || isMapaCanadaOrBundlePurchase(purchase)) return false;
+  if (purchase.product_id === simulatorProductId) return true;
+  return searchableText(purchase.product_name) === searchableText("simulador canada sem filtro");
+}
+
+/**
+ * The offer is optional, so it is deliberately conservative: it appears only
+ * when the purchase history positively identifies the standalone Simulador and
+ * contains no approved Meu Mapa Canadá or bundle purchase.
+ */
+export function shouldIncludeMapaOffer(purchases: Array<Pick<PurchaseRecordRow, "product_name" | "product_id" | "status_hotmart">>) {
+  return purchases.some(isStandaloneSimulatorPurchase) && !purchases.some(isMapaCanadaOrBundlePurchase);
 }
 
 function hasNonDiagnosticProductSignal(value: string | null | undefined) {
@@ -197,6 +229,68 @@ export function mapPurchaseWindowsByEmail(rows: AllowedEmailEventRow[], now = ne
 function isMissingPurchaseRelationError(error: { code?: string; message?: string } | null) {
   if (!error) return false;
   return error.code === "PGRST205" || /purchases|clients|schema cache|column/i.test(error.message ?? "");
+}
+
+export async function shouldIncludeMapaOfferForEmail(
+  admin: ReturnType<typeof getAdminSupabase>,
+  email: string,
+  knownClientId?: string | null,
+) {
+  const normalized = emailKey(email);
+  const { data: allowedRows, error: allowedError } = await admin
+    .from("allowed_emails")
+    .select("external_reference")
+    .eq("email", normalized)
+    .limit(10);
+
+  // A failed optional lookup must never prevent the client from receiving the
+  // approved report. Without a complete history, omit the offer instead.
+  if (allowedError) return false;
+
+  let clientId = knownClientId ?? null;
+  if (!clientId) {
+    const { data: client, error: clientError } = await admin
+      .from("clients")
+      .select("id")
+      .eq("email", normalized)
+      .limit(1)
+      .maybeSingle();
+
+    if (clientError) return false;
+    clientId = client?.id ?? null;
+  }
+
+  const transactionCodes = [...new Set((allowedRows ?? [])
+    .map((row) => row.external_reference)
+    .filter((value): value is string => Boolean(value)))];
+
+  const purchases: PurchaseRecordRow[] = [];
+  if (transactionCodes.length > 0) {
+    const { data, error } = await admin
+      .from("purchases")
+      .select("client_id,transaction_code,product_name,product_id,status_hotmart,purchase_date,created_at,access_expires_at")
+      .in("transaction_code", transactionCodes)
+      .limit(100);
+    if (error) return false;
+    purchases.push(...((data ?? []) as PurchaseRecordRow[]));
+  }
+
+  if (clientId) {
+    const { data, error } = await admin
+      .from("purchases")
+      .select("client_id,transaction_code,product_name,product_id,status_hotmart,purchase_date,created_at,access_expires_at")
+      .eq("client_id", clientId)
+      .in("status_hotmart", [...approvedPurchaseEvents])
+      .limit(100);
+    if (error) return false;
+    purchases.push(...((data ?? []) as PurchaseRecordRow[]));
+  }
+
+  const uniquePurchases = [...new Map(purchases.map((purchase, index) => [
+    purchase.transaction_code ?? `${purchase.product_id ?? "unknown"}-${purchase.purchase_date ?? index}`,
+    purchase,
+  ])).values()];
+  return shouldIncludeMapaOffer(uniquePurchases);
 }
 
 export async function hasPurchasedAccessForEmail(
