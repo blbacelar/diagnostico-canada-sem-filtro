@@ -167,6 +167,14 @@ describe("janela de compra para entrega", () => {
     })).toBe(true);
   });
 
+  it("reconhece o Meu Mapa Canadá como pacote completo com acesso ao Simulador", () => {
+    expect(isDiagnosticProductPurchase({
+      product_id: 7957233,
+      product_name: "O Meu Mapa Canadá",
+      status_hotmart: "PURCHASE_COMPLETE",
+    })).toBe(true);
+  });
+
   it("inclui a oferta do Meu Mapa somente para quem comprou apenas o Simulador", () => {
     expect(shouldIncludeMapaOffer([{
       product_id: 8259553,

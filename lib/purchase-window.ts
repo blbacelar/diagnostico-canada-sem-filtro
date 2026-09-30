@@ -78,6 +78,8 @@ export function isDiagnosticProductPurchase(
 ) {
   if (!purchase || !isApprovedPurchaseStatus(purchase.status_hotmart)) return false;
   if (purchase.product_id === simulatorProductId) return true;
+  // O Meu Mapa Canadá é o pacote completo e inclui o acesso ao Simulador.
+  if (purchase.product_id === mapaCanadaProductId) return true;
   if (purchase.product_id === annualBundleProductId) {
     const expiresAt = parseDate(purchase.access_expires_at ?? null);
     return Boolean(expiresAt && expiresAt > now);
