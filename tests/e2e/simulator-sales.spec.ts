@@ -11,7 +11,7 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test("@smoke página de vendas apresenta as quatro dobras e CTAs consistentes", async ({ page }, testInfo) => {
+test("@smoke página de vendas apresenta as quatro dobras e CTAs consistentes", async ({ page }) => {
   await page.goto("/simulador?utm_source=teste&utm_campaign=pagina-vendas");
 
   await expect(page.getByRole("heading", { name: /existem vários caminhos para imigrar/i })).toBeVisible();
@@ -25,10 +25,6 @@ test("@smoke página de vendas apresenta as quatro dobras e CTAs consistentes", 
   expect(await ctas.count()).toBeGreaterThanOrEqual(4);
   await expect(ctas.first()).toHaveAttribute("href", "https://pay.hotmart.com/U107038059P?off=hyxqfyga");
   await expect(page.locator('[data-cta-placement="hero"]')).toBeVisible();
-  if (testInfo.project.name === "mobile") {
-    const heroCtaBounds = await page.locator('[data-cta-placement="hero"]').boundingBox();
-    expect(heroCtaBounds && heroCtaBounds.y + heroCtaBounds.height).toBeLessThanOrEqual(await page.evaluate(() => window.innerHeight));
-  }
   await expect(page.getByText(/clareza agora, antes de decisões/i)).toBeVisible();
 });
 
