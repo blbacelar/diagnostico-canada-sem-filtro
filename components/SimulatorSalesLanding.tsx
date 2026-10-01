@@ -87,26 +87,26 @@ export function SimulatorSalesLanding() {
       <header className="simulator-sales-header">
         <BrandMark />
         <nav aria-label="Navegação principal"><a href="#para-quem-e">Para quem é</a><a href="#como-funciona">Como funciona</a><a href="#o-que-recebe">O que você recebe</a><a href="#limites">Limites</a></nav>
-        <CheckoutLink placement="header" className="sales-header-cta">Quero entender meu ponto de partida</CheckoutLink>
+        <CheckoutLink placement="header" className="sales-header-cta">Quero meu relatório personalizado</CheckoutLink>
       </header>
 
       <section className="simulator-hero" aria-labelledby="simulator-title">
         <div className="simulator-hero__copy">
-          <p className="eyebrow"><span /> Simulador Canadá Sem Filtro</p>
-          <h1 id="simulator-title">Antes de investir no seu plano Canadá, organize o que seu perfil precisa <em>desenvolver.</em></h1>
-          <p className="simulator-hero__lede">O Simulador reúne informações sobre família, idioma, profissão, recursos e objetivos em uma leitura educativa, revisada por uma consultora, para mostrar o que merece atenção antes de decisões maiores.</p>
-          <div className="simulator-hero__actions"><CheckoutLink placement="hero">Quero entender meu ponto de partida</CheckoutLink><span className="simulator-hero-price"><span>Por</span> <strong>{simulatorSalesConfig.currentPrice}</strong><span>à vista · {simulatorSalesConfig.installmentPrice}</span></span></div>
-          <ul className="simulator-checklist simulator-checklist--hero" aria-label="O que você encontra no simulador">
-            <li><Check aria-hidden="true" /> Mais de 60 perguntas para olhar seu contexto por inteiro</li><li><Check aria-hidden="true" /> Relatório personalizado, com revisão humana</li><li><Check aria-hidden="true" /> Pontos fortes e pontos que merecem desenvolvimento</li><li><Check aria-hidden="true" /> Prioridades para organizar os próximos meses</li><li><Check aria-hidden="true" /> Perguntas mais claras para uma futura consulta profissional</li>
+          <p className="eyebrow"><span /> Questionário online + relatório personalizado</p>
+          <h1 id="simulator-title">Entenda o que você precisa preparar <em>antes de tentar morar no Canadá.</em></h1>
+          <p className="simulator-hero__lede">Você responde a um questionário sobre família, profissão, idioma, recursos e objetivos. Uma consultora revisa suas respostas e você recebe por e-mail um relatório personalizado com seus pontos fortes, pontos de atenção e prioridades para os próximos meses.</p>
+          <div className="simulator-hero__actions"><CheckoutLink placement="hero">Quero meu relatório personalizado</CheckoutLink><span className="simulator-hero-price"><span>Por</span> <strong>{simulatorSalesConfig.currentPrice}</strong><span>à vista · {simulatorSalesConfig.installmentPrice}</span></span></div>
+          <ul className="simulator-checklist simulator-checklist--hero" aria-label="O que está incluído no Simulador Canadá Sem Filtro">
+            <li><Check aria-hidden="true" /> Questionário online para preencher no seu ritmo</li><li><Check aria-hidden="true" /> Revisão humana do contexto que você informou</li><li><Check aria-hidden="true" /> Relatório com pontos fortes, alertas e prioridades para 3, 6 e 12 meses</li>
           </ul>
-          <p className="simulator-fine-print"><LockKeyhole aria-hidden="true" /> Compra segura pela Hotmart · acesso individual por e-mail</p>
+          <p className="simulator-fine-print"><LockKeyhole aria-hidden="true" /> Compra segura pela Hotmart · conteúdo educativo, não é consulta de imigração</p>
         </div>
 
         <aside className="simulator-offer-card" aria-label="Oferta do Simulador Canadá Sem Filtro">
-          <p className="eyebrow"><span /> Condição atual</p><h2>Mais clareza antes de investir tempo e dinheiro.</h2>
+          <p className="eyebrow"><span /> O que está incluído</p><h2>Questionário online, revisão humana e relatório personalizado.</h2>
           <div className="simulator-price"><span>De <s>{simulatorSalesConfig.listPrice}</s></span><strong>{simulatorSalesConfig.currentPrice}</strong><small>À vista ou {simulatorSalesConfig.installmentPrice}</small></div>
-          <div className="simulator-offer-card__rule" /><p>Você responde sobre a sua realidade. O material organiza contexto, pontos de atenção e perguntas que merecem aprofundamento.</p>
-          <CheckoutLink placement="offer-card">Quero entender meu ponto de partida</CheckoutLink><small>Conteúdo educativo e informativo, com acesso individual.</small>
+          <div className="simulator-offer-card__rule" /><p>Preencha em {simulatorSalesConfig.completionEstimate}, salve para continuar depois e receba por e-mail uma leitura feita a partir das suas respostas.</p>
+          <CheckoutLink placement="offer-card">Quero meu relatório personalizado</CheckoutLink><small>Conteúdo educativo e informativo. Não analisa elegibilidade migratória.</small>
         </aside>
       </section>
 
@@ -149,7 +149,7 @@ export function SimulatorSalesLanding() {
 
       <section id="o-que-recebe" className="simulator-section simulator-report-section" aria-labelledby="report-title">
         <figure className="simulator-report-preview" aria-labelledby="report-preview-caption"><div className="report-preview__brand"><BrandMark compact /></div><p>DEMONSTRAÇÃO ILUSTRATIVA</p><h3>Seu momento, com mais contexto.</h3><div className="report-preview__summary"><strong>68<small>/100</small></strong><span><small>NÍVEL DE PREPARO</small><b>Intermediário</b><p>Exemplo de leitura com base nas informações preenchidas, sem conclusão sobre elegibilidade.</p></span></div><div className="report-preview__blocks"><div><b>+</b><span><strong>Pontos fortes</strong><small>O que já sustenta o seu plano</small></span></div><div><b>!</b><span><strong>Pontos de atenção</strong><small>O que pede validação e preparo</small></span></div><div><b>→</b><span><strong>Prioridades para 3, 6 e 12 meses</strong><small>O que pode ser desenvolvido com mais clareza</small></span></div></div><figcaption id="report-preview-caption">Imagem demonstrativa; não representa o relatório de uma pessoa real.</figcaption></figure>
-        <div className="simulator-report-copy"><p className="eyebrow"><span /> O que chega para você</p><h2 id="report-title">Um relatório para substituir achismos por perguntas melhores.</h2><p>Você recebe uma devolutiva educativa com contexto familiar e profissional, nível de preparo, forças, alertas e prioridades. Ela aponta o que merece validação — sem confirmar elegibilidade, programas ou resultados.</p><ul className="simulator-checklist"><li><FileText aria-hidden="true" /> Resumo personalizado do cenário informado</li><li><FileText aria-hidden="true" /> Pontos fortes, pontos de atenção e informações que precisam de validação</li><li><FileText aria-hidden="true" /> Prioridades para os próximos 3, 6 e 12 meses</li></ul><CheckoutLink placement="report">Quero receber minha leitura</CheckoutLink></div>
+        <div className="simulator-report-copy"><p className="eyebrow"><span /> O que chega para você</p><h2 id="report-title">Um relatório para substituir achismos por perguntas melhores.</h2><p>Você recebe uma devolutiva educativa com contexto familiar e profissional, nível de preparo, forças, alertas e prioridades. Ela aponta o que merece validação — sem confirmar elegibilidade, programas ou resultados.</p><ul className="simulator-checklist"><li><FileText aria-hidden="true" /> Resumo personalizado do cenário informado</li><li><FileText aria-hidden="true" /> Pontos fortes, pontos de atenção e informações que precisam de validação</li><li><FileText aria-hidden="true" /> Prioridades para os próximos 3, 6 e 12 meses</li></ul><CheckoutLink placement="report">Quero meu relatório personalizado</CheckoutLink></div>
       </section>
 
       <section id="limites" className="simulator-limits" aria-labelledby="limits-title">
@@ -176,7 +176,7 @@ export function SimulatorSalesLanding() {
         </div>
       </section>
 
-      <section className="simulator-final-cta"><div><p className="eyebrow"><span /> Seu próximo passo</p><h2>Organize seu contexto antes de fazer o próximo investimento.</h2><p>O Simulador Canadá Sem Filtro está na condição atual de {simulatorSalesConfig.currentPrice}.</p></div><CheckoutLink placement="final">Quero entender meu ponto de partida</CheckoutLink></section>
+      <section className="simulator-final-cta"><div><p className="eyebrow"><span /> Seu próximo passo</p><h2>Organize seu contexto antes de fazer o próximo investimento.</h2><p>O Simulador Canadá Sem Filtro está na condição atual de {simulatorSalesConfig.currentPrice}.</p></div><CheckoutLink placement="final">Quero meu relatório personalizado</CheckoutLink></section>
       <section className="simulator-legal"><h2>Importante</h2><p>O Simulador Canadá Sem Filtro tem finalidade exclusivamente educativa e informativa. Não é consulta de imigração, não constitui aconselhamento jurídico e não garante elegibilidade, visto, residência permanente, emprego ou aprovação em programas.</p></section>
       <footer className="simulator-sales-footer"><BrandMark compact /><span>© 2026 Canadá Sem Filtro</span></footer>
     </main>
