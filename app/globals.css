@@ -242,8 +242,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 
 /* Página de vendas em quatro dobras */
 .simulator-hero__subhead { max-width: 690px; margin: 28px 0 0; color: var(--brand-blue); font: 400 clamp(27px, 3vw, 40px)/1.12 var(--font-display), serif; letter-spacing: -.015em; }
-.simulator-hero__subhead strong { color: var(--brand-maple); font-weight: 400; }
-.simulator-hero__questions { max-width: 650px; margin: 30px 0 0; color: var(--ink-soft); font: 600 13px/1.65 var(--font-mono), monospace; letter-spacing: .04em; text-transform: uppercase; }
+.simulator-hero__subhead strong { color: inherit; font-weight: 400; }
 .simulator-hero__lede strong { color: var(--brand-blue); font-weight: 600; }
 .simulator-offer-card .simulator-checklist { margin: 26px 0 0; color: #E7EDF5; }
 .simulator-offer-card .simulator-checklist li { color: #E7EDF5; }
@@ -281,7 +280,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .simulator-hero-price strong { font-size: 22px; }
   .simulator-hero__actions + .simulator-checklist--hero { margin-top: 22px; }
   .simulator-hero__subhead { font-size: 28px; }
-  .simulator-hero__questions { margin-top: 24px; font-size: 11px; }
   .simulator-hero-disclaimer { margin: -20px 0 0; }
   .simulator-problem, .simulator-how-compact, .simulator-final-offer { grid-template-columns: 1fr; }
   .simulator-problem { padding: 75px 20px; }

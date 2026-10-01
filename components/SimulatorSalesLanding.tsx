@@ -88,7 +88,6 @@ export function SimulatorSalesLanding() {
           <p className="eyebrow"><span /> Simulador de Projeto Canadá</p>
           <h1 id="simulator-title">Existem vários caminhos para <em>imigrar para o Canadá.</em></h1>
           <h2 className="simulator-hero__subhead">Mas antes de decidir por onde seguir, você precisa entender <strong>o que já tem a seu favor, o que ainda precisa desenvolver e o que deve priorizar agora.</strong></h2>
-          <p className="simulator-hero__questions">College? Trabalho? Francês? Uma província específica? Um programa de imigração?</p>
           <div className="simulator-hero__actions"><CheckoutLink placement="hero">Quero entender meu Projeto Canadá</CheckoutLink><span className="simulator-hero-price"><span>Por apenas</span> <strong>{simulatorSalesConfig.currentPrice}</strong></span></div>
         </div>
 
