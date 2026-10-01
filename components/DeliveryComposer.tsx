@@ -10,6 +10,8 @@ import { getDeliveryStatusMessage } from "../lib/status-labels";
 import { detailFetch, type CaseDetailData } from "./DiagnosticDetail";
 import { DashboardError } from "./DashboardData";
 import { Button } from "./ui/button";
+import { Checkbox } from "./ui/checkbox";
+import { Label } from "./ui/label";
 import { useCaseLockLifecycle } from "./useCaseLockLifecycle";
 
 const purchaseDateFormatter = new Intl.DateTimeFormat("pt-BR", {
@@ -31,11 +33,15 @@ export function DeliveryComposer({ caseId }: { caseId: string }) {
   const [deliveryMethod, setDeliveryMethod] = useState<"secure_link" | "pdf">(
     "secure_link",
   );
+  const [overrideDeliveryWait, setOverrideDeliveryWait] = useState(false);
   const [state, setState] = useState("");
   const [error, setError] = useState("");
 
   const deliveryWindow = detail?.delivery_window;
   const deliveryUnlocked = deliveryWindow?.eligible_to_send ?? true;
+  const canOverrideDeliveryWait =
+    deliveryWindow?.can_override_wait_period ?? false;
+  const canSend = deliveryUnlocked || (canOverrideDeliveryWait && overrideDeliveryWait);
 
   useCaseLockLifecycle(caseId);
 
@@ -79,9 +85,11 @@ export function DeliveryComposer({ caseId }: { caseId: string }) {
 
   async function send() {
     if (!review) return;
-    if (!deliveryUnlocked) {
+    if (!canSend) {
       setError(
-        deliveryWindow?.message ??
+        canOverrideDeliveryWait
+          ? "Marque a exceção ao prazo para confirmar o envio antecipado."
+          : deliveryWindow?.message ??
           "A entrega só é liberada após 7 dias da compra aprovada.",
       );
       return;
@@ -105,6 +113,7 @@ export function DeliveryComposer({ caseId }: { caseId: string }) {
             subject,
             body,
             deliveryMethod,
+            overrideDeliveryWait,
             idempotencyKey: crypto.randomUUID(),
           }),
         },
@@ -261,10 +270,33 @@ export function DeliveryComposer({ caseId }: { caseId: string }) {
           )}
 
           {!deliveryUnlocked && (
-            <p className="form-error" role="alert">
-              {deliveryWindow?.message ??
-                "A entrega só é liberada após 7 dias da compra aprovada."}
-            </p>
+            <>
+              <p className="form-error" role="alert">
+                {deliveryWindow?.message ??
+                  "A entrega só é liberada após 7 dias da compra aprovada."}
+              </p>
+
+              {canOverrideDeliveryWait && (
+                <div className="delivery-wait-override">
+                  <Checkbox
+                    id="override-delivery-wait"
+                    checked={overrideDeliveryWait}
+                    onCheckedChange={(checked) =>
+                      setOverrideDeliveryWait(checked === true)
+                    }
+                  />
+                  <div>
+                    <Label htmlFor="override-delivery-wait">
+                      Liberar envio antes do prazo
+                    </Label>
+                    <p>
+                      Confirmo esta exceção para uma compra aprovada. A ação será
+                      registrada no histórico do caso.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           <Button
@@ -272,7 +304,7 @@ export function DeliveryComposer({ caseId }: { caseId: string }) {
             disabled={
               review?.status !== "approved" ||
               state === "Enviando…" ||
-              !deliveryUnlocked
+              !canSend
             }
             onClick={send}
           >

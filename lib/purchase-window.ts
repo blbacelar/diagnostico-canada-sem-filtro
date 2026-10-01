@@ -43,6 +43,8 @@ export type PurchaseWindow = {
   daysSincePurchase: number | null;
   daysRemaining: number | null;
   eligibleToSend: boolean;
+  /** A consultant may manually waive only the waiting period, never purchase verification. */
+  canOverrideWaitPeriod: boolean;
   message: string;
 };
 
@@ -178,6 +180,7 @@ export function buildPurchaseWindow(row: AllowedEmailEventRow | null, now = new 
       daysSincePurchase: null,
       daysRemaining: null,
       eligibleToSend: false,
+      canOverrideWaitPeriod: false,
       message: "A entrega só é liberada após compra aprovada.",
     };
   }
@@ -190,6 +193,7 @@ export function buildPurchaseWindow(row: AllowedEmailEventRow | null, now = new 
       daysSincePurchase: null,
       daysRemaining: null,
       eligibleToSend: false,
+      canOverrideWaitPeriod: false,
       message: "Data da compra indisponível para este cliente.",
     };
   }
@@ -205,6 +209,7 @@ export function buildPurchaseWindow(row: AllowedEmailEventRow | null, now = new 
     daysSincePurchase,
     daysRemaining,
     eligibleToSend,
+    canOverrideWaitPeriod: !eligibleToSend,
     message: eligibleToSend
       ? "Envio liberado para este cliente."
       : `Envio liberado em ${daysRemaining} dia(s), após mais de ${DELIVERY_WAIT_DAYS} dias da compra.`,

@@ -38,8 +38,22 @@ describe("janela de compra para entrega", () => {
     const result = buildPurchaseWindow(row, new Date("2026-07-05T10:00:00.000Z"));
 
     expect(result.eligibleToSend).toBe(false);
+    expect(result.canOverrideWaitPeriod).toBe(true);
     expect(result.daysSincePurchase).toBe(4);
     expect(result.daysRemaining).toBe(4);
+  });
+
+  it("não permite exceção quando a compra não está confirmada", () => {
+    const result = buildPurchaseWindow({
+      email: "cliente@example.com",
+      last_event: "PURCHASE_REFUNDED",
+      updated_at: "2026-07-01T10:00:00.000Z",
+      last_event_at: "2026-07-01T10:00:00.000Z",
+      active: true,
+    }, new Date("2026-07-05T10:00:00.000Z"));
+
+    expect(result.eligibleToSend).toBe(false);
+    expect(result.canOverrideWaitPeriod).toBe(false);
   });
 
   it("usa a data real da compra em vez da data do último evento", () => {

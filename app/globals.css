@@ -975,6 +975,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .delivery-layout fieldset svg { width: 18px; color: var(--accent); }
 .delivery-layout fieldset label > span:last-child { display: grid; color: var(--ink-mute); font-size: 9px; }
 .delivery-layout fieldset strong { color: var(--ink); font-size: 11px; }
+.delivery-wait-override { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 12px; align-items: start; padding: 15px; border: 1px solid color-mix(in srgb, var(--warning) 45%, var(--paper-edge)); background: color-mix(in srgb, var(--warning) 8%, white); }
+.delivery-wait-override [data-slot="checkbox"] { margin-top: 2px; border-color: var(--warning); }
+.delivery-wait-override label { display: block; color: var(--ink); font-size: 13px; cursor: pointer; }
+.delivery-wait-override p { margin: 5px 0 0; color: var(--ink-mute); font-size: 12px; line-height: 1.45; }
 .pdf-icon { color: var(--accent); font: 600 8px var(--font-mono), monospace; }
 .delivery-layout > aside { position: sticky; top: 30px; }
 .email-preview { box-shadow: var(--shadow); background: white; }

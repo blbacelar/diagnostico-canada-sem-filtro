@@ -62,6 +62,7 @@ export type CaseDetailData = {
     days_since_purchase: number | null;
     days_remaining: number | null;
     eligible_to_send: boolean;
+    can_override_wait_period: boolean;
     message: string;
   };
 };

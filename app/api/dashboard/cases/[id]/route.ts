@@ -63,6 +63,7 @@ export async function GET(
           daysSincePurchase: null,
           daysRemaining: null,
           eligibleToSend: false,
+          canOverrideWaitPeriod: false,
           message: "A entrega só é liberada após compra aprovada.",
         };
 
@@ -89,6 +90,7 @@ export async function GET(
         days_since_purchase: purchaseWindow.daysSincePurchase,
         days_remaining: purchaseWindow.daysRemaining,
         eligible_to_send: purchaseWindow.eligibleToSend,
+        can_override_wait_period: purchaseWindow.canOverrideWaitPeriod,
         message: purchaseWindow.message,
       },
     });

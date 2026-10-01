@@ -67,7 +67,8 @@ export async function POST(request: Request) {
 
     const [target, config] = await Promise.all([caseClient(admin, payload.caseId), getOperationalConfig(admin)]);
     const purchaseWindow = await getPurchaseWindowForEmail(admin, target.client.email_normalized);
-    if (!purchaseWindow.eligibleToSend) {
+    const waitPeriodOverridden = !purchaseWindow.eligibleToSend && payload.overrideDeliveryWait;
+    if (!purchaseWindow.eligibleToSend && !(waitPeriodOverridden && purchaseWindow.canOverrideWaitPeriod)) {
       throw new ApiError(409, purchaseWindow.message, "PURCHASE_WAIT_PERIOD");
     }
 
@@ -80,12 +81,12 @@ export async function POST(request: Request) {
       if (payload.deliveryMethod === "pdf") pdf = await generateReportPdf(await getReportData(admin, payload.caseId));
       const result = await sendFinalDiagnosticWithPdf({ to: target.client.email_normalized, subject: payload.subject, body: payload.body, reportUrl, pdf, caseNumber: target.case.case_number });
       const status = result.error ? "failed" : "sent";
-      const { data: delivery, error } = await admin.from("diagnostic_email_deliveries").insert({ case_id: payload.caseId, delivery_type: "final_diagnostic", recipient: target.client.email_normalized, subject: payload.subject, body_snapshot: payload.body, status, provider_id: result.data?.id ?? null, error_code: result.error?.name ?? null, sent_at: result.error ? null : new Date().toISOString(), sent_by: user.id, idempotency_key: key, metadata: { deliveryMethod: payload.deliveryMethod, reportTokenId: "stored", reportLinkDays: config.reportLinkDays } }).select("id,status,provider_id").single();
+      const { data: delivery, error } = await admin.from("diagnostic_email_deliveries").insert({ case_id: payload.caseId, delivery_type: "final_diagnostic", recipient: target.client.email_normalized, subject: payload.subject, body_snapshot: payload.body, status, provider_id: result.data?.id ?? null, error_code: result.error?.name ?? null, sent_at: result.error ? null : new Date().toISOString(), sent_by: user.id, idempotency_key: key, metadata: { deliveryMethod: payload.deliveryMethod, reportTokenId: "stored", reportLinkDays: config.reportLinkDays, waitPeriodOverridden } }).select("id,status,provider_id").single();
       if (error) throw error;
       const nextStatus = result.error ? "approved" : "sent";
       await admin.from("diagnostic_cases").update({ status: nextStatus }).eq("id", payload.caseId).eq("assigned_consultant_id", user.id);
-      await admin.from("diagnostic_status_history").insert({ case_id: payload.caseId, from_status: "sending", to_status: nextStatus, actor_type: "consultant", actor_user_id: user.id, note: result.error ? "Falha no envio; parecer aprovado preservado." : "Resultado final do simulador enviado." });
-      await writeAudit(admin, { caseId: payload.caseId, actorUserId: user.id, actorType: "consultant", action: "diagnostic.delivery", metadata: { deliveryId: delivery.id, status, deliveryMethod: payload.deliveryMethod, reportLinkDays: config.reportLinkDays } });
+      await admin.from("diagnostic_status_history").insert({ case_id: payload.caseId, from_status: "sending", to_status: nextStatus, actor_type: "consultant", actor_user_id: user.id, note: result.error ? "Falha no envio; parecer aprovado preservado." : waitPeriodOverridden ? "Resultado final do simulador enviado antes do prazo por exceção da consultora." : "Resultado final do simulador enviado." });
+      await writeAudit(admin, { caseId: payload.caseId, actorUserId: user.id, actorType: "consultant", action: "diagnostic.delivery", metadata: { deliveryId: delivery.id, status, deliveryMethod: payload.deliveryMethod, reportLinkDays: config.reportLinkDays, waitPeriodOverridden } });
       return json({ delivery }, { status: result.error ? 502 : 200 });
     } catch (deliveryError) {
       await admin.from("diagnostic_cases").update({ status: "approved" }).eq("id", payload.caseId).eq("assigned_consultant_id", user.id);
@@ -105,11 +106,12 @@ export async function POST(request: Request) {
           deliveryMethod: payload.deliveryMethod,
           reportTokenId: "stored",
           reportLinkDays: config.reportLinkDays,
+          waitPeriodOverridden,
           errorMessage: deliveryErrorMessage(deliveryError),
         },
       });
       await admin.from("diagnostic_status_history").insert({ case_id: payload.caseId, from_status: "sending", to_status: "approved", actor_type: "consultant", actor_user_id: user.id, note: "Falha no envio; parecer aprovado preservado." });
-      await writeAudit(admin, { caseId: payload.caseId, actorUserId: user.id, actorType: "consultant", action: "diagnostic.delivery_failed", metadata: { status: "failed", deliveryMethod: payload.deliveryMethod, errorCode: deliveryErrorCode(deliveryError) } });
+      await writeAudit(admin, { caseId: payload.caseId, actorUserId: user.id, actorType: "consultant", action: "diagnostic.delivery_failed", metadata: { status: "failed", deliveryMethod: payload.deliveryMethod, waitPeriodOverridden, errorCode: deliveryErrorCode(deliveryError) } });
       throw new ApiError(502, "Não foi possível enviar o resultado final. O parecer aprovado foi preservado para nova tentativa.", "DELIVERY_FAILED");
     }
   } catch (error) {

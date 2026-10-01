@@ -97,6 +97,7 @@ export const sendDiagnosticSchema = z.object({
   subject: z.string().trim().min(3).max(180),
   body: z.string().trim().min(10).max(30_000),
   deliveryMethod: z.enum(["secure_link", "pdf"]).default("secure_link"),
+  overrideDeliveryWait: z.boolean().default(false),
   idempotencyKey: z.string().uuid(),
 });
 
