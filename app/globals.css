@@ -240,6 +240,36 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .simulator-hero-price strong { color: var(--brand-blue); font: 700 25px/1 var(--font-sans), sans-serif; letter-spacing: 0; }
 .simulator-hero__actions + .simulator-checklist--hero { margin-top: 28px; }
 
+/* Página de vendas em quatro dobras */
+.simulator-hero__subhead { max-width: 690px; margin: 28px 0 0; color: var(--brand-blue); font: 400 clamp(27px, 3vw, 40px)/1.12 var(--font-display), serif; letter-spacing: -.015em; }
+.simulator-hero__subhead strong { color: var(--brand-maple); font-weight: 400; }
+.simulator-hero__questions { max-width: 650px; margin: 30px 0 0; color: var(--ink-soft); font: 600 13px/1.65 var(--font-mono), monospace; letter-spacing: .04em; text-transform: uppercase; }
+.simulator-hero__lede strong { color: var(--brand-blue); font-weight: 600; }
+.simulator-offer-card .simulator-checklist { margin: 26px 0 0; color: #E7EDF5; }
+.simulator-offer-card .simulator-checklist li { color: #E7EDF5; }
+.simulator-offer-card .simulator-checklist strong { color: var(--brand-ivory); }
+.simulator-offer-card .simulator-checklist svg { color: #BFD5C8; }
+.simulator-offer-card .simulator-price { margin-bottom: 28px; }
+.simulator-hero-disclaimer { grid-column: 1 / -1; display: flex; align-items: flex-start; gap: 8px; max-width: 940px; margin: -48px 0 0; color: var(--ink-mute); font-size: 11px; line-height: 1.55; }
+.simulator-hero-disclaimer svg { width: 14px; flex: none; margin-top: 1px; color: var(--brand-pine); }
+.simulator-problem { display: grid; grid-template-columns: .85fr 1fr; gap: clamp(55px, 10vw, 150px); border-top: 1px solid var(--rule); background: var(--paper-light); max-width: none; padding-left: max(30px, calc((100vw - 1200px) / 2)); padding-right: max(30px, calc((100vw - 1200px) / 2)); }
+.simulator-problem__copy { align-self: center; }
+.simulator-problem__copy > p { margin: 0; color: var(--ink-soft); font: 400 18px/1.7 var(--font-body), serif; }
+.simulator-problem__copy > p + p { margin-top: 22px; }
+.simulator-problem__copy blockquote { margin: 35px 0; padding: 25px 28px; border-left: 3px solid var(--brand-maple); background: var(--brand-ivory); color: var(--brand-blue); font: 400 31px/1.15 var(--font-display), serif; }
+.simulator-how-compact { display: grid; grid-template-columns: .8fr 1fr; gap: clamp(45px, 9vw, 130px); align-items: start; margin-top: 85px; padding-top: 75px; border-top: 1px solid var(--rule); }
+.simulator-how-compact h3 { margin: 0; font: 400 clamp(38px, 4.5vw, 62px)/.98 var(--font-display), serif; }
+.simulator-how-compact > div > p:not(.eyebrow) { margin: 24px 0 0; color: var(--ink-soft); font: 400 19px/1.65 var(--font-body), serif; }
+.simulator-how-compact .simulator-checklist { padding: 30px; border-top: 2px solid var(--brand-maple); background: var(--paper-light); font-size: 16px; }
+.simulator-transformation { max-width: 900px; margin: 80px auto 0; padding: 48px; border: 1px solid var(--paper-edge); text-align: center; background: var(--brand-blue); color: var(--brand-ivory); }
+.simulator-transformation p, .simulator-transformation span { margin: 0; color: #D7E0EC; font: 600 10px var(--font-mono), monospace; letter-spacing: .1em; text-transform: uppercase; }
+.simulator-transformation blockquote { margin: 18px 0 28px; color: #D7E0EC; font: 400 26px/1.25 var(--font-display), serif; }
+.simulator-transformation h3 { margin: 20px 0 0; color: var(--brand-ivory); font: 400 clamp(38px, 5vw, 62px)/1 var(--font-display), serif; }
+.simulator-final-offer { display: grid; grid-template-columns: 1fr minmax(390px, .72fr); gap: clamp(55px, 9vw, 130px); align-items: center; border-top: 1px solid var(--rule); background: var(--paper-light); max-width: none; padding-left: max(30px, calc((100vw - 1200px) / 2)); padding-right: max(30px, calc((100vw - 1200px) / 2)); }
+.simulator-final-offer__copy > p:not(.eyebrow) { max-width: 690px; margin: 27px 0 0; color: var(--ink-soft); font: 400 19px/1.65 var(--font-body), serif; }
+.simulator-final-offer__closing { padding-top: 28px; border-top: 1px solid var(--rule); }
+.simulator-final-offer__closing strong { display: block; color: var(--brand-blue); }
+
 @media (max-width: 768px) {
   .simulator-sales-header { min-height: 72px; }
   .simulator-hero { padding-top: 20px; padding-bottom: 48px; }
@@ -250,6 +280,17 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .simulator-hero-price { width: 100%; font-size: 11px; }
   .simulator-hero-price strong { font-size: 22px; }
   .simulator-hero__actions + .simulator-checklist--hero { margin-top: 22px; }
+  .simulator-hero__subhead { font-size: 28px; }
+  .simulator-hero__questions { margin-top: 24px; font-size: 11px; }
+  .simulator-hero-disclaimer { margin: -20px 0 0; }
+  .simulator-problem, .simulator-how-compact, .simulator-final-offer { grid-template-columns: 1fr; }
+  .simulator-problem { padding: 75px 20px; }
+  .simulator-problem__copy blockquote { margin: 28px 0; padding: 22px; font-size: 27px; }
+  .simulator-how-compact { margin-top: 60px; padding-top: 55px; }
+  .simulator-how-compact .simulator-checklist { padding: 23px 20px; }
+  .simulator-transformation { margin-top: 60px; padding: 38px 22px; }
+  .simulator-final-offer { padding: 75px 20px; }
+  .simulator-final-offer .simulator-offer-card { max-width: none; }
 }
 
 /* Formulário do cliente */

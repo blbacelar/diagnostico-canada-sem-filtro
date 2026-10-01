@@ -11,26 +11,25 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test("@smoke página de vendas apresenta promessa, limites e CTAs consistentes", async ({ page }, testInfo) => {
+test("@smoke página de vendas apresenta as quatro dobras e CTAs consistentes", async ({ page }, testInfo) => {
   await page.goto("/simulador?utm_source=teste&utm_campaign=pagina-vendas");
 
-  await expect(page.getByRole("heading", { name: /entenda o que você precisa preparar/i })).toBeVisible();
-  await expect(page.getByRole("heading", { name: /este simulador é para você/i })).toBeVisible();
-  await expect(page.getByRole("heading", { name: /ao concluir, você entende melhor/i })).toBeVisible();
-  await expect(page.getByRole("heading", { name: /o que o simulador não promete/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /existem vários caminhos para imigrar/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /escolher o caminho antes de entender/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /o simulador foi criado para você/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /antes de investir em um caminho/i })).toBeVisible();
+  await expect(page.getByText(/seus 3 próximos passos/i).first()).toBeVisible();
   await expect(page.getByText(/termina em|oferta especial de hoje|renovada diariamente/i)).toHaveCount(0);
 
   const ctas = page.locator("a[data-cta-placement]");
-  expect(await ctas.count()).toBeGreaterThanOrEqual(5);
+  expect(await ctas.count()).toBeGreaterThanOrEqual(4);
   await expect(ctas.first()).toHaveAttribute("href", "https://pay.hotmart.com/U107038059P?off=hyxqfyga");
   await expect(page.locator('[data-cta-placement="hero"]')).toBeVisible();
   if (testInfo.project.name === "mobile") {
     const heroCtaBounds = await page.locator('[data-cta-placement="hero"]').boundingBox();
     expect(heroCtaBounds && heroCtaBounds.y + heroCtaBounds.height).toBeLessThanOrEqual(await page.evaluate(() => window.innerHeight));
   }
-  await expect(page.getByText(/demonstração ilustrativa/i).first()).toBeVisible();
-  await expect.poll(() => page.locator(".testimonial-screenshots img").evaluateAll((images) => images.every((image) => (image as HTMLImageElement).naturalWidth > 0))).toBe(true);
-  await expect.poll(() => page.locator(".testimonial-screenshots img").first().evaluate((image) => getComputedStyle(image).objectFit)).toBe("contain");
+  await expect(page.getByText(/clareza agora, antes de decisões/i)).toBeVisible();
 });
 
 test("@smoke registra eventos sem exigir tracker externo", async ({ page }) => {

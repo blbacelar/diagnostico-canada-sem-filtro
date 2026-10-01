@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { SimulatorSalesLanding } from "../../components/SimulatorSalesLanding";
 
 export const metadata: Metadata = {
-  title: "Simulador Canadá Sem Filtro | Organize seu plano Canadá",
-  description: "Organize família, idioma, profissão, recursos e objetivos antes de investir tempo e dinheiro no seu plano Canadá.",
+  title: "Simulador de Projeto Canadá | Canadá Sem Filtro",
+  description: "Entenda seus pontos fortes, pontos de atenção, prioridades e próximos passos antes das grandes decisões do seu Projeto Canadá.",
 };
 
 export default function SimulatorSalesPage() {
