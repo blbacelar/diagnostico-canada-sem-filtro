@@ -58,6 +58,8 @@ test("@tracking carrega o GTM e prepara o Meta Pixel da marca", async ({ page })
   await page.goto("/simulador?pixel_test=1");
 
   await expect(page.locator('script[src*="googletagmanager.com/gtm.js?id=GTM-P2K5JWSC"]')).toHaveCount(1);
+  await expect(page.locator('script[src*="googletagmanager.com/gtag/js?id=AW-18488294475"]')).toHaveCount(1);
+  expect(await page.locator("script#csf-google-ads").evaluate((script) => script.innerHTML)).toContain("gtag('config', 'AW-18488294475')");
   expect(await page.locator("script#csf-meta-pixel").evaluate((script) => script.innerHTML)).toContain("1505495854011697");
   await page.locator('[data-cta-placement="hero"]').click();
   const metaEvents = await page.evaluate(() => (window as Window & { __metaEvents?: Array<{ action: string; eventName: string }> }).__metaEvents);
