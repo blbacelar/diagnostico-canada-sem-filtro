@@ -23,8 +23,10 @@ test("@smoke página de vendas apresenta as quatro dobras e CTAs consistentes", 
 
   const ctas = page.locator("a[data-cta-placement]");
   expect(await ctas.count()).toBeGreaterThanOrEqual(4);
+  expect(await ctas.allTextContents()).toEqual(Array(await ctas.count()).fill("Quero começar o meu projeto"));
   await expect(ctas.first()).toHaveAttribute("href", "https://pay.hotmart.com/U107038059P?off=hyxqfyga");
-  await expect(page.locator('[data-cta-placement="hero"]')).toBeVisible();
+  await expect(page.locator('[data-cta-placement="hero"]')).toHaveText(/quero começar o meu projeto/i);
+  await expect(page.locator(".simulator-hero__copy").getByText(/por apenas/i)).toHaveCount(0);
   await expect(page.getByText(/clareza agora, antes de decisões/i)).toBeVisible();
 });
 
@@ -43,7 +45,6 @@ test("@brand aplica a paleta oficial do manual de identidade", async ({ page }) 
   await expect.poll(() => page.locator(".simulator-offer-bar").evaluate((element) => getComputedStyle(element).backgroundColor)).toBe("rgb(246, 184, 54)");
   await expect.poll(() => page.locator(".simulator-hero__copy h1").evaluate((element) => getComputedStyle(element).color)).toBe("rgb(22, 60, 114)");
   await expect.poll(() => page.locator('[data-cta-placement="hero"]').evaluate((element) => getComputedStyle(element).backgroundColor)).toBe("rgb(200, 52, 50)");
-  await expect.poll(() => page.locator(".simulator-hero-price strong").evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(22);
 });
 
 test("@tracking carrega o GTM e prepara o Meta Pixel da marca", async ({ page }) => {

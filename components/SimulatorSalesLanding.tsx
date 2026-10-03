@@ -15,7 +15,7 @@ export function SimulatorSalesLanding() {
       <header className="simulator-sales-header">
         <BrandMark />
         <nav aria-label="Navegação principal"><a href="#problema">Por que começar por você</a><a href="#para-quem-e">Para quem é</a><a href="#oferta">O que você recebe</a></nav>
-        <CheckoutLink placement="header" className="sales-header-cta">Quero entender meu Projeto Canadá</CheckoutLink>
+        <CheckoutLink placement="header" className="sales-header-cta">Quero começar o meu projeto</CheckoutLink>
       </header>
 
       <section className="simulator-hero" aria-labelledby="simulator-title">
@@ -23,7 +23,7 @@ export function SimulatorSalesLanding() {
           <p className="eyebrow"><span /> Simulador de Projeto Canadá</p>
           <h1 id="simulator-title">Existem vários caminhos para <em>imigrar para o Canadá.</em></h1>
           <h2 className="simulator-hero__subhead">Mas antes de decidir por onde seguir, você precisa entender <strong>o que já tem a seu favor, o que ainda precisa desenvolver e o que deve priorizar agora.</strong></h2>
-          <div className="simulator-hero__actions"><CheckoutLink placement="hero">Quero entender meu Projeto Canadá</CheckoutLink><span className="simulator-hero-price"><span>Por apenas</span> <strong>{simulatorSalesConfig.currentPrice}</strong></span></div>
+          <div className="simulator-hero__actions"><CheckoutLink placement="hero">Quero começar o meu projeto</CheckoutLink></div>
         </div>
 
         <aside className="simulator-offer-card" aria-label="Oferta do Simulador Canadá Sem Filtro">
@@ -37,7 +37,7 @@ export function SimulatorSalesLanding() {
             <li><Check aria-hidden="true" /> Um plano de preparação para <strong>3, 6 e 12 meses</strong></li>
           </ul>
           <div className="simulator-price"><span>Por apenas</span><strong>{simulatorSalesConfig.currentPrice}</strong><small>À vista ou {simulatorSalesConfig.installmentPrice}</small></div>
-          <CheckoutLink placement="offer-card">Quero entender meu Projeto Canadá</CheckoutLink>
+          <CheckoutLink placement="offer-card">Quero começar o meu projeto</CheckoutLink>
         </aside>
 
         <p className="simulator-hero-disclaimer"><LockKeyhole aria-hidden="true" /> Ferramenta educativa e de planejamento. Não realiza análise de elegibilidade, não garante aprovação e não substitui uma consultoria de imigração.</p>
@@ -105,7 +105,7 @@ export function SimulatorSalesLanding() {
           </ul>
           <div className="simulator-price"><strong>{simulatorSalesConfig.currentPrice}</strong><small>À vista ou {simulatorSalesConfig.installmentPrice}</small></div>
           <p><strong>Clareza agora, antes de decisões que podem envolver meses de preparação e milhares de reais.</strong></p>
-          <CheckoutLink placement="final">Quero descobrir meus próximos passos</CheckoutLink>
+          <CheckoutLink placement="final">Quero começar o meu projeto</CheckoutLink>
         </aside>
       </section>
 
