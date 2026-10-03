@@ -1,7 +1,17 @@
-import { Check, LockKeyhole, Tag } from "lucide-react";
+import { ArrowRight, Check, LockKeyhole, Tag } from "lucide-react";
 import { simulatorSalesConfig } from "../lib/simulator-sales";
 import { BrandMark } from "./BrandMark";
-import { CheckoutLink, SimulatorPageTracking } from "./SimulatorSalesTracking";
+import { SimulatorPageTracking } from "./SimulatorSalesTracking";
+
+type CtaPlacement = "header" | "hero" | "offer-card" | "report" | "final";
+
+function CheckoutLink({ placement, className = "sales-primary-button", children }: { placement: CtaPlacement; className?: string; children: React.ReactNode }) {
+  return (
+    <a className={className} data-cta-placement={placement} href={simulatorSalesConfig.checkoutUrl} target="_blank" rel="noreferrer">
+      {children}<ArrowRight aria-hidden="true" />
+    </a>
+  );
+}
 
 export function SimulatorSalesLanding() {
   return (
