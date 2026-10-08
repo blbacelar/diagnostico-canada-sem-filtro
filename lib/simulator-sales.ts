@@ -4,7 +4,7 @@ export const simulatorSalesConfig = {
   currentPrice: "R$ 97",
   installmentPrice: "12x R$ 10,03",
   completionEstimate: "25–35 minutos",
-  reviewEstimate: "até 5 dias úteis",
+  reviewEstimate: "até 7 dias úteis",
   deliveryReleaseDays: 7,
 } as const;
 
