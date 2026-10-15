@@ -1,7 +1,6 @@
 import { ArrowRight, Check, LockKeyhole, Tag } from "lucide-react";
 import { simulatorSalesConfig } from "../lib/simulator-sales";
 import { BrandMark } from "./BrandMark";
-import { SimulatorPageTracking } from "./SimulatorSalesTracking";
 
 type CtaPlacement = "header" | "hero" | "offer-card" | "report" | "final";
 
@@ -16,7 +15,6 @@ function CheckoutLink({ placement, className = "sales-primary-button", children 
 export function SimulatorSalesLanding() {
   return (
     <main className="simulator-sales-page">
-      <SimulatorPageTracking />
       <aside className="simulator-offer-bar" aria-label="Condição atual do Simulador Canadá Sem Filtro">
         <span><Tag aria-hidden="true" /> Condição atual: de {simulatorSalesConfig.listPrice} por <strong>{simulatorSalesConfig.currentPrice}</strong></span>
         <span className="simulator-price-inline">À vista ou {simulatorSalesConfig.installmentPrice}</span>

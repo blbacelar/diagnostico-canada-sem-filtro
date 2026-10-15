@@ -1,14 +1,22 @@
-import { GoogleTagManager } from "@next/third-parties/google";
 import Script from "next/script";
-import { SimulatorMetaPixel } from "../../components/SimulatorMetaPixel";
-import { canadaSemFiltroTracking } from "../../lib/marketing-tracking";
+
+const googleAdsId = "AW-18488294475";
+const googleTagManagerId = "GTM-P2K5JWSC";
 
 export default function SimulatorLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <>
-      <GoogleTagManager gtmId={canadaSemFiltroTracking.googleTagManagerId} />
+      <Script id="csf-google-tag-manager" strategy="afterInteractive">
+        {`
+          (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+          new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+          j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+          'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+          })(window,document,'script','dataLayer','${googleTagManagerId}');
+        `}
+      </Script>
       <Script
-        src={`https://www.googletagmanager.com/gtag/js?id=${canadaSemFiltroTracking.googleAdsId}`}
+        src={`https://www.googletagmanager.com/gtag/js?id=${googleAdsId}`}
         strategy="afterInteractive"
       />
       <Script id="csf-google-ads" strategy="afterInteractive">
@@ -16,19 +24,18 @@ export default function SimulatorLayout({ children }: Readonly<{ children: React
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
           gtag('js', new Date());
-          gtag('config', '${canadaSemFiltroTracking.googleAdsId}');
+          gtag('config', '${googleAdsId}');
         `}
       </Script>
       <noscript>
         <iframe
           aria-label="Google Tag Manager"
           height="0"
-          src={`https://www.googletagmanager.com/ns.html?id=${canadaSemFiltroTracking.googleTagManagerId}`}
+          src={`https://www.googletagmanager.com/ns.html?id=${googleTagManagerId}`}
           style={{ display: "none", visibility: "hidden" }}
           width="0"
         />
       </noscript>
-      <SimulatorMetaPixel />
       {children}
     </>
   );
