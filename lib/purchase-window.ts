@@ -164,7 +164,12 @@ export function attachPurchaseRecord(
     : isAllowedEmailAccessActive(row, now);
   return {
     ...row,
-    last_event: purchaseVerified ? (purchase?.status_hotmart ?? row.last_event) : null,
+    // Legacy purchases migrated before the `purchases` relation may have an
+    // active access record without a Hotmart event value. That access is
+    // already treated as verified by `isAllowedEmailAccessActive`; normalize
+    // it to an approved event as well so the delivery window uses the same
+    // authorization decision as form access.
+    last_event: purchaseVerified ? (purchase?.status_hotmart ?? row.last_event ?? "PURCHASE_APPROVED") : null,
     purchase_date: purchaseVerified ? (purchase?.purchase_date ?? row.purchase_date ?? null) : null,
     access_product_id: purchaseVerified && purchase ? (purchase.product_id ?? null) : row.access_product_id,
     access_expires_at: purchaseVerified && purchase ? (purchase.access_expires_at ?? null) : row.access_expires_at,

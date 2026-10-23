@@ -131,6 +131,26 @@ describe("janela de compra para entrega", () => {
     expect(result.eligibleToSend).toBe(true);
   });
 
+  it("normaliza um acesso legado ativo sem evento para permitir a entrega", () => {
+    const row: AllowedEmailEventRow = {
+      email: "cliente@example.com",
+      last_event: null,
+      created_at: "2026-08-01T22:12:34.226Z",
+      updated_at: "2026-08-09T12:31:51.988Z",
+      last_event_at: null,
+      source: "manual",
+      active: true,
+    };
+
+    const attached = attachPurchaseRecord(row, null);
+    const result = buildPurchaseWindow(attached, new Date("2026-08-11T12:00:00.000Z"));
+
+    expect(attached.purchase_verified).toBe(true);
+    expect(attached.last_event).toBe("PURCHASE_APPROVED");
+    expect(result.purchaseDate).toBe("2026-08-01T22:12:34.226Z");
+    expect(result.eligibleToSend).toBe(true);
+  });
+
   it("não usa o fallback legado para uma inscrição de masterclass", () => {
     const row: AllowedEmailEventRow = {
       email: "cliente@example.com",
