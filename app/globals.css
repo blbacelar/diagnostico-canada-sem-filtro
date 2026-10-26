@@ -590,16 +590,22 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .service-time > div b { display: block; height: 100%; background: var(--accent-soft); }
 .service-time > small { display: block; margin-top: 10px; color: #8da0ab; font: 500 7px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .1em; }
 .list-toolbar { margin: 28px 0 18px; display: grid; grid-template-columns: minmax(260px, 1fr) 250px; gap: 12px; }
+.list-toolbar--diagnostics { grid-template-columns: minmax(240px, 1fr) 190px 190px 150px 150px; }
 .list-toolbar label { min-height: 48px; padding: 0 14px; display: flex; align-items: center; gap: 10px; border: 1px solid var(--paper-edge); background: var(--paper-light); }
 .list-toolbar svg { width: 15px; color: var(--ink-mute); }
 .list-toolbar input, .list-toolbar select { width: 100%; border: 0; outline: 0; background: transparent; font-size: 12px; }
+.list-toolbar__date { min-width: 0; }
+.list-toolbar__date span { color: var(--ink-mute); font: 500 8px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .08em; }
+.list-toolbar__date input[type="date"] { min-width: 0; color: var(--ink); font: 500 10px var(--font-mono), monospace; }
 .list-toolbar [data-slot="select"] { width: 100%; }
 .list-toolbar__select-trigger { width: 100% !important; min-height: 0 !important; height: auto !important; border: 0 !important; border-radius: 0 !important; background: transparent !important; padding: 0 !important; box-shadow: none !important; font-size: 12px !important; }
 .list-toolbar__select-trigger:focus-visible { outline: 0 !important; box-shadow: none !important; }
 .diagnostic-table { width: 100%; border: 1px solid var(--paper-edge); background: var(--paper-light); overflow: visible; }
-.diagnostic-table__scroll { overflow: visible; }
-.diagnostic-table__table { width: 100%; min-width: 860px; }
-.table-pagination { min-width: 860px; min-height: 52px; padding: 10px 20px; display: flex; align-items: center; justify-content: flex-end; gap: 12px; border-top: 1px solid var(--paper-edge); background: var(--paper-light); }
+.diagnostic-table__scroll { overflow-x: auto; }
+.diagnostic-table__table { width: 100%; min-width: 1300px; }
+.diagnostic-table__date { color: var(--ink-mute); font: 500 8px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+.diagnostic-table__date--empty { color: var(--ink-mute); }
+.table-pagination { min-width: 1300px; min-height: 52px; padding: 10px 20px; display: flex; align-items: center; justify-content: flex-end; gap: 12px; border-top: 1px solid var(--paper-edge); background: var(--paper-light); }
 .table-pagination > span { color: var(--ink-mute); font: 500 8px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .08em; }
 .table-pagination > button { min-width: 92px; min-height: 32px; padding: 0 12px; border: 1px solid var(--paper-edge); background: white; color: var(--ink); font: 500 8px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .08em; cursor: pointer; }
 .table-pagination > button[disabled] { opacity: .45; cursor: default; }

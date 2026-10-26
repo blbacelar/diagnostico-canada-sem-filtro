@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   attachPurchaseRecord,
   buildPurchaseWindow,
+  getDeliveryReleaseAt,
   isAllowedEmailAccessActive,
   isDiagnosticProductPurchase,
   mapPurchaseWindowsByEmail,
@@ -24,6 +25,12 @@ describe("janela de compra para entrega", () => {
     expect(result.eligibleToSend).toBe(true);
     expect(result.daysSincePurchase).toBe(8);
     expect(result.daysRemaining).toBe(0);
+    expect(result.deliveryReleaseAt).toBe("2026-07-09T10:00:00.000Z");
+  });
+
+  it("calcula a data de liberação com a mesma regra da janela de envio", () => {
+    expect(getDeliveryReleaseAt("2026-07-01T10:00:00.000Z")).toBe("2026-07-09T10:00:00.000Z");
+    expect(getDeliveryReleaseAt(null)).toBeNull();
   });
 
   it("bloqueia envio com menos de 7 dias", () => {

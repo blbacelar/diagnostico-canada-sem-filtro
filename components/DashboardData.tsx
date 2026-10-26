@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "./ui/select";
 
-type CaseRow = { id: string; case_number: string; status: string; objective: string | null; submitted_at: string | null; updated_at: string; assigned_consultant_id?: string | null; locked_by_other?: boolean; locked_by_name?: string | null; diagnostic_clients: { full_name: string; email_display: string } | null; diagnostic_ai_assessments?: Array<{ structured_result: { overallScore?: number; readinessLevel?: string; technicalAlerts?: string[] } }> };
+type CaseRow = { id: string; case_number: string; status: string; objective: string | null; created_at: string; submitted_at: string | null; updated_at: string; purchase_date?: string | null; delivery_release_at?: string | null; assigned_consultant_id?: string | null; locked_by_other?: boolean; locked_by_name?: string | null; diagnostic_clients: { full_name: string; email_display: string } | null; diagnostic_ai_assessments?: Array<{ structured_result: { overallScore?: number; readinessLevel?: string; technicalAlerts?: string[] } }> };
 type Summary = { counts: Record<string, number>; recent: CaseRow[]; averageHours: number | null; reviewSlaHours: number };
 type CaseListResponse = {
   items: CaseRow[];
@@ -85,6 +85,9 @@ export function DiagnosticsListClient() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
+  const [dateField, setDateField] = useState("purchase");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [error, setError] = useState(false);
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({
@@ -100,6 +103,9 @@ export function DiagnosticsListClient() {
     const query = new URLSearchParams();
     if (search) query.set("search", search);
     if (status) query.set("status", status);
+    query.set("dateField", dateField);
+    if (dateFrom) query.set("dateFrom", dateFrom);
+    if (dateTo) query.set("dateTo", dateTo);
     query.set("page", String(page));
     query.set("pageSize", String(PAGE_SIZE));
 
@@ -116,7 +122,7 @@ export function DiagnosticsListClient() {
     }, 250);
 
     return () => clearTimeout(timer);
-  }, [page, search, status]);
+  }, [page, search, status, dateField, dateFrom, dateTo]);
 
   function goToPreviousPage() {
     setPage((current) => Math.max(1, current - 1));
@@ -132,8 +138,14 @@ export function DiagnosticsListClient() {
 
   return <>
     <DashboardHeader eyebrow="Operações" title="Simuladores" description="Acompanhe o funil completo do simulador, revisões ativas e prontas para entrega." />
-    <div className="list-toolbar"><label className="list-toolbar__search"><Search /><input aria-label="Buscar simuladores" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Buscar por nome, e-mail ou código" /></label><label className="list-toolbar__select"><Select value={status || "all"} onValueChange={(value) => { setStatus(value === "all" ? "" : value); setPage(1); }}><SelectTrigger className="list-toolbar__select-trigger"><SelectValue placeholder="Todos os status" /></SelectTrigger><SelectContent><SelectItem value="all">Todos os status</SelectItem>{Object.entries(caseStatusLabels).map(([value,label]) => <SelectItem value={value} key={value}>{label}</SelectItem>)}</SelectContent></Select></label></div>
-    {error ? <DashboardError /> : loading ? <DashboardLoading /> : <div className="diagnostic-table"><div className="diagnostic-table__scroll"><Table className="diagnostic-table__table"><TableHeader><TableRow><TableHead className="w-[320px]">Cliente / simulador</TableHead><TableHead>Objetivo</TableHead><TableHead>Status</TableHead><TableHead>Preparo</TableHead><TableHead>Alertas</TableHead><TableHead className="w-[18px]" /></TableRow></TableHeader><TableBody>{items.length ? items.map((item) => <DiagnosticTableRow key={item.id} item={item} onOpen={openCase} />) : <TableRow><TableCell colSpan={6}><div className="empty-row">Nenhum simulador encontrado.</div></TableCell></TableRow>}</TableBody></Table><footer className="table-pagination"><button type="button" onClick={goToPreviousPage} disabled={!pagination.hasPreviousPage}>Anterior</button><span>Página {pagination.page} de {pagination.totalPages} · {pagination.total} itens</span><button type="button" onClick={goToNextPage} disabled={!pagination.hasNextPage}>Próxima</button></footer></div></div>}
+    <div className="list-toolbar list-toolbar--diagnostics">
+      <label className="list-toolbar__search"><Search /><input aria-label="Buscar simuladores" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Buscar por nome, e-mail ou código" /></label>
+      <label className="list-toolbar__select"><Select value={status || "all"} onValueChange={(value) => { setStatus(value === "all" ? "" : value); setPage(1); }}><SelectTrigger className="list-toolbar__select-trigger"><SelectValue placeholder="Todos os status" /></SelectTrigger><SelectContent><SelectItem value="all">Todos os status</SelectItem>{Object.entries(caseStatusLabels).map(([value,label]) => <SelectItem value={value} key={value}>{label}</SelectItem>)}</SelectContent></Select></label>
+      <label className="list-toolbar__select"><Select value={dateField} onValueChange={(value) => { setDateField(value); setPage(1); }}><SelectTrigger className="list-toolbar__select-trigger" aria-label="Tipo de data para filtrar"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="purchase">Data da compra</SelectItem><SelectItem value="draft">Entrada como rascunho</SelectItem><SelectItem value="release">Previsão de envio</SelectItem></SelectContent></Select></label>
+      <label className="list-toolbar__date"><span>De</span><input aria-label="Data inicial do filtro" type="date" value={dateFrom} onChange={(event) => { setDateFrom(event.target.value); setPage(1); }} /></label>
+      <label className="list-toolbar__date"><span>Até</span><input aria-label="Data final do filtro" type="date" value={dateTo} onChange={(event) => { setDateTo(event.target.value); setPage(1); }} /></label>
+    </div>
+    {error ? <DashboardError /> : loading ? <DashboardLoading /> : <div className="diagnostic-table"><div className="diagnostic-table__scroll"><Table className="diagnostic-table__table"><TableHeader><TableRow><TableHead className="w-[280px]">Cliente / simulador</TableHead><TableHead>Objetivo</TableHead><TableHead>Status</TableHead><TableHead>Compra</TableHead><TableHead>Rascunho</TableHead><TableHead>Previsão de envio</TableHead><TableHead>Preparo</TableHead><TableHead>Alertas</TableHead><TableHead className="w-[18px]" /></TableRow></TableHeader><TableBody>{items.length ? items.map((item) => <DiagnosticTableRow key={item.id} item={item} onOpen={openCase} />) : <TableRow><TableCell colSpan={9}><div className="empty-row">Nenhum simulador encontrado.</div></TableCell></TableRow>}</TableBody></Table><footer className="table-pagination"><button type="button" onClick={goToPreviousPage} disabled={!pagination.hasPreviousPage}>Anterior</button><span>Página {pagination.page} de {pagination.totalPages} · {pagination.total} itens</span><button type="button" onClick={goToNextPage} disabled={!pagination.hasNextPage}>Próxima</button></footer></div></div>}
   </>;
 }
 
@@ -156,6 +168,9 @@ function DiagnosticTableRow({ item, onOpen }: { item: CaseRow; onOpen: (caseId: 
     </TableCell>
     <TableCell className="whitespace-nowrap text-[12px] uppercase tracking-[.08em]">{item.objective ?? "Objetivo não informado"}</TableCell>
     <TableCell><span className={`status-pill status-${item.status}`}>{getCaseStatusLabel(item.status)}</span></TableCell>
+    <TableCell><DateTableCell value={item.purchase_date} /></TableCell>
+    <TableCell><DateTableCell value={item.created_at} /></TableCell>
+    <TableCell><DateTableCell value={item.delivery_release_at} /></TableCell>
     <TableCell><span className="score">{score ?? "—"}<small>{typeof score === "number" ? "/100" : ""}</small></span></TableCell>
     <TableCell>
       {alertsCount > 0 ? <span className="alert-count alert-count--with-popover"><AlertTriangle />{alertsCount}<span className="alert-popover" role="tooltip"><strong>Alertas técnicos</strong><ul>{technicalAlerts.map((alert, index) => <li key={`${item.id}-alert-${index}`}>{alert}</li>)}</ul></span></span> : <span className="alert-count alert-count--empty">—</span>}
@@ -165,6 +180,10 @@ function DiagnosticTableRow({ item, onOpen }: { item: CaseRow; onOpen: (caseId: 
 }
 
 const dateFormatter = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+
+function DateTableCell({ value }: { value: string | null | undefined }) {
+  return value ? <time className="diagnostic-table__date" dateTime={value}>{dateFormatter.format(new Date(value))}</time> : <span className="diagnostic-table__date diagnostic-table__date--empty">—</span>;
+}
 
 export function ClientsListClient() {
   const [items, setItems] = useState<ClientListItem[]>([]);

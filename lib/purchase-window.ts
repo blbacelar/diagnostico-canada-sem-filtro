@@ -39,6 +39,7 @@ export type AllowedEmailEventRow = {
 
 export type PurchaseWindow = {
   purchaseDate: string | null;
+  deliveryReleaseAt: string | null;
   purchaseEvent: string | null;
   daysSincePurchase: number | null;
   daysRemaining: number | null;
@@ -57,6 +58,11 @@ export type PurchaseRecordRow = {
   status_hotmart: string | null;
   purchase_date: string | null;
   created_at: string | null;
+};
+
+export type PurchaseWindowClient = {
+  id: string;
+  email: string;
 };
 
 function emailKey(value: string) {
@@ -150,6 +156,12 @@ function canonicalPurchaseDate(row: AllowedEmailEventRow) {
   return parseDate(row.purchase_date ?? null) ?? parseDate(row.created_at ?? null) ?? parseDate(row.last_event_at);
 }
 
+export function getDeliveryReleaseAt(purchaseDate: string | null) {
+  const parsedPurchaseDate = parseDate(purchaseDate);
+  if (!parsedPurchaseDate) return null;
+  return new Date(parsedPurchaseDate.getTime() + (DELIVERY_WAIT_DAYS + 1) * dayInMs).toISOString();
+}
+
 export function attachPurchaseRecord(
   row: AllowedEmailEventRow,
   purchase: Pick<PurchaseRecordRow, "product_name" | "product_id" | "purchase_date" | "status_hotmart" | "access_expires_at"> | null | undefined,
@@ -181,6 +193,7 @@ export function buildPurchaseWindow(row: AllowedEmailEventRow | null, now = new 
   if (!row || row.purchase_verified === false || !isAllowedEmailAccessActive(row, now) || !row.last_event || !purchaseEvents.has(row.last_event)) {
     return {
       purchaseDate: null,
+      deliveryReleaseAt: null,
       purchaseEvent: row?.last_event ?? null,
       daysSincePurchase: null,
       daysRemaining: null,
@@ -194,6 +207,7 @@ export function buildPurchaseWindow(row: AllowedEmailEventRow | null, now = new 
   if (!purchaseDate) {
     return {
       purchaseDate: null,
+      deliveryReleaseAt: null,
       purchaseEvent: row.last_event,
       daysSincePurchase: null,
       daysRemaining: null,
@@ -210,6 +224,7 @@ export function buildPurchaseWindow(row: AllowedEmailEventRow | null, now = new 
 
   return {
     purchaseDate: purchaseDate.toISOString(),
+    deliveryReleaseAt: getDeliveryReleaseAt(purchaseDate.toISOString()),
     purchaseEvent: row.last_event,
     daysSincePurchase,
     daysRemaining,
@@ -219,6 +234,81 @@ export function buildPurchaseWindow(row: AllowedEmailEventRow | null, now = new 
       ? "Envio liberado para este cliente."
       : `Envio liberado em ${daysRemaining} dia(s), após mais de ${DELIVERY_WAIT_DAYS} dias da compra.`,
   };
+}
+
+/**
+ * Builds delivery windows in bulk for dashboard lists. It follows the same
+ * approved-purchase and legacy-access rules used by the delivery endpoint,
+ * without issuing a query per client.
+ */
+export async function getPurchaseWindowsForClients(
+  admin: ReturnType<typeof getAdminSupabase>,
+  clients: PurchaseWindowClient[],
+  now = new Date(),
+) {
+  const uniqueClients = [...new Map(clients
+    .filter((client) => Boolean(client.id && client.email))
+    .map((client) => [client.id, { ...client, email: emailKey(client.email) }])).values()];
+  if (!uniqueClients.length) return new Map<string, PurchaseWindow>();
+
+  const clientIds = uniqueClients.map((client) => client.id);
+  const emails = [...new Set(uniqueClients.map((client) => client.email))];
+  const { data: allowedRows, error: allowedError } = await admin
+    .from("allowed_emails")
+    .select("email,last_event,created_at,updated_at,last_event_at,external_reference,source,notes,active,access_product_id,access_expires_at")
+    .in("email", emails)
+    .eq("active", true)
+    .order("last_event_at", { ascending: false })
+    .limit(Math.max(500, emails.length * 2));
+  if (allowedError) throw allowedError;
+
+  const transactionCodes = [...new Set((allowedRows ?? [])
+    .map((row) => row.external_reference)
+    .filter((value): value is string => Boolean(value)))];
+  const [purchasesByClientResult, purchasesByTransactionResult] = await Promise.all([
+    admin
+      .from("purchases")
+      .select("client_id,transaction_code,product_name,product_id,status_hotmart,purchase_date,created_at,access_expires_at")
+      .in("client_id", clientIds)
+      .in("status_hotmart", [...approvedPurchaseEvents])
+      .order("purchase_date", { ascending: true })
+      .limit(Math.max(500, clientIds.length * 3)),
+    transactionCodes.length
+      ? admin
+          .from("purchases")
+          .select("client_id,transaction_code,product_name,product_id,status_hotmart,purchase_date,created_at,access_expires_at")
+          .in("transaction_code", transactionCodes)
+          .order("purchase_date", { ascending: true })
+          .limit(Math.max(100, transactionCodes.length * 2))
+      : Promise.resolve({ data: [] as PurchaseRecordRow[], error: null }),
+  ]);
+  if (purchasesByClientResult.error && !isMissingPurchaseRelationError(purchasesByClientResult.error)) throw purchasesByClientResult.error;
+  if (purchasesByTransactionResult.error && !isMissingPurchaseRelationError(purchasesByTransactionResult.error)) throw purchasesByTransactionResult.error;
+
+  const diagnosticPurchaseByClientId = new Map<string, PurchaseRecordRow>();
+  const diagnosticPurchaseByTransaction = new Map<string, PurchaseRecordRow>();
+  for (const purchase of [
+    ...((purchasesByClientResult.data ?? []) as PurchaseRecordRow[]),
+    ...((purchasesByTransactionResult.data ?? []) as PurchaseRecordRow[]),
+  ]) {
+    if (!isDiagnosticProductPurchase(purchase, now)) continue;
+    if (purchase.client_id && !diagnosticPurchaseByClientId.has(purchase.client_id)) {
+      diagnosticPurchaseByClientId.set(purchase.client_id, purchase);
+    }
+    if (purchase.transaction_code && !diagnosticPurchaseByTransaction.has(purchase.transaction_code)) {
+      diagnosticPurchaseByTransaction.set(purchase.transaction_code, purchase);
+    }
+  }
+
+  const clientIdByEmail = new Map(uniqueClients.map((client) => [client.email, client.id]));
+  const rowsWithPurchaseData = ((allowedRows ?? []) as AllowedEmailEventRow[]).map((row) => {
+    const clientId = clientIdByEmail.get(emailKey(row.email));
+    const purchase = (row.external_reference ? diagnosticPurchaseByTransaction.get(row.external_reference) : null)
+      ?? (clientId ? diagnosticPurchaseByClientId.get(clientId) : null);
+    return attachPurchaseRecord(row, purchase, now);
+  });
+
+  return mapPurchaseWindowsByEmail(rowsWithPurchaseData, now);
 }
 
 export function mapPurchaseWindowsByEmail(rows: AllowedEmailEventRow[], now = new Date()) {
