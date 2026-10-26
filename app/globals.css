@@ -533,7 +533,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .alert-count--with-popover { position: relative; cursor: help; }
 .alert-popover {
   position: absolute;
-  bottom: calc(100% + 8px);
+  bottom: 100%;
   right: 0;
   width: min(300px, 36vw);
   max-height: min(320px, calc(100dvh - 120px));
@@ -543,11 +543,12 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   color: #eef4f7;
   box-shadow: 0 10px 24px rgba(18, 33, 44, 0.3);
   text-align: left;
-  display: none;
   opacity: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
   transform: translateY(4px);
   pointer-events: none;
+  visibility: hidden;
   transition: opacity .12s ease, transform .12s ease;
   z-index: 20;
 }
@@ -572,9 +573,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 }
 .alert-count--with-popover:hover .alert-popover,
 .alert-count--with-popover:focus-within .alert-popover {
-  display: block;
   opacity: 1;
   transform: translateY(0);
+  pointer-events: auto;
+  visibility: visible;
 }
 .alert-count--empty { color: var(--ink-mute); }
 .case-objective { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-mute); font: 500 8px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .06em; }
@@ -590,7 +592,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .service-time > div b { display: block; height: 100%; background: var(--accent-soft); }
 .service-time > small { display: block; margin-top: 10px; color: #8da0ab; font: 500 7px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .1em; }
 .list-toolbar { margin: 28px 0 18px; display: grid; grid-template-columns: minmax(260px, 1fr) 250px; gap: 12px; }
-.list-toolbar--diagnostics { grid-template-columns: minmax(240px, 1fr) 190px 190px 150px 150px; }
+.list-toolbar--diagnostics { grid-template-columns: minmax(220px, 1fr) 175px 175px 180px 150px 150px; }
 .list-toolbar label { min-height: 48px; padding: 0 14px; display: flex; align-items: center; gap: 10px; border: 1px solid var(--paper-edge); background: var(--paper-light); }
 .list-toolbar svg { width: 15px; color: var(--ink-mute); }
 .list-toolbar input, .list-toolbar select { width: 100%; border: 0; outline: 0; background: transparent; font-size: 12px; }
@@ -603,11 +605,18 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .diagnostic-table { width: 100%; border: 1px solid var(--paper-edge); background: var(--paper-light); overflow: visible; }
 .diagnostic-table__scroll { overflow-x: auto; }
 .diagnostic-table__table { width: 100%; min-width: 1300px; }
-.diagnostic-table__date { color: var(--ink-mute); font: 500 8px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+.diagnostic-table__table th { font-size: 9px; }
+.diagnostic-table .case-avatar { width: 42px; height: 42px; font-size: 10px; }
+.diagnostic-table .status-pill { padding: 7px 10px; font-size: 8px; }
+.diagnostic-table__date { color: var(--ink-mute); font: 500 10px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; }
 .diagnostic-table__date--empty { color: var(--ink-mute); }
+.diagnostic-table__delivery-date { display: grid; gap: 6px; justify-items: start; }
+.diagnostic-table__delivery-alert { display: inline-flex; align-items: center; gap: 5px; padding: 5px 7px; border: 1px solid rgba(167,104,23,.35); border-radius: 999px; background: #fff4dc; color: #8b5310; font: 600 8px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+.diagnostic-table__delivery-alert svg { width: 12px; }
+.diagnostic-table__row--delivery-due, .diagnostic-table__row--delivery-due:hover { background: #fffaf0 !important; box-shadow: inset 4px 0 0 #d89224; }
 .table-pagination { min-width: 1300px; min-height: 52px; padding: 10px 20px; display: flex; align-items: center; justify-content: flex-end; gap: 12px; border-top: 1px solid var(--paper-edge); background: var(--paper-light); }
-.table-pagination > span { color: var(--ink-mute); font: 500 8px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .08em; }
-.table-pagination > button { min-width: 92px; min-height: 32px; padding: 0 12px; border: 1px solid var(--paper-edge); background: white; color: var(--ink); font: 500 8px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .08em; cursor: pointer; }
+.table-pagination > span { color: var(--ink-mute); font: 500 9px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .08em; }
+.table-pagination > button { min-width: 92px; min-height: 32px; padding: 0 12px; border: 1px solid var(--paper-edge); background: white; color: var(--ink); font: 500 9px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .08em; cursor: pointer; }
 .table-pagination > button[disabled] { opacity: .45; cursor: default; }
 .clients-toolbar { margin: 28px 0 18px; display: grid; grid-template-columns: minmax(260px, 1fr) 250px auto; align-items: center; gap: 12px; }
 .clients-toolbar label { min-height: 48px; padding: 0 14px; display: flex; align-items: center; gap: 10px; border: 1px solid var(--paper-edge); background: var(--paper-light); }

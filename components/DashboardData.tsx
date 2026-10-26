@@ -31,6 +31,8 @@ type CaseListResponse = {
   };
 };
 
+type DateRangePreset = "all" | "last_7" | "last_15" | "last_30" | "custom";
+
 const clientStatusOptions = [
   ...Object.entries(caseStatusLabels).map(([value, label]) => ({ value, label })),
   { value: "no_case", label: "Sem caso" },
@@ -72,7 +74,7 @@ function CaseLine({ item }: { item: CaseRow }) {
   const score = result?.overallScore;
   const technicalAlerts = result?.technicalAlerts ?? [];
   const alertsCount = technicalAlerts.length;
-  const content = <><div className="case-avatar">{item.diagnostic_clients?.full_name?.split(" ").map((part) => part[0]).slice(0,2).join("")}</div><div className="case-person"><strong>{item.diagnostic_clients?.full_name}</strong><small>{item.case_number}</small>{item.locked_by_other && <small className="case-lock-label"><LockKeyhole /> Em revisão por {item.locked_by_name ?? "outra consultora"}</small>}</div><div className="case-objective">{item.objective ?? "Objetivo não informado"}</div><span className={`status-pill status-${item.status}`}>{getCaseStatusLabel(item.status)}</span><span className="score">{score ?? "—"}<small>{typeof score === "number" ? "/100" : ""}</small></span>{alertsCount > 0 ? <span className="alert-count alert-count--with-popover"><AlertTriangle />{alertsCount}<span className="alert-popover" role="tooltip"><strong>Alertas técnicos</strong><ul>{technicalAlerts.map((alert, index) => <li key={`${item.id}-alert-${index}`}>{alert}</li>)}</ul></span></span> : <span className="alert-count alert-count--empty">—</span>}{item.locked_by_other ? <LockKeyhole className="row-arrow" /> : <ArrowUpRight className="row-arrow" />}</>;
+  const content = <><div className="case-avatar">{item.diagnostic_clients?.full_name?.split(" ").map((part) => part[0]).slice(0,2).join("")}</div><div className="case-person"><strong>{item.diagnostic_clients?.full_name}</strong><small>{item.case_number}</small>{item.locked_by_other && <small className="case-lock-label"><LockKeyhole /> Em revisão por {item.locked_by_name ?? "outra consultora"}</small>}</div><div className="case-objective">{item.objective ?? "Objetivo não informado"}</div><span className={`status-pill status-${item.status}`}>{getCaseStatusLabel(item.status)}</span><span className="score">{score ?? "—"}<small>{typeof score === "number" ? "/100" : ""}</small></span>{alertsCount > 0 ? <span className="alert-count alert-count--with-popover"><AlertTriangle />{alertsCount}<span className="alert-popover" role="tooltip" onClick={(event) => event.stopPropagation()}><strong>Alertas técnicos</strong><ul>{technicalAlerts.map((alert, index) => <li key={`${item.id}-alert-${index}`}>{alert}</li>)}</ul></span></span> : <span className="alert-count alert-count--empty">—</span>}{item.locked_by_other ? <LockKeyhole className="row-arrow" /> : <ArrowUpRight className="row-arrow" />}</>;
   return item.locked_by_other
     ? <div className="case-line case-line--locked" aria-disabled="true">{content}</div>
     : <Link className="case-line" href={`/dashboard/diagnosticos/${item.id}`}>{content}</Link>;
@@ -86,6 +88,7 @@ export function DiagnosticsListClient() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [dateField, setDateField] = useState("purchase");
+  const [dateRangePreset, setDateRangePreset] = useState<DateRangePreset>("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [error, setError] = useState(false);
@@ -132,6 +135,25 @@ export function DiagnosticsListClient() {
     setPage((current) => Math.min(pagination.totalPages, current + 1));
   }
 
+  function applyDateRangePreset(value: DateRangePreset) {
+    setDateRangePreset(value);
+    setPage(1);
+
+    if (value === "all") {
+      setDateFrom("");
+      setDateTo("");
+      return;
+    }
+    if (value === "custom") return;
+
+    const days = value === "last_7" ? 7 : value === "last_15" ? 15 : 30;
+    const today = new Date();
+    const from = new Date(today);
+    from.setDate(from.getDate() - (days - 1));
+    setDateFrom(toDateInputValue(from));
+    setDateTo(toDateInputValue(today));
+  }
+
   function openCase(caseId: string) {
     router.push(`/dashboard/diagnosticos/${caseId}`);
   }
@@ -142,8 +164,9 @@ export function DiagnosticsListClient() {
       <label className="list-toolbar__search"><Search /><input aria-label="Buscar simuladores" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Buscar por nome, e-mail ou código" /></label>
       <label className="list-toolbar__select"><Select value={status || "all"} onValueChange={(value) => { setStatus(value === "all" ? "" : value); setPage(1); }}><SelectTrigger className="list-toolbar__select-trigger"><SelectValue placeholder="Todos os status" /></SelectTrigger><SelectContent><SelectItem value="all">Todos os status</SelectItem>{Object.entries(caseStatusLabels).map(([value,label]) => <SelectItem value={value} key={value}>{label}</SelectItem>)}</SelectContent></Select></label>
       <label className="list-toolbar__select"><Select value={dateField} onValueChange={(value) => { setDateField(value); setPage(1); }}><SelectTrigger className="list-toolbar__select-trigger" aria-label="Tipo de data para filtrar"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="purchase">Data da compra</SelectItem><SelectItem value="draft">Entrada como rascunho</SelectItem><SelectItem value="release">Previsão de envio</SelectItem></SelectContent></Select></label>
-      <label className="list-toolbar__date"><span>De</span><input aria-label="Data inicial do filtro" type="date" value={dateFrom} onChange={(event) => { setDateFrom(event.target.value); setPage(1); }} /></label>
-      <label className="list-toolbar__date"><span>Até</span><input aria-label="Data final do filtro" type="date" value={dateTo} onChange={(event) => { setDateTo(event.target.value); setPage(1); }} /></label>
+      <label className="list-toolbar__select"><Select value={dateRangePreset} onValueChange={(value) => applyDateRangePreset(value as DateRangePreset)}><SelectTrigger className="list-toolbar__select-trigger" aria-label="Período para filtrar"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todo o período</SelectItem><SelectItem value="last_7">Últimos 7 dias</SelectItem><SelectItem value="last_15">Últimos 15 dias</SelectItem><SelectItem value="last_30">Últimos 30 dias</SelectItem><SelectItem value="custom">Período personalizado</SelectItem></SelectContent></Select></label>
+      <label className="list-toolbar__date"><span>De</span><input aria-label="Data inicial do filtro" type="date" value={dateFrom} onChange={(event) => { setDateRangePreset("custom"); setDateFrom(event.target.value); setPage(1); }} /></label>
+      <label className="list-toolbar__date"><span>Até</span><input aria-label="Data final do filtro" type="date" value={dateTo} onChange={(event) => { setDateRangePreset("custom"); setDateTo(event.target.value); setPage(1); }} /></label>
     </div>
     {error ? <DashboardError /> : loading ? <DashboardLoading /> : <div className="diagnostic-table"><div className="diagnostic-table__scroll"><Table className="diagnostic-table__table"><TableHeader><TableRow><TableHead className="w-[280px]">Cliente / simulador</TableHead><TableHead>Objetivo</TableHead><TableHead>Status</TableHead><TableHead>Compra</TableHead><TableHead>Rascunho</TableHead><TableHead>Previsão de envio</TableHead><TableHead>Preparo</TableHead><TableHead>Alertas</TableHead><TableHead className="w-[18px]" /></TableRow></TableHeader><TableBody>{items.length ? items.map((item) => <DiagnosticTableRow key={item.id} item={item} onOpen={openCase} />) : <TableRow><TableCell colSpan={9}><div className="empty-row">Nenhum simulador encontrado.</div></TableCell></TableRow>}</TableBody></Table><footer className="table-pagination"><button type="button" onClick={goToPreviousPage} disabled={!pagination.hasPreviousPage}>Anterior</button><span>Página {pagination.page} de {pagination.totalPages} · {pagination.total} itens</span><button type="button" onClick={goToNextPage} disabled={!pagination.hasNextPage}>Próxima</button></footer></div></div>}
   </>;
@@ -154,26 +177,27 @@ function DiagnosticTableRow({ item, onOpen }: { item: CaseRow; onOpen: (caseId: 
   const score = result?.overallScore;
   const technicalAlerts = result?.technicalAlerts ?? [];
   const alertsCount = technicalAlerts.length;
+  const deliveryDueToday = item.status !== "sent" && isToday(item.delivery_release_at);
 
-  return <TableRow className={item.locked_by_other ? "bg-[rgba(23,34,43,.035)]" : "cursor-pointer"} aria-disabled={item.locked_by_other ? "true" : undefined} onClick={() => !item.locked_by_other && onOpen(item.id)}>
+  return <TableRow className={`${item.locked_by_other ? "bg-[rgba(23,34,43,.035)]" : "cursor-pointer"}${deliveryDueToday ? " diagnostic-table__row--delivery-due" : ""}`} aria-disabled={item.locked_by_other ? "true" : undefined} onClick={() => !item.locked_by_other && onOpen(item.id)}>
     <TableCell className="whitespace-nowrap">
       <div className="flex items-center gap-3">
         <div className="case-avatar">{item.diagnostic_clients?.full_name?.split(" ").map((part) => part[0]).slice(0, 2).join("")}</div>
         <div className="min-w-0">
-          <strong className="block truncate text-[12px] font-semibold">{item.diagnostic_clients?.full_name}</strong>
-          <small className="block truncate text-[10px] uppercase tracking-[.08em]">{item.case_number}</small>
+          <strong className="block truncate text-[13px] font-semibold">{item.diagnostic_clients?.full_name}</strong>
+          <small className="block truncate text-[11px] uppercase tracking-[.08em]">{item.case_number}</small>
           {item.locked_by_other && <small className="case-lock-label"><LockKeyhole /> Em revisão por {item.locked_by_name ?? "outra consultora"}</small>}
         </div>
       </div>
     </TableCell>
-    <TableCell className="whitespace-nowrap text-[12px] uppercase tracking-[.08em]">{item.objective ?? "Objetivo não informado"}</TableCell>
+    <TableCell className="whitespace-nowrap text-[13px] uppercase tracking-[.08em]">{item.objective ?? "Objetivo não informado"}</TableCell>
     <TableCell><span className={`status-pill status-${item.status}`}>{getCaseStatusLabel(item.status)}</span></TableCell>
     <TableCell><DateTableCell value={item.purchase_date} /></TableCell>
     <TableCell><DateTableCell value={item.created_at} /></TableCell>
-    <TableCell><DateTableCell value={item.delivery_release_at} /></TableCell>
+    <TableCell><DeliveryDateTableCell value={item.delivery_release_at} dueToday={deliveryDueToday} /></TableCell>
     <TableCell><span className="score">{score ?? "—"}<small>{typeof score === "number" ? "/100" : ""}</small></span></TableCell>
     <TableCell>
-      {alertsCount > 0 ? <span className="alert-count alert-count--with-popover"><AlertTriangle />{alertsCount}<span className="alert-popover" role="tooltip"><strong>Alertas técnicos</strong><ul>{technicalAlerts.map((alert, index) => <li key={`${item.id}-alert-${index}`}>{alert}</li>)}</ul></span></span> : <span className="alert-count alert-count--empty">—</span>}
+      {alertsCount > 0 ? <span className="alert-count alert-count--with-popover"><AlertTriangle />{alertsCount}<span className="alert-popover" role="tooltip" onClick={(event) => event.stopPropagation()}><strong>Alertas técnicos</strong><ul>{technicalAlerts.map((alert, index) => <li key={`${item.id}-alert-${index}`}>{alert}</li>)}</ul></span></span> : <span className="alert-count alert-count--empty">—</span>}
     </TableCell>
     <TableCell className="text-right">{item.locked_by_other ? <LockKeyhole className="row-arrow" /> : <ArrowUpRight className="row-arrow" />}</TableCell>
   </TableRow>;
@@ -183,6 +207,27 @@ const dateFormatter = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: 
 
 function DateTableCell({ value }: { value: string | null | undefined }) {
   return value ? <time className="diagnostic-table__date" dateTime={value}>{dateFormatter.format(new Date(value))}</time> : <span className="diagnostic-table__date diagnostic-table__date--empty">—</span>;
+}
+
+function DeliveryDateTableCell({ value, dueToday }: { value: string | null | undefined; dueToday: boolean }) {
+  return <div className="diagnostic-table__delivery-date"><DateTableCell value={value} />{dueToday && <span className="diagnostic-table__delivery-alert"><AlertTriangle aria-hidden="true" /> Enviar hoje</span>}</div>;
+}
+
+function isToday(value: string | null | undefined) {
+  if (!value) return false;
+  const date = new Date(value);
+  const today = new Date();
+  return !Number.isNaN(date.getTime())
+    && date.getFullYear() === today.getFullYear()
+    && date.getMonth() === today.getMonth()
+    && date.getDate() === today.getDate();
+}
+
+function toDateInputValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 export function ClientsListClient() {
