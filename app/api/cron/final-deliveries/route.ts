@@ -5,6 +5,7 @@ import { caseClient } from "../../../../lib/cases";
 import { sendFinalDiagnosticWithPdf } from "../../../../lib/email";
 import { generateReportPdf, getReportData } from "../../../../lib/report";
 import { getOperationalConfig } from "../../../../lib/operational-config.server";
+import { buildDeliveryWindow } from "../../../../lib/delivery-window";
 import { getPurchaseWindowForEmail } from "../../../../lib/purchase-window";
 import { getAdminSupabase } from "../../../../lib/supabase";
 import { constantTimeEqual, createFormToken, hashFormToken } from "../../../../lib/tokens";
@@ -62,7 +63,8 @@ async function deliverCase(caseId: string, template: FinalDeliveryTemplate) {
     getOperationalConfig(admin),
   ]);
   const purchaseWindow = await getPurchaseWindowForEmail(admin, target.client.email_normalized);
-  if (!purchaseWindow.eligibleToSend) return { outcome: "skipped" as const, reason: "purchase_window" };
+  const deliveryWindow = buildDeliveryWindow(purchaseWindow, target.case.submitted_at);
+  if (!deliveryWindow.eligibleToSend) return { outcome: "skipped" as const, reason: "delivery_window" };
 
   const { data: review, error: reviewError } = await admin
     .from("diagnostic_reviews")

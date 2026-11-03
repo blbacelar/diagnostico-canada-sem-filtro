@@ -59,8 +59,8 @@ export type CaseDetailData = {
   delivery_window?: {
     purchase_date: string | null;
     purchase_event: string | null;
-    days_since_purchase: number | null;
-    days_remaining: number | null;
+    submitted_at: string | null;
+    delivery_release_at: string | null;
     eligible_to_send: boolean;
     can_override_wait_period: boolean;
     message: string;

@@ -53,11 +53,11 @@ describe("entrega do diagnóstico", () => {
           delivery_window: {
             purchase_date: "2026-09-30T12:00:00.000Z",
             purchase_event: "PURCHASE_APPROVED",
-            days_since_purchase: 1,
-            days_remaining: 7,
+            submitted_at: "2026-10-01T12:00:00.000Z",
+            delivery_release_at: "2026-10-12T12:00:00.000Z",
             eligible_to_send: false,
             can_override_wait_period: true,
-            message: "Envio liberado em 7 dia(s), após mais de 7 dias da compra.",
+            message: "Envio liberado a partir de 12 de outubro de 2026, até 7 dias úteis após o envio das respostas.",
           },
         };
       }

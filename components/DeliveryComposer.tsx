@@ -14,7 +14,7 @@ import { Checkbox } from "./ui/checkbox";
 import { Label } from "./ui/label";
 import { useCaseLockLifecycle } from "./useCaseLockLifecycle";
 
-const purchaseDateFormatter = new Intl.DateTimeFormat("pt-BR", {
+const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
   day: "2-digit",
   month: "short",
   year: "numeric",
@@ -90,7 +90,7 @@ export function DeliveryComposer({ caseId }: { caseId: string }) {
         canOverrideDeliveryWait
           ? "Marque a exceção ao prazo para confirmar o envio antecipado."
           : deliveryWindow?.message ??
-          "A entrega só é liberada após 7 dias da compra aprovada.",
+          "A entrega só é liberada até 7 dias úteis após o envio das respostas.",
       );
       return;
     }
@@ -197,12 +197,24 @@ export function DeliveryComposer({ caseId }: { caseId: string }) {
             <input value={detail.client.email_display} readOnly />
           </label>
 
-          {deliveryWindow?.purchase_date ? (
+          {deliveryWindow?.submitted_at ? (
             <label>
-              <span>Compra registrada</span>
+              <span>Respostas recebidas</span>
               <input
-                value={purchaseDateFormatter.format(
-                  new Date(deliveryWindow.purchase_date),
+                value={dateFormatter.format(
+                  new Date(deliveryWindow.submitted_at),
+                )}
+                readOnly
+              />
+            </label>
+          ) : null}
+
+          {deliveryWindow?.delivery_release_at ? (
+            <label>
+              <span>Envio liberado a partir de</span>
+              <input
+                value={dateFormatter.format(
+                  new Date(deliveryWindow.delivery_release_at),
                 )}
                 readOnly
               />
@@ -273,7 +285,7 @@ export function DeliveryComposer({ caseId }: { caseId: string }) {
             <>
               <p className="form-error" role="alert">
                 {deliveryWindow?.message ??
-                  "A entrega só é liberada após 7 dias da compra aprovada."}
+                  "A entrega só é liberada até 7 dias úteis após o envio das respostas."}
               </p>
 
               {canOverrideDeliveryWait && (
@@ -290,8 +302,8 @@ export function DeliveryComposer({ caseId }: { caseId: string }) {
                       Liberar envio antes do prazo
                     </Label>
                     <p>
-                      Confirmo esta exceção para uma compra aprovada. A ação será
-                      registrada no histórico do caso.
+                      Confirmo esta exceção antes da data prevista de entrega. A
+                      ação será registrada no histórico do caso.
                     </p>
                   </div>
                 </div>

@@ -1,4 +1,5 @@
 import type { PurchaseWindow } from "./purchase-window";
+import { buildDeliveryWindow } from "./delivery-window";
 
 export type ClientRecord = {
   id: string;
@@ -69,7 +70,7 @@ export function buildClientList(
         case_count: clientCases.length,
         purchase_date: purchaseWindow?.purchaseDate ?? null,
         purchase_event: purchaseWindow?.purchaseEvent ?? null,
-        delivery_eligible: purchaseWindow?.eligibleToSend ?? false,
+        delivery_eligible: buildDeliveryWindow(purchaseWindow, latest?.submitted_at).eligibleToSend,
         latest_case: latest
           ? {
               id: latest.id,

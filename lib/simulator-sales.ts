@@ -6,6 +6,7 @@ export const simulatorSalesConfig = {
   completionEstimate: "25–35 minutos",
   reviewEstimate: "até 7 dias úteis",
   deliveryReleaseDays: 7,
+  deliveryReleaseBusinessDays: 7,
 } as const;
 
-export const simulatorDeliveryReleaseText = `após mais de ${simulatorSalesConfig.deliveryReleaseDays} dias da compra aprovada`;
+export const simulatorDeliveryReleaseText = `${simulatorSalesConfig.reviewEstimate} após o envio das respostas`;

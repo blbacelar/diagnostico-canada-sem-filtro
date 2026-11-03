@@ -2,12 +2,13 @@
 import { handleApiError, json, requireConsultant } from "../../../../lib/api";
 import { decorateCaseLocks } from "../../../../lib/case-lock";
 import { getCentralClientsByIds, searchCentralClients } from "../../../../lib/central-client";
+import { buildDeliveryWindow } from "../../../../lib/delivery-window";
 import { getPurchaseWindowsForClients } from "../../../../lib/purchase-window";
 
 const DEFAULT_PAGE_SIZE = 10;
 const MAX_PAGE_SIZE = 50;
 const MAX_DATE_FILTER_CANDIDATES = 2_000;
-const dateFields = new Set(["purchase", "draft", "release"]);
+const dateFields = new Set(["purchase", "draft", "submission", "release"]);
 
 function sanitizeSearch(value: string) {
   return value
@@ -124,10 +125,11 @@ export async function GET(request: Request) {
     const decorated = await decorateCaseLocks(admin, data.map((item: any) => {
       const client = clientsById.get(item.client_id);
       const purchaseWindow = client ? purchaseWindowsByEmail.get(client.email.toLowerCase()) : null;
+      const deliveryWindow = buildDeliveryWindow(purchaseWindow, item.submitted_at);
       return {
       ...item,
       purchase_date: purchaseWindow?.purchaseDate ?? null,
-      delivery_release_at: purchaseWindow?.deliveryReleaseAt ?? null,
+      delivery_release_at: deliveryWindow.deliveryReleaseAt,
       diagnostic_clients: client
         ? { full_name: client.name, email_display: client.email }
         : null,
@@ -139,7 +141,7 @@ export async function GET(request: Request) {
             ? item.purchase_date
             : dateField === "release"
               ? item.delivery_release_at
-              : item.created_at,
+              : item.submitted_at,
           dateFrom,
           dateTo,
         ))

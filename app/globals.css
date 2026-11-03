@@ -402,6 +402,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .status-page h1 { margin: 0 0 18px; font: 400 clamp(48px,7vw,76px)/1 var(--font-display), serif; }
 .status-page section > p:not(.eyebrow) { color: var(--ink-soft); font: 400 18px/1.7 var(--font-body), serif; }
 .status-page .primary-button { margin-top: 22px; }
+.delivery-deadline { box-sizing: border-box; width: min(620px, 100%); margin: 28px auto 0; padding: 22px clamp(18px, 4vw, 32px); border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--paper-edge)); background: color-mix(in srgb, var(--accent) 7%, white); color: var(--accent); }
+.delivery-deadline > span { display: block; font: 700 11px var(--font-mono), monospace; letter-spacing: .14em; text-transform: uppercase; }
+.delivery-deadline strong { display: block; margin-top: 8px; overflow-wrap: anywhere; text-wrap: balance; font: 700 clamp(28px, 4vw, 36px)/1.15 var(--font-display), serif; }
+.delivery-deadline small { display: block; margin-top: 9px; color: var(--ink-soft); font: 500 14px/1.5 var(--font-body), sans-serif; }
 .status-orbit { width: 82px; height: 82px; margin: 0 auto 30px; border: 1px solid var(--paper-edge); border-radius: 50%; display: grid; place-items: center; color: var(--accent); }
 .status-orbit svg { width: 28px; }
 .status-orbit.success { color: var(--success); }

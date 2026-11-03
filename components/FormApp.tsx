@@ -32,7 +32,7 @@ export function FormApp({ initialToken, dashboardReturn = false }: { initialToke
   const [submitError, setSubmitError] = useState("");
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [submitted, setSubmitted] = useState<{ caseNumber: string; expectedTime: string } | null>(null);
+  const [submitted, setSubmitted] = useState<{ caseNumber: string; expectedTime: string; submittedDate: string | null; expectedDeliveryDate: string | null } | null>(null);
   const answersRef = useRef<FormAnswers>({});
   const initialized = useRef(false);
   const submitInFlight = useRef(false);
@@ -179,7 +179,7 @@ export function FormApp({ initialToken, dashboardReturn = false }: { initialToke
         headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
         body: JSON.stringify({ consent: true, legalDisclaimerAccepted: true, policyVersion: session.policyVersion ?? operationalConfig.policyVersion, idempotencyKey }),
       });
-      const data = await response.json() as { error?: string; code?: string; caseNumber: string; expectedTime: string };
+      const data = await response.json() as { error?: string; code?: string; caseNumber: string; expectedTime: string; submittedDate: string | null; expectedDeliveryDate: string | null };
       if (!response.ok) {
         if (data.code === "ALREADY_SUBMITTED") {
           setSession((current) => current ? { ...current, status: "submitted" } : current);
@@ -188,7 +188,7 @@ export function FormApp({ initialToken, dashboardReturn = false }: { initialToke
         }
         throw new Error(data.error ?? "Não foi possível enviar.");
       }
-      setSubmitted({ caseNumber: data.caseNumber, expectedTime: data.expectedTime });
+      setSubmitted({ caseNumber: data.caseNumber, expectedTime: data.expectedTime, submittedDate: data.submittedDate, expectedDeliveryDate: data.expectedDeliveryDate });
       setSaveState("saved");
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : "Não foi possível enviar.");
@@ -214,7 +214,7 @@ export function FormApp({ initialToken, dashboardReturn = false }: { initialToke
     if (dashboardMode) {
       return <FormStatus success title="Simulador atualizado" detail={`As respostas de ${submitted.caseNumber} foram salvas com sucesso. Redirecionando para a ficha do caso…`} dashboardHref={`/dashboard/diagnosticos/${session?.caseId ?? ""}`} />;
     }
-    return <FormStatus success title="Respostas recebidas" detail={`O simulador ${submitted.caseNumber} foi enviado. Prazo estimado: ${submitted.expectedTime}. A análise automática ficará restrita às consultoras até a revisão profissional.`} />;
+    return <FormStatus success title="Respostas recebidas" detail={`O simulador ${submitted.caseNumber} foi enviado para análise. A análise automática ficará restrita às consultoras até a revisão profissional.`} submittedDate={submitted.submittedDate} expectedDeliveryDate={submitted.expectedDeliveryDate} />;
   }
   if (!session) return null;
   if (session.status !== "client_draft" && !dashboardMode) return <FormStatus success title="Simulador já enviado" detail={`As respostas de ${session.caseNumber} estão protegidas e não podem mais ser alteradas. Se a equipe precisar de informações adicionais, você receberá uma nova comunicação.`} dashboardHref={dashboardMode ? `/dashboard/diagnosticos/${session.caseId}` : undefined} />;
@@ -391,6 +391,6 @@ function ReviewAnswers({ answers, incompleteSections, onEdit, onSubmit, submitti
   );
 }
 
-function FormStatus({ title, detail, error = false, success = false, dashboardHref }: { title: string; detail: string; error?: boolean; success?: boolean; dashboardHref?: string }) {
-  return <main className="status-page"><BrandMark /><section><span className={`status-orbit ${error ? "error" : success ? "success" : ""}`}>{error ? <AlertTriangle /> : success ? <Check /> : <Cloud />}</span><p className="eyebrow">Simulador Canadá Sem Filtro</p><h1>{title}</h1><p>{detail}</p>{dashboardHref ? <Link className="primary-button" href={dashboardHref}>Voltar ao dashboard</Link> : error && <Link className="primary-button" href="/">Solicitar um novo link</Link>}</section></main>;
+function FormStatus({ title, detail, error = false, success = false, dashboardHref, submittedDate, expectedDeliveryDate }: { title: string; detail: string; error?: boolean; success?: boolean; dashboardHref?: string; submittedDate?: string | null; expectedDeliveryDate?: string | null }) {
+  return <main className="status-page"><BrandMark /><section><span className={`status-orbit ${error ? "error" : success ? "success" : ""}`}>{error ? <AlertTriangle /> : success ? <Check /> : <Cloud />}</span><p className="eyebrow">Simulador Canadá Sem Filtro</p><h1>{title}</h1><p>{detail}</p>{expectedDeliveryDate && <div className="delivery-deadline" role="status"><span>Previsão de entrega</span><strong>Até {expectedDeliveryDate}</strong><small>{submittedDate ? `Até 7 dias úteis a partir de ${submittedDate}.` : "Em até 7 dias úteis, contados do envio das suas respostas."}</small></div>}{dashboardHref ? <Link className="primary-button" href={dashboardHref}>Voltar ao dashboard</Link> : error && <Link className="primary-button" href="/">Solicitar um novo link</Link>}</section></main>;
 }

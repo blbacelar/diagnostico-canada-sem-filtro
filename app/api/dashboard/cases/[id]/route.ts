@@ -1,5 +1,6 @@
 import { ApiError, handleApiError, json, requireConsultant, writeAudit } from "../../../../../lib/api";
 import { claimCaseForReview } from "../../../../../lib/case-lock";
+import { buildDeliveryWindow } from "../../../../../lib/delivery-window";
 import { getPurchaseWindowForEmail } from "../../../../../lib/purchase-window";
 import { getCentralClientById } from "../../../../../lib/central-client";
 
@@ -66,6 +67,7 @@ export async function GET(
           canOverrideWaitPeriod: false,
           message: "A entrega só é liberada após compra aprovada.",
         };
+    const deliveryWindow = buildDeliveryWindow(purchaseWindow, diagnosticCase.submitted_at);
 
     await writeAudit(admin, {
       caseId: id,
@@ -87,11 +89,11 @@ export async function GET(
       delivery_window: {
         purchase_date: purchaseWindow.purchaseDate,
         purchase_event: purchaseWindow.purchaseEvent,
-        days_since_purchase: purchaseWindow.daysSincePurchase,
-        days_remaining: purchaseWindow.daysRemaining,
-        eligible_to_send: purchaseWindow.eligibleToSend,
-        can_override_wait_period: purchaseWindow.canOverrideWaitPeriod,
-        message: purchaseWindow.message,
+        submitted_at: deliveryWindow.submittedAt,
+        delivery_release_at: deliveryWindow.deliveryReleaseAt,
+        eligible_to_send: deliveryWindow.eligibleToSend,
+        can_override_wait_period: deliveryWindow.canOverrideWaitPeriod,
+        message: deliveryWindow.message,
       },
     });
   } catch (error) {

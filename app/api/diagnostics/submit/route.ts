@@ -18,9 +18,22 @@ import { getOperationalConfig } from "../../../../lib/operational-config.server"
 import { diagnosticSubmissionAnswersSchema } from "../../../../lib/diagnostic-validation";
 import { notifyDashboardUsersOfSubmission } from "../../../../lib/dashboard-notifications";
 import { getCentralClientById, upsertCentralClient } from "../../../../lib/central-client";
+import { formatDeliveryDeadline, getDeliveryReleaseAt } from "../../../../lib/delivery-window";
 import { simulatorSalesConfig } from "../../../../lib/simulator-sales";
 
 const expectedTime = simulatorSalesConfig.reviewEstimate;
+
+function submissionResponse(caseNumber: string, submittedAt: string) {
+  const expectedDeliveryAt = getDeliveryReleaseAt(submittedAt);
+  return {
+    caseNumber,
+    submittedAt,
+    expectedTime,
+    expectedDeliveryAt,
+    submittedDate: formatDeliveryDeadline(submittedAt),
+    expectedDeliveryDate: formatDeliveryDeadline(expectedDeliveryAt),
+  };
+}
 
 export async function POST(request: Request) {
   try {
@@ -36,7 +49,7 @@ export async function POST(request: Request) {
       .eq("case_id", caseRow.id)
       .eq("idempotency_key", idempotencyKey)
       .maybeSingle();
-    if (existing) return json({ caseNumber: caseRow.case_number, submittedAt: existing.submitted_at, expectedTime });
+    if (existing) return json(submissionResponse(caseRow.case_number, existing.submitted_at));
     if (caseRow.status !== "client_draft") throw new ApiError(409, "Este simulador já foi enviado.", "ALREADY_SUBMITTED");
 
     const { data: rows, error } = await admin.from("diagnostic_answers").select("question_key,answer").eq("case_id", caseRow.id);
@@ -107,7 +120,7 @@ export async function POST(request: Request) {
         .maybeSingle();
       if (conflictReadError) throw conflictReadError;
       if (conflictingSubmission?.idempotency_key === idempotencyKey) {
-        return json({ caseNumber: caseRow.case_number, submittedAt: conflictingSubmission.submitted_at, expectedTime });
+        return json(submissionResponse(caseRow.case_number, conflictingSubmission.submitted_at));
       }
       throw new ApiError(409, "Este simulador já foi enviado.", "ALREADY_SUBMITTED");
     }
@@ -143,10 +156,13 @@ export async function POST(request: Request) {
     ]);
 
     if (client && submissionActor !== "consultant") {
+      const expectedDeliveryAt = getDeliveryReleaseAt(now);
       waitUntil(sendSubmissionConfirmation({
         to: client.email,
         fullName: client.name,
         caseNumber: caseRow.case_number,
+        submittedAt: now,
+        expectedDeliveryAt,
       }).then(async (result) => {
         await admin.from("diagnostic_email_deliveries").insert({
           case_id: caseRow.id,
@@ -182,7 +198,7 @@ export async function POST(request: Request) {
       action: "diagnostic.submitted",
       metadata: { submissionId: submission.id, schemaVersion: 1, legalDisclaimerAccepted: payload.legalDisclaimerAccepted },
     });
-    const response = json({ caseNumber: caseRow.case_number, submittedAt: now, expectedTime }, { status: 202 });
+    const response = json(submissionResponse(caseRow.case_number, now), { status: 202 });
     response.headers.append("Set-Cookie", "diagnostic_form_token=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0");
     return response;
   } catch (error) {
