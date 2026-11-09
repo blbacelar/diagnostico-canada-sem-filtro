@@ -23,7 +23,7 @@ test("@smoke página de vendas apresenta as quatro dobras e CTAs consistentes", 
   const ctas = page.locator("a[data-cta-placement]");
   expect(await ctas.count()).toBeGreaterThanOrEqual(4);
   expect(await ctas.allTextContents()).toEqual(Array(await ctas.count()).fill("Quero começar o meu projeto"));
-  await expect(ctas.first()).toHaveAttribute("href", "https://pay.hotmart.com/U107038059P?off=hyxqfyga");
+  await expect(ctas.first()).toHaveAttribute("href", "https://pay.hotmart.com/U107038059P?off=hyxqfyga&checkoutMode=10");
   await expect(page.locator('[data-cta-placement="hero"]')).toHaveText(/quero começar o meu projeto/i);
   await expect(page.locator(".simulator-hero__copy").getByText(/por apenas/i)).toHaveCount(0);
   await expect(page.getByText(/clareza agora, antes de decisões/i)).toBeVisible();

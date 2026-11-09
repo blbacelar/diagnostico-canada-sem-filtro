@@ -1,5 +1,5 @@
 export const simulatorSalesConfig = {
-  checkoutUrl: "https://pay.hotmart.com/U107038059P?off=hyxqfyga",
+  checkoutUrl: "https://pay.hotmart.com/U107038059P?off=hyxqfyga&checkoutMode=10",
   listPrice: "R$ 147",
   currentPrice: "R$ 97",
   installmentPrice: "12x R$ 10,03",
