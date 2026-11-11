@@ -283,7 +283,12 @@ export function DiagnosticDetailClient({ caseId }: { caseId: string }) {
           {actionError && <p className="detail-dialog-error" role="alert">{actionError}</p>}
           <AlertDialogFooter>
             <AlertDialogCancel asChild>
-              <Button type="button" variant="outline" disabled={cancelling}>
+              <Button
+                type="button"
+                variant="outline"
+                className="!border-[var(--ink)] !bg-[var(--ink)] !text-white hover:!bg-[var(--ink-soft)] hover:!text-white"
+                disabled={cancelling}
+              >
                 Manter simulador
               </Button>
             </AlertDialogCancel>
