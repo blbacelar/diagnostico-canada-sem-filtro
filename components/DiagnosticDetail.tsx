@@ -28,6 +28,15 @@ import type { AiAssessment, FormAnswers } from "../lib/types";
 import { getBrowserSupabase } from "../lib/supabase";
 import { getCaseStatusLabel, getReviewStatusLabel } from "../lib/status-labels";
 import { DashboardError, DashboardLoading } from "./DashboardData";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "./ui/alert-dialog";
 import { Button } from "./ui/button";
 import { useCaseLockLifecycle } from "./useCaseLockLifecycle";
 
@@ -92,6 +101,7 @@ export function DiagnosticDetailClient({ caseId }: { caseId: string }) {
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [actionError, setActionError] = useState("");
 
   useCaseLockLifecycle(caseId, data?.case.status !== "cancelled");
@@ -143,17 +153,13 @@ export function DiagnosticDetailClient({ caseId }: { caseId: string }) {
   }
 
   async function cancelSimulator() {
-    const confirmed = window.confirm(
-      "Cancelar este simulador? As respostas e o histórico serão preservados, mas a entrega será interrompida e os links de acesso serão revogados.",
-    );
-    if (!confirmed) return;
-
     setCancelling(true);
     setActionError("");
     try {
       await detailFetch(`/api/dashboard/cases/${caseId}/cancel`, { method: "POST" });
       const refreshed = await detailFetch<CaseDetailData>(`/api/dashboard/cases/${caseId}`);
       setData(refreshed);
+      setCancelDialogOpen(false);
     } catch (cancelError) {
       setActionError(
         cancelError instanceof Error
@@ -244,7 +250,7 @@ export function DiagnosticDetailClient({ caseId }: { caseId: string }) {
                 type="button"
                 variant="outline"
                 className="detail-cancel-button"
-                onClick={cancelSimulator}
+                onClick={() => setCancelDialogOpen(true)}
                 disabled={cancelling}
               >
                 <Ban /> {cancelling ? "Cancelando…" : "Cancelar simulador"}
@@ -259,6 +265,39 @@ export function DiagnosticDetailClient({ caseId }: { caseId: string }) {
           )}
         </div>
       </header>
+
+      <AlertDialog
+        open={cancelDialogOpen}
+        onOpenChange={(open) => {
+          if (!cancelling) setCancelDialogOpen(open);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <p className="eyebrow"><Ban /> Cancelamento</p>
+            <AlertDialogTitle>Cancelar este simulador?</AlertDialogTitle>
+            <AlertDialogDescription>
+              As respostas e o histórico serão preservados. A entrega será interrompida, os links de acesso serão revogados e este caso não poderá voltar ao fluxo de revisão.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {actionError && <p className="detail-dialog-error" role="alert">{actionError}</p>}
+          <AlertDialogFooter>
+            <AlertDialogCancel asChild>
+              <Button type="button" variant="outline" disabled={cancelling}>
+                Manter simulador
+              </Button>
+            </AlertDialogCancel>
+            <Button
+              type="button"
+              className="detail-dialog-confirm"
+              onClick={cancelSimulator}
+              disabled={cancelling}
+            >
+              <Ban /> {cancelling ? "Cancelando…" : "Confirmar cancelamento"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="detail-layout">
         <main className="detail-content">

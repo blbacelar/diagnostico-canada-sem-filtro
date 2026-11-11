@@ -880,6 +880,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .detail-cancelled-message { display: inline-flex; align-items: center; gap: 8px; color: #635948; font-size: 13px; }
 .detail-cancelled-message svg { width: 16px; }
 .detail-action-error { max-width: 500px; margin: 0; color: var(--accent); font-size: 10px; text-align: right; }
+.detail-dialog-error { margin: -4px 0 0; color: var(--accent); font-size: 13px; line-height: 1.45; }
+.detail-dialog-confirm { background: var(--accent); color: white; }
+.detail-dialog-confirm:hover { background: #9f1634; }
 .detail-layout { display: grid; grid-template-columns: minmax(0,1fr) 278px; gap: 30px; margin-top: 30px; align-items: start; }
 .detail-content { min-width: 0; display: grid; gap: 25px; }
 .assessment-hero { min-height: 250px; padding: 38px; display: grid; grid-template-columns: 150px 1fr; gap: 36px; align-items: center; background: var(--ink); color: var(--paper); }
