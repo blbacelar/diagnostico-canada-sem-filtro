@@ -7,8 +7,11 @@ import { getPurchaseWindowsForClients } from "../../../../lib/purchase-window";
 
 const DEFAULT_PAGE_SIZE = 10;
 const MAX_PAGE_SIZE = 50;
-const MAX_DATE_FILTER_CANDIDATES = 2_000;
+// Delivery dates are derived from the purchase and submission records, so the
+// final ordering must happen after those records are joined to the cases.
+const MAX_SORT_CANDIDATES = 2_000;
 const dateFields = new Set(["purchase", "draft", "submission", "release"]);
+const terminalCaseStatuses = new Set(["sent", "cancelled", "archived"]);
 
 function sanitizeSearch(value: string) {
   return value
@@ -38,6 +41,39 @@ function matchesDateRange(value: string | null | undefined, from: string | null,
   const dateKey = getDateKey(value);
   if (!dateKey) return false;
   return (!from || dateKey >= from) && (!to || dateKey <= to);
+}
+
+function getDeliveryPriority(item: { status: string; delivery_release_at?: string | null }) {
+  if (terminalCaseStatuses.has(item.status)) return 3;
+
+  const releaseDate = item.delivery_release_at ? new Date(item.delivery_release_at) : null;
+  if (!releaseDate || Number.isNaN(releaseDate.getTime())) return 2;
+
+  const today = new Date();
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  const startOfReleaseDate = new Date(
+    releaseDate.getFullYear(),
+    releaseDate.getMonth(),
+    releaseDate.getDate(),
+  ).getTime();
+
+  // An overdue delivery needs attention before today's and future deliveries.
+  if (startOfReleaseDate < startOfToday) return 0;
+  if (startOfReleaseDate === startOfToday) return 1;
+  return 2;
+}
+
+function sortByDeliveryPriority(items: any[]) {
+  return [...items].sort((left, right) => {
+    const priorityDifference = getDeliveryPriority(left) - getDeliveryPriority(right);
+    if (priorityDifference !== 0) return priorityDifference;
+
+    const leftReleaseAt = left.delivery_release_at ? new Date(left.delivery_release_at).getTime() : Number.POSITIVE_INFINITY;
+    const rightReleaseAt = right.delivery_release_at ? new Date(right.delivery_release_at).getTime() : Number.POSITIVE_INFINITY;
+    if (leftReleaseAt !== rightReleaseAt) return leftReleaseAt - rightReleaseAt;
+
+    return new Date(right.updated_at).getTime() - new Date(left.updated_at).getTime();
+  });
 }
 
 function applyFilters(query: any, search: string, status: string | null, clientIds: string[]) {
@@ -72,53 +108,20 @@ export async function GET(request: Request) {
     }
 
     const caseSelect = "id,case_number,status,objective,created_at,submitted_at,updated_at,assigned_consultant_id,client_id,diagnostic_ai_assessments(version,structured_result,status)";
-    let data: any[] = [];
-    let total = 0;
-
-    if (hasDateFilter) {
-      const dataQuery = applyFilters(
-        admin
-          .from("diagnostic_cases")
-          .select(caseSelect)
-          .is("archived_at", null)
-          .order("updated_at", { ascending: false })
-          .range(0, MAX_DATE_FILTER_CANDIDATES - 1),
-        search,
-        status,
-        clientIds,
-      );
-      const { data: allCandidates, error } = await dataQuery;
-      if (error) throw error;
-      data = allCandidates ?? [];
-    } else {
-      const countQuery = applyFilters(
-        admin
-          .from("diagnostic_cases")
-          .select("id", { count: "exact", head: true })
-          .is("archived_at", null),
-        search,
-        status,
-        clientIds,
-      );
-      const [{ count, error: countError }, { data: pagedData, error }] = await Promise.all([
-        countQuery,
-        applyFilters(
-          admin
-            .from("diagnostic_cases")
-            .select(caseSelect)
-            .is("archived_at", null)
-            .order("updated_at", { ascending: false })
-            .range(offset, offset + pageSize - 1),
-          search,
-          status,
-          clientIds,
-        ),
-      ]);
-      if (countError) throw countError;
-      if (error) throw error;
-      total = count ?? 0;
-      data = pagedData ?? [];
-    }
+    const dataQuery = applyFilters(
+      admin
+        .from("diagnostic_cases")
+        .select(caseSelect)
+        .is("archived_at", null)
+        .order("updated_at", { ascending: false })
+        .range(0, MAX_SORT_CANDIDATES - 1),
+      search,
+      status,
+      clientIds,
+    );
+    const { data: allCandidates, error } = await dataQuery;
+    if (error) throw error;
+    const data = allCandidates ?? [];
 
     const clientsById = await getCentralClientsByIds(admin, data.map((item: any) => item.client_id));
     const purchaseWindowsByEmail = await getPurchaseWindowsForClients(admin, [...clientsById.values()]);
@@ -146,8 +149,9 @@ export async function GET(request: Request) {
           dateTo,
         ))
       : decorated;
-    if (hasDateFilter) total = filtered.length;
-    const visibleItems = hasDateFilter ? filtered.slice(offset, offset + pageSize) : filtered;
+    const sorted = sortByDeliveryPriority(filtered);
+    const total = sorted.length;
+    const visibleItems = sorted.slice(offset, offset + pageSize);
     const items = visibleItems.map((item: any) => ({
       ...item,
       diagnostic_ai_assessments: [...(item.diagnostic_ai_assessments ?? [])]
