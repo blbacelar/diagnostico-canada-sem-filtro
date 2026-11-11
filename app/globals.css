@@ -609,7 +609,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .list-toolbar__select-trigger { width: 100% !important; min-height: 0 !important; height: auto !important; border: 0 !important; border-radius: 0 !important; background: transparent !important; padding: 0 !important; box-shadow: none !important; font-size: 12px !important; }
 .list-toolbar__select-trigger:focus-visible { outline: 0 !important; box-shadow: none !important; }
 .diagnostic-table { width: 100%; border: 1px solid var(--paper-edge); background: var(--paper-light); overflow: visible; }
-.diagnostic-table__scroll { overflow-x: auto; }
+.diagnostic-table__scroll { overflow-x: auto; overflow-y: hidden; }
 .diagnostic-table__table { width: 100%; min-width: 1300px; }
 .diagnostic-table__table th { font-size: 9px; }
 .diagnostic-table .case-avatar { width: 42px; height: 42px; font-size: 10px; }
@@ -620,7 +620,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .diagnostic-table__delivery-alert { display: inline-flex; align-items: center; gap: 5px; padding: 5px 7px; border: 1px solid rgba(167,104,23,.35); border-radius: 999px; background: #fff4dc; color: #8b5310; font: 600 8px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
 .diagnostic-table__delivery-alert svg { width: 12px; }
 .diagnostic-table__row--delivery-due, .diagnostic-table__row--delivery-due:hover { background: #fffaf0 !important; box-shadow: inset 4px 0 0 #d89224; }
-.table-pagination { min-width: 1300px; min-height: 52px; padding: 10px 20px; display: flex; align-items: center; justify-content: flex-end; gap: 12px; border-top: 1px solid var(--paper-edge); background: var(--paper-light); }
+.table-pagination { min-height: 52px; padding: 10px 20px; display: flex; align-items: center; justify-content: flex-end; gap: 12px; border-top: 1px solid var(--paper-edge); background: var(--paper-light); }
 .table-pagination > span { color: var(--ink-mute); font: 500 9px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .08em; }
 .table-pagination > button { min-width: 92px; min-height: 32px; padding: 0 12px; border: 1px solid var(--paper-edge); background: white; color: var(--ink); font: 500 9px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .08em; cursor: pointer; }
 .table-pagination > button[disabled] { opacity: .45; cursor: default; }
