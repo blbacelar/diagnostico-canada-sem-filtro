@@ -5,6 +5,7 @@ describe("tradução de estados técnicos", () => {
   it("traduz os estados exibidos no detalhe do diagnóstico", () => {
     expect(getCaseStatusLabel("ready_for_approval")).toBe("Pronto para aprovação");
     expect(getCaseStatusLabel("sent")).toBe("Enviado");
+    expect(getCaseStatusLabel("cancelled")).toBe("Cancelado");
     expect(getReviewStatusLabel("approved")).toBe("Aprovado");
   });
 

@@ -10,6 +10,7 @@ export const caseStatusLabels: Record<string, string> = {
   sending: "Enviando",
   sent: "Enviado",
   processing_error: "Erro no processamento",
+  cancelled: "Cancelado",
   archived: "Arquivado",
 };
 

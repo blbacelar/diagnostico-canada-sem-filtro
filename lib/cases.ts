@@ -25,15 +25,31 @@ export async function processAssessment(caseId: string, submissionId: string, as
     const assessment = await generateAssessment(submissionResult.data.answers_snapshot, config);
     const { error: assessmentError } = await admin.from("diagnostic_ai_assessments").update({ status: "completed", structured_result: assessment, confidence: assessment.confidence, model: assessment.model, completed_at: new Date().toISOString(), error_code: null }).eq("id", assessmentId).eq("case_id", caseId);
     if (assessmentError) throw assessmentError;
-    await admin.from("diagnostic_cases").update({ status: "awaiting_triage" }).eq("id", caseId);
+    const { data: transitionedCase, error: transitionError } = await admin
+      .from("diagnostic_cases")
+      .update({ status: "awaiting_triage" })
+      .eq("id", caseId)
+      .eq("status", "ai_processing")
+      .select("id")
+      .maybeSingle();
+    if (transitionError) throw transitionError;
+    if (!transitionedCase) return;
     await admin.from("diagnostic_status_history").insert({ case_id: caseId, from_status: "ai_processing", to_status: "awaiting_triage", actor_type: "system", note: "Análise estruturada concluída." });
     await writeAudit(admin, { caseId, actorType: "system", action: "ai_assessment.completed", metadata: { assessmentId, methodologyVersion: config.methodologyVersion, promptVersion: config.promptVersion, model: config.model } });
   } catch (error) {
     const code = error instanceof Error ? error.name.slice(0, 80) : "UNKNOWN_AI_ERROR";
     await admin.from("diagnostic_ai_assessments").update({ status: "failed", error_code: code, completed_at: new Date().toISOString() }).eq("id", assessmentId);
-    await admin.from("diagnostic_cases").update({ status: "processing_error" }).eq("id", caseId);
-    await admin.from("diagnostic_status_history").insert({ case_id: caseId, from_status: "ai_processing", to_status: "processing_error", actor_type: "system", note: "Falha segura no processamento; respostas preservadas." });
-    await writeAudit(admin, { caseId, actorType: "system", action: "ai_assessment.failed", metadata: { assessmentId, errorCode: code } });
+    const { data: transitionedCase } = await admin
+      .from("diagnostic_cases")
+      .update({ status: "processing_error" })
+      .eq("id", caseId)
+      .eq("status", "ai_processing")
+      .select("id")
+      .maybeSingle();
+    if (transitionedCase) {
+      await admin.from("diagnostic_status_history").insert({ case_id: caseId, from_status: "ai_processing", to_status: "processing_error", actor_type: "system", note: "Falha segura no processamento; respostas preservadas." });
+      await writeAudit(admin, { caseId, actorType: "system", action: "ai_assessment.failed", metadata: { assessmentId, errorCode: code } });
+    }
     throw error;
   }
 }

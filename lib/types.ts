@@ -10,6 +10,7 @@ export type DiagnosticStatus =
   | "sending"
   | "sent"
   | "processing_error"
+  | "cancelled"
   | "archived";
 
 export type FieldType =

@@ -7,6 +7,7 @@ import {
   AlertTriangle,
   ArrowLeft,
   ArrowUpRight,
+  Ban,
   Brain,
   CalendarDays,
   CircleDollarSign,
@@ -90,9 +91,10 @@ export function DiagnosticDetailClient({ caseId }: { caseId: string }) {
   const [data, setData] = useState<CaseDetailData | null>(null);
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [actionError, setActionError] = useState("");
 
-  useCaseLockLifecycle(caseId);
+  useCaseLockLifecycle(caseId, data?.case.status !== "cancelled");
 
   useEffect(() => {
     detailFetch<CaseDetailData>(`/api/dashboard/cases/${caseId}`)
@@ -118,6 +120,8 @@ export function DiagnosticDetailClient({ caseId }: { caseId: string }) {
   const delivered = data.case.status === "sent";
   const approved = data.case.status === "approved";
   const sending = data.case.status === "sending";
+  const cancelled = data.case.status === "cancelled";
+  const canCancel = !["sent", "sending", "cancelled", "archived"].includes(data.case.status);
 
   async function createReassessment() {
     setCreating(true);
@@ -138,6 +142,29 @@ export function DiagnosticDetailClient({ caseId }: { caseId: string }) {
     }
   }
 
+  async function cancelSimulator() {
+    const confirmed = window.confirm(
+      "Cancelar este simulador? As respostas e o histórico serão preservados, mas a entrega será interrompida e os links de acesso serão revogados.",
+    );
+    if (!confirmed) return;
+
+    setCancelling(true);
+    setActionError("");
+    try {
+      await detailFetch(`/api/dashboard/cases/${caseId}/cancel`, { method: "POST" });
+      const refreshed = await detailFetch<CaseDetailData>(`/api/dashboard/cases/${caseId}`);
+      setData(refreshed);
+    } catch (cancelError) {
+      setActionError(
+        cancelError instanceof Error
+          ? cancelError.message
+          : "Não foi possível cancelar o simulador.",
+      );
+    } finally {
+      setCancelling(false);
+    }
+  }
+
   return (
     <>
       <div className="detail-back">
@@ -149,7 +176,7 @@ export function DiagnosticDetailClient({ caseId }: { caseId: string }) {
 
       <header className="detail-heading">
         <div>
-          <p className="eyebrow">{delivered ? "Simulador enviado" : "Caso em análise"}</p>
+          <p className="eyebrow">{delivered ? "Simulador enviado" : cancelled ? "Simulador cancelado" : "Caso em análise"}</p>
           <h1>{data.client.full_name}</h1>
           <p>
             {data.client.email_display} · {data.case.objective ?? "Objetivo não definido"}
@@ -158,7 +185,11 @@ export function DiagnosticDetailClient({ caseId }: { caseId: string }) {
 
         <div className="detail-action-group">
           <div className="detail-actions">
-            {delivered ? (
+            {cancelled ? (
+              <p className="detail-cancelled-message" role="status">
+                <Ban /> A entrega deste simulador foi cancelada.
+              </p>
+            ) : delivered ? (
               <>
                 <Link
                   className="secondary-button"
@@ -207,6 +238,17 @@ export function DiagnosticDetailClient({ caseId }: { caseId: string }) {
                   <Pencil /> {data.review ? "Editar parecer" : "Iniciar parecer"}
                 </Link>
               </>
+            )}
+            {canCancel && (
+              <Button
+                type="button"
+                variant="outline"
+                className="detail-cancel-button"
+                onClick={cancelSimulator}
+                disabled={cancelling}
+              >
+                <Ban /> {cancelling ? "Cancelando…" : "Cancelar simulador"}
+              </Button>
             )}
           </div>
 
@@ -382,7 +424,7 @@ export function DiagnosticDetailClient({ caseId }: { caseId: string }) {
             <Link href={`/dashboard/diagnosticos/${caseId}/relatorio`}>
               {delivered ? "Ver resultado enviado" : "Pré-visualizar relatório"} <ArrowUpRight />
             </Link>
-            {!delivered && !sending && (
+            {!delivered && !sending && !cancelled && (
               <Link href={`/dashboard/diagnosticos/${caseId}/email`}>
                 Preparar e-mail <ArrowUpRight />
               </Link>

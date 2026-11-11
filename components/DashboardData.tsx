@@ -177,7 +177,7 @@ function DiagnosticTableRow({ item, onOpen }: { item: CaseRow; onOpen: (caseId: 
   const score = result?.overallScore;
   const technicalAlerts = result?.technicalAlerts ?? [];
   const alertsCount = technicalAlerts.length;
-  const deliveryDueToday = item.status !== "sent" && isToday(item.delivery_release_at);
+  const deliveryDueToday = !["sent", "cancelled"].includes(item.status) && isToday(item.delivery_release_at);
 
   return <TableRow className={`${item.locked_by_other ? "bg-[rgba(23,34,43,.035)]" : "cursor-pointer"}${deliveryDueToday ? " diagnostic-table__row--delivery-due" : ""}`} aria-disabled={item.locked_by_other ? "true" : undefined} onClick={() => !item.locked_by_other && onOpen(item.id)}>
     <TableCell className="whitespace-nowrap">

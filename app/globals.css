@@ -532,6 +532,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .status-awaiting_triage, .status-submitted { background: rgba(183,28,61,.09); color: var(--accent); }
 .status-in_review { background: rgba(70,105,138,.12); color: #46698a; }
 .status-ready_for_approval, .status-sent, .status-approved { background: rgba(47,102,85,.11); color: var(--success); }
+.status-cancelled { background: rgba(99, 89, 72, .12); color: #635948; }
 .alert-count { color: var(--warning); display: flex; align-items: center; justify-content: center; gap: 4px; font: 500 9px var(--font-mono), monospace; }
 .alert-count svg { width: 13px; }
 .alert-count--with-popover { position: relative; cursor: help; }
@@ -874,6 +875,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .detail-heading > div > p:not(.eyebrow), .review-editor-header > header > div > p:not(.eyebrow) { margin: 12px 0 0; color: var(--ink-mute); font-size: 12px; }
 .detail-actions { display: flex; gap: 10px; align-items: center; }
 .detail-action-group { display: grid; justify-items: end; gap: 8px; }
+.detail-cancel-button { border-color: rgba(183,28,61,.45); color: var(--accent); }
+.detail-cancel-button:hover { background: rgba(183,28,61,.08); color: var(--accent); }
+.detail-cancelled-message { display: inline-flex; align-items: center; gap: 8px; color: #635948; font-size: 13px; }
+.detail-cancelled-message svg { width: 16px; }
 .detail-action-error { max-width: 500px; margin: 0; color: var(--accent); font-size: 10px; text-align: right; }
 .detail-layout { display: grid; grid-template-columns: minmax(0,1fr) 278px; gap: 30px; margin-top: 30px; align-items: start; }
 .detail-content { min-width: 0; display: grid; gap: 25px; }

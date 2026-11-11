@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { isReviewImmutable } from "../../lib/case-lifecycle";
 
 describe("ciclo de vida do parecer", () => {
-  it.each(["sending", "archived"])("protege o status %s contra edição", (status) => {
+  it.each(["sending", "cancelled", "archived"])("protege o status %s contra edição", (status) => {
     expect(isReviewImmutable(status)).toBe(true);
   });
 

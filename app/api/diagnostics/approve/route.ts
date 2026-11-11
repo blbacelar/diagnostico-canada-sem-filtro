@@ -6,6 +6,9 @@ export async function POST(request: Request) {
 		const payload = await parseJson(request, approveSchema, 10_000);
 		const { admin, user } = await requireConsultant(request);
 		const diagnosticCase = await claimCaseForReview(admin, payload.caseId, user.id);
+		if (diagnosticCase.status === "cancelled") {
+			throw new ApiError(409, "Este simulador foi cancelado e não pode ser aprovado.", "CASE_CANCELLED");
+		}
 		const { data: review, error } = await admin
 			.from("diagnostic_reviews")
 			.select("id,status,case_id,version")

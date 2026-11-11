@@ -105,7 +105,7 @@ export async function requireFormCase(request: Request) {
     .eq("id", data.case_id)
     .maybeSingle();
   if (caseError) throw caseError;
-  if (!caseRow || caseRow.archived_at) {
+  if (!caseRow || caseRow.archived_at || caseRow.status === "cancelled") {
     await admin.from("diagnostic_access_tokens").update({ revoked_at: new Date().toISOString() }).eq("id", data.id).is("revoked_at", null);
     throw new ApiError(401, "O link é inválido, expirou ou foi revogado.", "INVALID_FORM_TOKEN");
   }

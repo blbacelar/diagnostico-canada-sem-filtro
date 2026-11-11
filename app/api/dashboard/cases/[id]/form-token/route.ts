@@ -33,10 +33,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     const now = new Date().toISOString();
 
-    if (["sending"].includes(diagnosticCase.status)) {
+    if (["sending", "cancelled", "archived"].includes(diagnosticCase.status)) {
       throw new ApiError(
         409,
-        "Um simulador em processo de envio não pode ser alterado.",
+        diagnosticCase.status === "cancelled"
+          ? "Este simulador foi cancelado e não pode ser alterado."
+          : "Um simulador em processo de envio não pode ser alterado.",
         "CASE_IMMUTABLE",
       );
     }

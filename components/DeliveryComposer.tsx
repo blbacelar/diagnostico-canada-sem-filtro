@@ -43,13 +43,13 @@ export function DeliveryComposer({ caseId }: { caseId: string }) {
     deliveryWindow?.can_override_wait_period ?? false;
   const canSend = deliveryUnlocked || (canOverrideDeliveryWait && overrideDeliveryWait);
 
-  useCaseLockLifecycle(caseId);
+  useCaseLockLifecycle(caseId, detail?.case.status !== "cancelled");
 
   useEffect(() => {
     detailFetch<CaseDetailData>(`/api/dashboard/cases/${caseId}`)
       .then((data) => {
         setDetail(data);
-        if (data.case.status === "sent") return null;
+        if (["sent", "cancelled"].includes(data.case.status)) return null;
         return detailFetch(`/api/diagnostics/reviews?caseId=${caseId}`);
       })
       .then((data) => {
@@ -155,6 +155,22 @@ export function DeliveryComposer({ caseId }: { caseId: string }) {
         >
           <Eye />
           Ver resultado enviado
+        </Link>
+      </div>
+    );
+  }
+
+  if (detail.case.status === "cancelled") {
+    return (
+      <div className="module-empty">
+        <Mail />
+        <h2>Este simulador foi cancelado</h2>
+        <p>
+          A entrega foi interrompida e nenhum resultado será enviado ao cliente.
+          As respostas e o histórico permanecem preservados no caso.
+        </p>
+        <Link className="primary-button" href={`/dashboard/diagnosticos/${caseId}`}>
+          <ArrowLeft /> Voltar ao caso
         </Link>
       </div>
     );

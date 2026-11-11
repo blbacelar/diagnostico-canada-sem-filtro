@@ -28,6 +28,9 @@ export async function POST(request: Request) {
     const { data: existing } = await admin.from("diagnostic_email_deliveries").select("id,status,provider_id").eq("idempotency_key", key).maybeSingle();
     if (existing) return json({ delivery: existing });
     const diagnosticCase = await claimCaseForReview(admin, payload.caseId, user.id);
+    if (diagnosticCase.status === "cancelled") {
+      throw new ApiError(409, "Este simulador foi cancelado e não pode ser enviado.", "CASE_CANCELLED");
+    }
     const { data: requestedReview } = await admin
       .from("diagnostic_reviews")
       .select("id,status")
@@ -58,6 +61,7 @@ export async function POST(request: Request) {
         .update({ status: "approved" })
         .eq("id", payload.caseId)
         .eq("assigned_consultant_id", user.id)
+        .neq("status", "cancelled")
         .select("status")
         .maybeSingle();
       caseStatus = syncedCase?.status ?? caseStatus;
@@ -77,7 +81,18 @@ export async function POST(request: Request) {
     const reportToken = createFormToken();
     await admin.from("diagnostic_report_tokens").insert({ case_id: payload.caseId, review_id: effectiveReview.id, token_hash: hashFormToken(reportToken), expires_at: new Date(Date.now() + config.reportLinkDays * 24 * 60 * 60 * 1000).toISOString() });
     const reportUrl = `${process.env.APP_URL ?? "http://localhost:3000"}/relatorio/${encodeURIComponent(reportToken)}`;
-    await admin.from("diagnostic_cases").update({ status: "sending" }).eq("id", payload.caseId).eq("assigned_consultant_id", user.id);
+    const { data: reservedCase, error: reservationError } = await admin
+      .from("diagnostic_cases")
+      .update({ status: "sending" })
+      .eq("id", payload.caseId)
+      .eq("assigned_consultant_id", user.id)
+      .eq("status", "approved")
+      .select("id")
+      .maybeSingle();
+    if (reservationError) throw reservationError;
+    if (!reservedCase) {
+      throw new ApiError(409, "Este simulador foi atualizado ou cancelado antes do envio.", "DELIVERY_NOT_RESERVED");
+    }
     try {
       let pdf: Uint8Array | undefined;
       if (payload.deliveryMethod === "pdf") pdf = await generateReportPdf(await getReportData(admin, payload.caseId));
