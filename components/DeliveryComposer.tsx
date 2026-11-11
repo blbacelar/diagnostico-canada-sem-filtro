@@ -18,6 +18,10 @@ const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
   day: "2-digit",
   month: "short",
   year: "numeric",
+  // Delivery windows are calculated and unlocked by their UTC calendar date.
+  // Formatting in the browser's local timezone could otherwise show the
+  // previous day for a timestamp at midnight UTC.
+  timeZone: "UTC",
 });
 
 export function DeliveryComposer({ caseId }: { caseId: string }) {

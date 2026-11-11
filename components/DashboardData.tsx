@@ -203,7 +203,14 @@ function DiagnosticTableRow({ item, onOpen }: { item: CaseRow; onOpen: (caseId: 
   </TableRow>;
 }
 
-const dateFormatter = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+  // Keep the dashboard calendar date aligned with the delivery rule used by
+  // the API instead of shifting it in the consultant's browser timezone.
+  timeZone: "UTC",
+});
 
 function DateTableCell({ value }: { value: string | null | undefined }) {
   return value ? <time className="diagnostic-table__date" dateTime={value}>{dateFormatter.format(new Date(value))}</time> : <span className="diagnostic-table__date diagnostic-table__date--empty">—</span>;
