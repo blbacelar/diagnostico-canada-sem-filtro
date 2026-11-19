@@ -3,6 +3,7 @@ import { getAdminSupabase, getSupabaseForAccessToken } from "./supabase";
 import { formTokenFromRequest, hashFormToken, hashIp } from "./tokens";
 import { hasPurchasedAccessForEmail } from "./purchase-window";
 import { getCentralClientById } from "./central-client";
+import { portalTokenFromCookie, verifiedPortalStudent } from "./portal-student";
 
 export class ApiError extends Error {
   constructor(
@@ -110,8 +111,15 @@ export async function requireFormCase(request: Request) {
     throw new ApiError(401, "O link é inválido, expirou ou foi revogado.", "INVALID_FORM_TOKEN");
   }
   const client = await getCentralClientById(admin, caseRow.client_id);
-  const hasPurchase = client?.email ? await hasPurchasedAccessForEmail(admin, client.email) : false;
+  const portalToken = portalTokenFromCookie(request);
+  const portalStudent = portalToken ? await verifiedPortalStudent(portalToken) : null;
+  const portalAccess = Boolean(client?.email && portalStudent && client.email.trim().toLowerCase() === portalStudent.email);
+  const metadata = caseRow.source_metadata as { source?: unknown } | null;
+  const portalCase = metadata?.source === 'portal_mentoria';
+  const hasPurchase = portalCase ? portalAccess : portalAccess || (client?.email ? await hasPurchasedAccessForEmail(admin, client.email) : false);
   if (!hasPurchase) {
+    // O aluno pode retornar pelo portal e renovar sua sessão sem perder o formulário.
+    if (portalCase) throw new ApiError(401, "Sua sessão expirou. Abra o simulador novamente pelo portal.", "PORTAL_SESSION_EXPIRED");
     await admin.from("diagnostic_access_tokens").update({ revoked_at: new Date().toISOString() }).eq("id", data.id).is("revoked_at", null);
     await writeAudit(admin, {
       caseId: caseRow.id,

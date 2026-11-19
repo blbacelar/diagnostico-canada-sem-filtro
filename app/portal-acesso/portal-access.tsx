@@ -13,6 +13,8 @@ export default function PortalAccess() {
   const [codeSent, setCodeSent] = useState(false);
   const [code, setCode] = useState('');
   const [pending, setPending] = useState(false);
+  const [canStart, setCanStart] = useState(false);
+  const [consent, setConsent] = useState(false);
   const token = useRef('');
   const started = useRef(false);
 
@@ -37,10 +39,21 @@ export default function PortalAccess() {
       setStatus('Seu acesso ao diagnóstico ainda precisa ser confirmado.'); return;
     }
     if (!response.ok) throw new Error('Não foi possível localizar seu diagnóstico. Tente novamente.');
-    const data = await response.json() as { cases: Case[] };
+    const data = await response.json() as { cases: Case[]; pending?: boolean };
     if (data.cases.length === 1) { await openCase(data.cases[0].id); return; }
     setCases(data.cases);
-    setStatus(data.cases.length ? 'Escolha o diagnóstico que deseja continuar.' : 'Não há formulário disponível para continuar nesta conta.');
+    setCanStart(!data.cases.length && !data.pending);
+    setStatus(data.cases.length ? 'Escolha o diagnóstico que deseja continuar.' : data.pending ? 'Seu simulador já está em andamento com a equipe.' : 'Comece seu simulador com a conta do portal.');
+  }
+
+  async function startCase() {
+    if (!consent) return;
+    setPending(true);
+    try {
+      const response = await api('POST', { consent: true });
+      if (!response.ok) throw new Error();
+      window.location.assign('/formulario');
+    } catch { setPending(false); setStatus('Não foi possível iniciar seu simulador. Tente novamente.'); }
   }
 
   useEffect(() => {
@@ -84,5 +97,5 @@ export default function PortalAccess() {
     finally { setPending(false); }
   }
 
-  return <main className="module-empty"><h1>Seu diagnóstico</h1><p role="status">{status}</p>{needsProof && !codeSent && <button className="primary-button" type="button" disabled={pending} onClick={() => void linkAccount()}>Enviar código de confirmação</button>}{needsProof && codeSent && <form onSubmit={event => { event.preventDefault(); void verifyCode(); }}><label htmlFor="link-code">Código recebido por e-mail</label><input id="link-code" value={code} onChange={event => setCode(event.target.value)} autoComplete="one-time-code" required /><button className="primary-button" type="submit" disabled={pending}>Confirmar código</button></form>}{cases.map(item => <button className="primary-button" type="button" key={item.id} disabled={pending} onClick={() => void openCase(item.id)}>Continuar {item.case_number}</button>)}<p><Link href="/">Voltar ao diagnóstico</Link></p></main>;
+  return <main className="module-empty"><h1>Seu diagnóstico</h1><p role="status">{status}</p>{canStart && <form onSubmit={event => { event.preventDefault(); void startCase(); }}><label className="consent-row"><input type="checkbox" checked={consent} onChange={event => setConsent(event.target.checked)} required /><span>Autorizo o tratamento dos meus dados para elaboração deste simulador e comunicações relacionadas, conforme a política de privacidade.</span></label><button className="primary-button" type="submit" disabled={pending}>{pending ? 'Abrindo...' : 'Iniciar meu simulador'}</button></form>}{needsProof && !codeSent && <button className="primary-button" type="button" disabled={pending} onClick={() => void linkAccount()}>Enviar código de confirmação</button>}{needsProof && codeSent && <form onSubmit={event => { event.preventDefault(); void verifyCode(); }}><label htmlFor="link-code">Código recebido por e-mail</label><input id="link-code" value={code} onChange={event => setCode(event.target.value)} autoComplete="one-time-code" required /><button className="primary-button" type="submit" disabled={pending}>Confirmar código</button></form>}{cases.map(item => <button className="primary-button" type="button" key={item.id} disabled={pending} onClick={() => void openCase(item.id)}>Continuar {item.case_number}</button>)}<p><Link href="/">Voltar ao diagnóstico</Link></p></main>;
 }
