@@ -1,11 +1,11 @@
 import { startDiagnosticSchema } from "../../../../lib/schemas";
 import { ApiError, enforceRateLimit, handleApiError, json, parseJson, requestIp, writeAudit } from "../../../../lib/api";
 import { getAdminSupabase } from "../../../../lib/supabase";
-import { createFormToken, hashFormToken, tokenCookie } from "../../../../lib/tokens";
+import { createFormToken, hashFormToken } from "../../../../lib/tokens";
 import { sendContinuationEmail } from "../../../../lib/email";
 import { newCaseNumber } from "../../../../lib/cases";
 import { getOperationalConfig } from "../../../../lib/operational-config.server";
-import { upsertCentralClient } from "../../../../lib/central-client";
+import { getCentralClientByEmail, upsertCentralClient } from "../../../../lib/central-client";
 import { hasPurchasedAccessForEmail } from "../../../../lib/purchase-window";
 
 const neutralMessage = "Se os dados puderem ser processados, você receberá um link pessoal para continuar. Confira também a pasta de spam.";
@@ -28,7 +28,8 @@ export async function POST(request: Request) {
     }
     const operationalConfig = await getOperationalConfig(admin);
     const now = new Date().toISOString();
-    const client = await upsertCentralClient(admin, {
+    const existingClient = await getCentralClientByEmail(admin, payload.email);
+    const client = existingClient ?? await upsertCentralClient(admin, {
       name: payload.fullName,
       email: payload.email,
       source: "hotmart",
@@ -45,7 +46,6 @@ export async function POST(request: Request) {
       return json({ message: neutralMessage });
     }
     const token = createFormToken();
-    await admin.from("diagnostic_access_tokens").update({ revoked_at: now }).eq("case_id", diagnosticCase.id).is("revoked_at", null);
     const { error: tokenError } = await admin.from("diagnostic_access_tokens").insert({ case_id: diagnosticCase.id, token_hash: hashFormToken(token), expires_at: new Date(Date.now() + operationalConfig.formLinkDays * 24 * 60 * 60 * 1000).toISOString() });
     if (tokenError) throw tokenError;
     await admin.from("diagnostic_consents").insert({ case_id: diagnosticCase.id, consent_type: "diagnostic_processing", policy_version: payload.policyVersion, granted: true, source: "hotmart" });
@@ -53,9 +53,7 @@ export async function POST(request: Request) {
     const emailError = emailResult.error;
     await admin.from("diagnostic_email_deliveries").insert({ case_id: diagnosticCase.id, delivery_type: "continuation_link", recipient: client.email, subject: "Seu link pessoal — Simulador Canadá Sem Filtro", status: emailError ? "failed" : "sent", provider_id: emailResult.data?.id ?? null, error_code: emailError?.name ?? null, sent_at: emailError ? null : now });
     await writeAudit(admin, { caseId: diagnosticCase.id, actorType: "client", action: "diagnostic.started", metadata: { source: "hotmart", policyVersion: payload.policyVersion } });
-    const response = json({ message: neutralMessage });
-    response.headers.append("Set-Cookie", tokenCookie(token));
-    return response;
+    return json({ message: neutralMessage });
   } catch (error) {
     if (error instanceof ApiError && error.status === 429) return handleApiError(error);
     console.error("diagnostic_start_failed", error instanceof Error ? error.message : "unknown");

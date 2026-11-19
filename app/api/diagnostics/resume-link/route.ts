@@ -24,7 +24,6 @@ export async function POST(request: Request) {
     if (!diagnosticCase) return json({ message: neutralMessage });
     const config = await getOperationalConfig(admin);
     const token = createFormToken();
-    await admin.from("diagnostic_access_tokens").update({ revoked_at: new Date().toISOString() }).eq("case_id", diagnosticCase.id).is("revoked_at", null);
     await admin.from("diagnostic_access_tokens").insert({ case_id: diagnosticCase.id, token_hash: hashFormToken(token), expires_at: new Date(Date.now() + config.formLinkDays * 24 * 60 * 60 * 1000).toISOString() });
     const result = await sendContinuationEmail({ to: client.email, fullName: client.name, caseNumber: diagnosticCase.case_number, token });
     await admin.from("diagnostic_email_deliveries").insert({ case_id: diagnosticCase.id, delivery_type: "continuation_link", recipient: client.email, subject: "Seu link pessoal — Simulador Canadá Sem Filtro", status: result.error ? "failed" : "sent", provider_id: result.data?.id ?? null, error_code: result.error?.name ?? null, sent_at: result.error ? null : new Date().toISOString() });
