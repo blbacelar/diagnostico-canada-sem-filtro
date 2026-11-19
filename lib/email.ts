@@ -1,5 +1,5 @@
 import { Resend } from "resend";
-import { formatDeliveryDeadline } from "./delivery-window";
+import { submissionDeliveryMessage, submissionReviewMessage } from "./submission-confirmation";
 
 function emailClient() {
   const key = process.env.RESEND_API_KEY ?? process.env.EMAIL_PROVIDER_API_KEY;
@@ -37,16 +37,12 @@ export async function sendPasswordRecoveryEmail(input: { to: string; resetUrl: s
 }
 
 export async function sendSubmissionConfirmation(input: { to: string; fullName: string; caseNumber: string; submittedAt: string; expectedDeliveryAt: string | null }) {
-  const submittedDate = formatDeliveryDeadline(input.submittedAt);
-  const expectedDeliveryDate = formatDeliveryDeadline(input.expectedDeliveryAt);
-  const deliveryDeadline = expectedDeliveryDate
-    ? `<div style="margin:26px 0;padding:20px 22px;border:1px solid #d98a9c;background:#fff5f6;color:#8f1530;text-align:center"><div style="font:700 11px Arial,sans-serif;letter-spacing:.12em;text-transform:uppercase">Previsão de entrega</div><strong style="display:block;margin-top:7px;font:700 26px/1.15 Georgia,serif">Até ${escapeHtml(expectedDeliveryDate)}</strong><div style="margin-top:8px;font:15px/1.55 Arial,sans-serif">${submittedDate ? `Até 7 dias úteis a partir de ${escapeHtml(submittedDate)}.` : "Em até 7 dias úteis, contados do envio das suas respostas."}</div></div>`
-    : "";
+  const deliveryTimeframe = `<p style="margin:26px 0 0;color:#586c7a;font:15px/1.55 Arial,sans-serif;text-align:center">${escapeHtml(submissionDeliveryMessage())}</p>`;
   return emailClient().emails.send({
     from: fromAddress(),
     to: input.to,
     subject: `Recebemos o simulador ${input.caseNumber}`,
-    html: shell("Recebemos suas respostas", `<p style="font:17px/1.7 Georgia,serif">Olá, ${escapeHtml(input.fullName)}. O simulador <strong>${escapeHtml(input.caseNumber)}</strong> foi enviado para análise${submittedDate ? ` em ${escapeHtml(submittedDate)}` : ""}. Uma consultora revisará o material antes de qualquer entrega.</p>${deliveryDeadline}`),
+    html: shell("Recebemos suas respostas", `<p style="font:17px/1.7 Georgia,serif">Olá, ${escapeHtml(input.fullName)}.</p><p style="font:17px/1.7 Georgia,serif">${escapeHtml(submissionReviewMessage(input.caseNumber))}</p>${deliveryTimeframe}`),
   });
 }
 

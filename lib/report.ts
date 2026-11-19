@@ -69,6 +69,54 @@ export async function generateReportPdf(report: ReportData) {
       .replace(/≠/g, "!=")
       .replace(/[^\x09\x0a\x0d\x20-\x7e\u00a0-\u00ff]/g, "");
 
+  function wrapCoverName(value: string, maxWidth: number) {
+    const name = safe(value).trim() || "Cliente";
+    const wrapAtSize = (size: number) => {
+      const lines: string[] = [];
+      let line = "";
+
+      for (const word of name.split(/\s+/)) {
+        const next = line ? `${line} ${word}` : word;
+        if (titleFont.widthOfTextAtSize(next, size) <= maxWidth) {
+          line = next;
+          continue;
+        }
+
+        if (line) lines.push(line);
+
+        // Names normally wrap on spaces. This fallback also keeps an
+        // unusually long, unbroken name inside the printable area.
+        if (titleFont.widthOfTextAtSize(word, size) > maxWidth) {
+          let fragment = "";
+          for (const character of word) {
+            const candidate = `${fragment}${character}`;
+            if (fragment && titleFont.widthOfTextAtSize(candidate, size) > maxWidth) {
+              lines.push(fragment);
+              fragment = character;
+            } else {
+              fragment = candidate;
+            }
+          }
+          line = fragment;
+        } else {
+          line = word;
+        }
+      }
+      if (line) lines.push(line);
+      return lines;
+    };
+
+    // Preserve the editorial scale for typical names, then reduce only as
+    // much as needed to keep longer names compact on the cover.
+    for (let size = 44; size >= 26; size -= 1) {
+      const lines = wrapAtSize(size);
+      if (lines.length <= 2) return { lines, size, lineHeight: size * 1.08 };
+    }
+
+    const size = 26;
+    return { lines: wrapAtSize(size), size, lineHeight: size * 1.08 };
+  }
+
   const footerLabel = `${report.caseNumber}  |  Versão ${report.review.version}  |  ${new Date(report.generatedAt).toLocaleDateString("pt-BR")}`;
   const readinessLabel = {
     inicial: "Inicial",
@@ -221,12 +269,15 @@ export async function generateReportPdf(report: ReportData) {
       font: italicFont,
       color: burgundy,
     });
-    page.drawText(safe(report.clientName), {
-      x: titleX,
-      y: titleBaseY - 122,
-      size: 44,
-      font: titleFont,
-      color: ink,
+    const coverName = wrapCoverName(report.clientName, width - titleX - margin);
+    coverName.lines.forEach((line, index) => {
+      page.drawText(line, {
+        x: titleX,
+        y: titleBaseY - 122 - index * coverName.lineHeight,
+        size: coverName.size,
+        font: titleFont,
+        color: ink,
+      });
     });
   }
 
