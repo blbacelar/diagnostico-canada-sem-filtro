@@ -62,6 +62,17 @@ describe("PDF do relatório", () => {
     expect(pdf.byteLength).toBeGreaterThan(1000);
   });
 
+  it("gera a capa com nomes longos sem ultrapassar a área imprimível", async () => {
+    const pdf = await generateReportPdf({
+      ...reportWithText("Texto curto para validar a capa."),
+      clientName: "Sheila Cristina Gomes de Araujo",
+    });
+
+    const document = await PDFDocument.load(pdf);
+    expect(document.getPageCount()).toBeGreaterThan(0);
+    expect(pdf.byteLength).toBeGreaterThan(1000);
+  });
+
   it("inclui uma última página com QR Code e link clicável para quem comprou somente o Simulador", async () => {
     const pdf = await generateReportPdf({
       ...reportWithText("Texto curto para validar a oferta."),

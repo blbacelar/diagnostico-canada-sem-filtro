@@ -13,8 +13,10 @@ const caseId = '11111111-1111-4111-8111-111111111111';
 
 describe('simulador pelo portal', () => {
   let inserted: Array<{ table: string; value: unknown }>;
+  let existingCase: boolean;
+  let filters: Array<[string, unknown]>;
   beforeEach(() => {
-    vi.clearAllMocks(); inserted = [];
+    vi.clearAllMocks(); inserted = []; existingCase = false; filters = [];
     m.student.mockResolvedValue({ id: 'user-1', email: 'student@example.test' });
     m.client.mockResolvedValue({ id: 'client-1', email: 'student@example.test' });
     m.config.mockResolvedValue({ policyVersion: 'test', formLinkDays: 14 });
@@ -22,9 +24,9 @@ describe('simulador pelo portal', () => {
     m.admin.mockReturnValue({ from: (table: string) => {
       let inserting = false;
       const query = {
-        select: () => query, eq: () => query, in: () => query, is: () => query, limit: () => query,
+        select: () => query, eq: (field: string, value: unknown) => { if (table === 'diagnostic_cases') filters.push([field, value]); return query; }, in: () => query, is: () => query, limit: () => query,
         insert: (value: unknown) => { inserting = true; inserted.push({ table, value }); return query; },
-        maybeSingle: async () => ({ data: null, error: null }),
+        maybeSingle: async () => ({ data: existingCase ? (table === 'diagnostic_cases' ? { id: caseId, status: 'client_draft', archived_at: null } : table === 'diagnostic_consents' ? { id: 'consent' } : null) : null, error: null }),
         single: async () => ({ data: inserting ? { id: caseId } : null, error: null }),
         then: (resolve: (value: unknown) => unknown) => resolve({ data: inserting ? null : [], error: null }),
       };
@@ -51,5 +53,13 @@ describe('simulador pelo portal', () => {
   it('não permite abrir caso de outro cliente', async () => {
     expect((await POST(request({ caseId }))).status).toBe(404);
     expect(inserted).toHaveLength(0);
+  });
+  it('reabre o rascunho do aluno e emite uma nova sessão sem criar outro caso', async () => {
+    existingCase = true;
+    const response = await POST(request({ caseId }));
+    expect(response.status).toBe(200);
+    expect(filters).toContainEqual(['client_id', 'client-1']);
+    expect(inserted.map(item => item.table)).toEqual(['diagnostic_access_tokens']);
+    expect(response.headers.get('set-cookie')).toContain('HttpOnly');
   });
 });

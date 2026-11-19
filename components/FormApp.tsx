@@ -6,6 +6,7 @@ import { AlertTriangle, ArrowLeft, ArrowRight, Check, Cloud, CloudOff, LockKeyho
 import { formatCurrencyAmount, formatCurrencyEditingAmount, normalizeCurrencyInput } from "../lib/currency";
 import { legalDisclaimerParagraphs, legalDisclaimerTitle } from "../lib/legal-disclaimer";
 import { operationalConfig } from "../lib/operational-config";
+import { submissionDeliveryMessage, submissionReviewMessage } from "../lib/submission-confirmation";
 import { diagnosticSections, layoutQuestionRows, pruneHiddenAnswers, visibleQuestions } from "../lib/questions";
 import { validateQuestionAnswer, validationErrorsForDiagnostic, validationErrorsForSection } from "../lib/diagnostic-validation";
 import type { DiagnosticQuestion, FormAnswers } from "../lib/types";
@@ -214,7 +215,7 @@ export function FormApp({ initialToken, dashboardReturn = false }: { initialToke
     if (dashboardMode) {
       return <FormStatus success title="Simulador atualizado" detail={`As respostas de ${submitted.caseNumber} foram salvas com sucesso. Redirecionando para a ficha do caso…`} dashboardHref={`/dashboard/diagnosticos/${session?.caseId ?? ""}`} />;
     }
-    return <FormStatus success title="Respostas recebidas" detail={`O simulador ${submitted.caseNumber} foi enviado para análise. A análise automática ficará restrita às consultoras até a revisão profissional.`} submittedDate={submitted.submittedDate} expectedDeliveryDate={submitted.expectedDeliveryDate} />;
+    return <FormStatus success title="Respostas recebidas" detail={submissionReviewMessage(submitted.caseNumber)} showDeliveryTimeframe />;
   }
   if (!session) return null;
   if (session.status !== "client_draft" && !dashboardMode) return <FormStatus success title="Simulador já enviado" detail={`As respostas de ${session.caseNumber} estão protegidas e não podem mais ser alteradas. Se a equipe precisar de informações adicionais, você receberá uma nova comunicação.`} dashboardHref={dashboardMode ? `/dashboard/diagnosticos/${session.caseId}` : undefined} />;
@@ -253,7 +254,7 @@ export function FormApp({ initialToken, dashboardReturn = false }: { initialToke
         </aside>
         <main className="form-main">
           {isReview ? (
-            <ReviewAnswers answers={answers} incompleteSections={incompleteSections} onEdit={setStep} onSubmit={submit} submitting={isSubmitting} error={submitError} consultantManaged={dashboardMode} disclaimerAccepted={disclaimerAccepted} onToggleDisclaimerAccepted={(accepted) => { setDisclaimerAccepted(accepted); if (accepted) setSubmitError(""); }} />
+            <ReviewAnswers answers={answers} incompleteSections={incompleteSections} onEdit={setStep} onSubmit={submit} submitting={isSubmitting} error={submitError} consultantManaged={dashboardMode} disclaimerAccepted={disclaimerAccepted} canSubmit={incompleteSections.every((count) => count === 0)} onToggleDisclaimerAccepted={(accepted) => { setDisclaimerAccepted(accepted); if (accepted) setSubmitError(""); }} />
           ) : (
             <section className="question-section" aria-labelledby="section-title">
               <p className="eyebrow">Seção {section.number} de 11</p>
@@ -371,7 +372,7 @@ function CurrencyInput({ id, name, value, currencyCode, placeholder, required, "
   );
 }
 
-function ReviewAnswers({ answers, incompleteSections, onEdit, onSubmit, submitting, error, consultantManaged, disclaimerAccepted, onToggleDisclaimerAccepted }: { answers: FormAnswers; incompleteSections: number[]; onEdit: (index: number) => void; onSubmit: () => void; submitting: boolean; error: string; consultantManaged: boolean; disclaimerAccepted: boolean; onToggleDisclaimerAccepted: (accepted: boolean) => void }) {
+function ReviewAnswers({ answers, incompleteSections, onEdit, onSubmit, submitting, error, consultantManaged, disclaimerAccepted, canSubmit, onToggleDisclaimerAccepted }: { answers: FormAnswers; incompleteSections: number[]; onEdit: (index: number) => void; onSubmit: () => void; submitting: boolean; error: string; consultantManaged: boolean; disclaimerAccepted: boolean; canSubmit: boolean; onToggleDisclaimerAccepted: (accepted: boolean) => void }) {
   return (
     <section className="question-section review-section">
       <p className="eyebrow">{consultantManaged ? "Revisão pela consultoria" : "Revisão final"}</p>
@@ -386,11 +387,11 @@ function ReviewAnswers({ answers, incompleteSections, onEdit, onSubmit, submitti
       </section>
       <label className="final-consent"><input type="checkbox" checked={disclaimerAccepted} onChange={(event) => onToggleDisclaimerAccepted(event.target.checked)} /><span><Check />{consultantManaged ? "Confirmo a atualização das respostas do cliente para o simulador." : "Confirmo que li e entendi o aviso legal acima e autorizo o uso das respostas para elaboração do simulador profissional."}</span></label>
       {error && <p className="inline-alert" role="alert"><AlertTriangle />{error}</p>}
-      <div className="form-actions"><button className="secondary-button" type="button" onClick={() => onEdit(diagnosticSections.length - 1)}><ArrowLeft /> Voltar</button><button className="primary-button" type="button" disabled={submitting || !disclaimerAccepted} onClick={onSubmit}>{submitting ? "Salvando…" : (consultantManaged ? "Salvar e analisar" : "Enviar para análise")}<Send /></button></div>
+      <div className="form-actions"><button className="secondary-button" type="button" onClick={() => onEdit(diagnosticSections.length - 1)}><ArrowLeft /> Voltar</button><button className="primary-button" type="button" disabled={submitting || !disclaimerAccepted || !canSubmit} onClick={onSubmit}>{submitting ? "Salvando…" : (consultantManaged ? "Salvar e analisar" : "Enviar para análise")}<Send /></button></div>
     </section>
   );
 }
 
-function FormStatus({ title, detail, error = false, success = false, dashboardHref, submittedDate, expectedDeliveryDate }: { title: string; detail: string; error?: boolean; success?: boolean; dashboardHref?: string; submittedDate?: string | null; expectedDeliveryDate?: string | null }) {
-  return <main className="status-page"><BrandMark /><section><span className={`status-orbit ${error ? "error" : success ? "success" : ""}`}>{error ? <AlertTriangle /> : success ? <Check /> : <Cloud />}</span><p className="eyebrow">Simulador Canadá Sem Filtro</p><h1>{title}</h1><p>{detail}</p>{expectedDeliveryDate && <div className="delivery-deadline" role="status"><span>Previsão de entrega</span><strong>Até {expectedDeliveryDate}</strong><small>{submittedDate ? `Até 7 dias úteis a partir de ${submittedDate}.` : "Em até 7 dias úteis, contados do envio das suas respostas."}</small></div>}{dashboardHref ? <Link className="primary-button" href={dashboardHref}>Voltar ao dashboard</Link> : error && <Link className="primary-button" href="/">Solicitar um novo link</Link>}</section></main>;
+function FormStatus({ title, detail, error = false, success = false, dashboardHref, showDeliveryTimeframe = false }: { title: string; detail: string; error?: boolean; success?: boolean; dashboardHref?: string; showDeliveryTimeframe?: boolean }) {
+  return <main className="status-page"><BrandMark /><section><span className={`status-orbit ${error ? "error" : success ? "success" : ""}`}>{error ? <AlertTriangle /> : success ? <Check /> : <Cloud />}</span><p className="eyebrow">Simulador Canadá Sem Filtro</p><h1>{title}</h1><p>{detail}</p>{showDeliveryTimeframe && <p className="delivery-timeframe" role="status">{submissionDeliveryMessage()}</p>}{dashboardHref ? <Link className="primary-button" href={dashboardHref}>Voltar ao dashboard</Link> : error && <Link className="primary-button" href="/">Solicitar um novo link</Link>}</section></main>;
 }

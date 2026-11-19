@@ -327,15 +327,15 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .sensitive-notice svg { width: 18px; color: var(--warning); }
 .sensitive-notice p { margin: 0; font-size: 12px; }
 .sensitive-notice strong { display: block; color: var(--ink); margin-bottom: 3px; }
-.questions-stack { display: grid; gap: 24px; }
-.question-row { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 24px; align-items: stretch; }
-.question-card { grid-column: 1 / -1; min-width: 0; height: 100%; margin: 0; padding: 24px; border: 1px solid var(--paper-edge); background: rgba(246,250,251,.72); }
+.questions-stack { display: grid; gap: 20px; }
+.question-row { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 20px; align-items: stretch; }
+.question-card { grid-column: 1 / -1; min-width: 0; height: 100%; margin: 0; padding: 16px 18px; border: 1px solid var(--paper-edge); background: rgba(246,250,251,.72); }
 .question-card--half { grid-column: span 6; }
 .question-card--third { grid-column: span 4; }
 .question-card--two-thirds { grid-column: span 8; }
 .question-card--full { grid-column: 1 / -1; }
 .question-card--invalid { border-color: var(--accent); background: rgba(183,28,61,.025); }
-.question-card legend { width: 100%; min-height: 44px; display: grid; grid-template-columns: 34px 1fr; gap: 9px; padding: 0; margin-bottom: 19px; color: var(--ink); font: 500 15px/1.45 var(--font-sans), sans-serif; }
+.question-card legend { width: 100%; min-height: 28px; display: grid; grid-template-columns: 28px 1fr; gap: 7px; padding: 0; margin-bottom: 12px; color: var(--ink); font: 500 15px/1.45 var(--font-sans), sans-serif; }
 .question-card legend small { padding-top: 4px; color: var(--accent); font: 500 9px var(--font-mono), monospace; letter-spacing: .1em; }
 .question-card legend b { color: var(--accent); }
 .question-card legend em { margin-left: 8px; color: var(--ink-mute); font: 400 8px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .1em; }
@@ -402,10 +402,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .status-page h1 { margin: 0 0 18px; font: 400 clamp(48px,7vw,76px)/1 var(--font-display), serif; }
 .status-page section > p:not(.eyebrow) { color: var(--ink-soft); font: 400 18px/1.7 var(--font-body), serif; }
 .status-page .primary-button { margin-top: 22px; }
-.delivery-deadline { box-sizing: border-box; width: min(620px, 100%); margin: 28px auto 0; padding: 22px clamp(18px, 4vw, 32px); border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--paper-edge)); background: color-mix(in srgb, var(--accent) 7%, white); color: var(--accent); }
-.delivery-deadline > span { display: block; font: 700 11px var(--font-mono), monospace; letter-spacing: .14em; text-transform: uppercase; }
-.delivery-deadline strong { display: block; margin-top: 8px; overflow-wrap: anywhere; text-wrap: balance; font: 700 clamp(28px, 4vw, 36px)/1.15 var(--font-display), serif; }
-.delivery-deadline small { display: block; margin-top: 9px; color: var(--ink-soft); font: 500 14px/1.5 var(--font-body), sans-serif; }
+.delivery-timeframe { box-sizing: border-box; width: min(620px, 100%); margin: 28px auto 0; padding: 16px clamp(18px, 4vw, 28px); border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--paper-edge)); background: color-mix(in srgb, var(--accent) 6%, white); color: var(--ink-soft); font: 500 16px/1.55 var(--font-body), sans-serif; }
 .status-orbit { width: 82px; height: 82px; margin: 0 auto 30px; border: 1px solid var(--paper-edge); border-radius: 50%; display: grid; place-items: center; color: var(--accent); }
 .status-orbit svg { width: 28px; }
 .status-orbit.success { color: var(--success); }
@@ -434,7 +431,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .save-state span { display: none; }
   .question-section > h1 { font-size: 50px; }
   .section-intro { font-size: 18px; margin-bottom: 36px; }
-  .question-card { padding: 22px 18px; }
+  .question-card { padding: 16px 14px; }
   .option-grid { grid-template-columns: 1fr; }
   .form-actions { position: fixed; z-index: 18; left: 0; right: 0; bottom: 0; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: rgba(246,250,251,.96); border-top: 1px solid var(--paper-edge); }
   .form-actions .primary-button, .form-actions .secondary-button { min-width: 0; flex: 1; }
@@ -1039,7 +1036,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .report-cover > div > p { color: var(--accent); font: 500 8px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .16em; }
 .report-cover h1 { max-width: 520px; margin: 0; font: 400 78px/.9 var(--font-display), serif; }
 .report-cover h1 em { color: var(--accent); }
-.report-cover h2 { margin: 44px 0 0; font: 400 27px var(--font-body), serif; }
+.report-cover h2 { max-width: 520px; margin: 44px 0 0; overflow-wrap: anywhere; font: 400 27px/1.2 var(--font-body), serif; }
 .report-cover > footer, .report-footer { display: flex; justify-content: space-between; padding-top: 18px; border-top: 1px solid var(--rule); color: var(--ink-mute); font: 500 7px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .1em; }
 .report-heading { margin: 54px 0 24px; padding-bottom: 12px; display: grid; grid-template-columns: 44px 1fr; align-items: end; border-bottom: 1px solid var(--rule); }
 .report-heading:first-child { margin-top: 0; }
