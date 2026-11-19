@@ -254,7 +254,7 @@ export function FormApp({ initialToken, dashboardReturn = false }: { initialToke
         </aside>
         <main className="form-main">
           {isReview ? (
-            <ReviewAnswers answers={answers} incompleteSections={incompleteSections} onEdit={setStep} onSubmit={submit} submitting={isSubmitting} error={submitError} consultantManaged={dashboardMode} disclaimerAccepted={disclaimerAccepted} onToggleDisclaimerAccepted={(accepted) => { setDisclaimerAccepted(accepted); if (accepted) setSubmitError(""); }} />
+            <ReviewAnswers answers={answers} incompleteSections={incompleteSections} onEdit={setStep} onSubmit={submit} submitting={isSubmitting} error={submitError} consultantManaged={dashboardMode} disclaimerAccepted={disclaimerAccepted} canSubmit={incompleteSections.every((count) => count === 0)} onToggleDisclaimerAccepted={(accepted) => { setDisclaimerAccepted(accepted); if (accepted) setSubmitError(""); }} />
           ) : (
             <section className="question-section" aria-labelledby="section-title">
               <p className="eyebrow">Seção {section.number} de 11</p>
@@ -372,7 +372,7 @@ function CurrencyInput({ id, name, value, currencyCode, placeholder, required, "
   );
 }
 
-function ReviewAnswers({ answers, incompleteSections, onEdit, onSubmit, submitting, error, consultantManaged, disclaimerAccepted, onToggleDisclaimerAccepted }: { answers: FormAnswers; incompleteSections: number[]; onEdit: (index: number) => void; onSubmit: () => void; submitting: boolean; error: string; consultantManaged: boolean; disclaimerAccepted: boolean; onToggleDisclaimerAccepted: (accepted: boolean) => void }) {
+function ReviewAnswers({ answers, incompleteSections, onEdit, onSubmit, submitting, error, consultantManaged, disclaimerAccepted, canSubmit, onToggleDisclaimerAccepted }: { answers: FormAnswers; incompleteSections: number[]; onEdit: (index: number) => void; onSubmit: () => void; submitting: boolean; error: string; consultantManaged: boolean; disclaimerAccepted: boolean; canSubmit: boolean; onToggleDisclaimerAccepted: (accepted: boolean) => void }) {
   return (
     <section className="question-section review-section">
       <p className="eyebrow">{consultantManaged ? "Revisão pela consultoria" : "Revisão final"}</p>
@@ -387,7 +387,7 @@ function ReviewAnswers({ answers, incompleteSections, onEdit, onSubmit, submitti
       </section>
       <label className="final-consent"><input type="checkbox" checked={disclaimerAccepted} onChange={(event) => onToggleDisclaimerAccepted(event.target.checked)} /><span><Check />{consultantManaged ? "Confirmo a atualização das respostas do cliente para o simulador." : "Confirmo que li e entendi o aviso legal acima e autorizo o uso das respostas para elaboração do simulador profissional."}</span></label>
       {error && <p className="inline-alert" role="alert"><AlertTriangle />{error}</p>}
-      <div className="form-actions"><button className="secondary-button" type="button" onClick={() => onEdit(diagnosticSections.length - 1)}><ArrowLeft /> Voltar</button><button className="primary-button" type="button" disabled={submitting || !disclaimerAccepted} onClick={onSubmit}>{submitting ? "Salvando…" : (consultantManaged ? "Salvar e analisar" : "Enviar para análise")}<Send /></button></div>
+      <div className="form-actions"><button className="secondary-button" type="button" onClick={() => onEdit(diagnosticSections.length - 1)}><ArrowLeft /> Voltar</button><button className="primary-button" type="button" disabled={submitting || !disclaimerAccepted || !canSubmit} onClick={onSubmit}>{submitting ? "Salvando…" : (consultantManaged ? "Salvar e analisar" : "Enviar para análise")}<Send /></button></div>
     </section>
   );
 }

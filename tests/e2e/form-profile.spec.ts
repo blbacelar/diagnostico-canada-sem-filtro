@@ -81,6 +81,16 @@ test("@regression perfil pessoal usa controles shadcn e limpa respostas condicio
   await expect(page.getByRole("textbox", { name: "Idade dos filhos" })).toHaveValue("");
 });
 
+test("@critical @regression envio permanece bloqueado quando há campos obrigatórios pendentes", async ({ page }) => {
+  await openProfile(page);
+
+  await page.getByRole("button", { name: /Revisão e envio$/ }).click();
+  await expect(page.getByRole("heading", { name: "Revise antes de enviar" })).toBeVisible();
+  await page.getByRole("checkbox", { name: /Confirmo que li e entendi/ }).check();
+
+  await expect(page.getByRole("button", { name: "Enviar para análise" })).toBeDisabled();
+});
+
 test("@regression @a11y select shadcn funciona por teclado e mantém semântica acessível", async ({ page }) => {
   await openProfile(page);
 
