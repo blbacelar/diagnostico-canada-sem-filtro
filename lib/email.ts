@@ -23,6 +23,13 @@ export async function sendContinuationEmail(input: { to: string; fullName: strin
   return emailClient().emails.send({ from: fromAddress(), to: input.to, subject: "Seu link pessoal — Simulador Canadá Sem Filtro", html });
 }
 
+export async function sendPortalLinkCode(input: { to: string; code: string }) {
+  return emailClient().emails.send({
+    from: fromAddress(), to: input.to, subject: "Confirme o acesso ao diagnóstico — Canadá Sem Filtro",
+    html: shell("Confirme sua conta", `<p>Para associar seu diagnóstico à sua conta do portal, informe este código na tela de confirmação:</p><p style="font:700 22px monospace;letter-spacing:.08em">${escapeHtml(input.code)}</p><p>O código expira em 10 minutos. Se você não solicitou o vínculo, ignore este e-mail.</p>`),
+  });
+}
+
 export async function sendPasswordRecoveryEmail(input: { to: string; resetUrl: string }) {
   const safeResetUrl = escapeHtml(input.resetUrl);
   return emailClient().emails.send({
