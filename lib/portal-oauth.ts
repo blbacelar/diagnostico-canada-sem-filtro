@@ -19,7 +19,7 @@ export async function beginPortalAuthorization() {
   const challenge = b64url(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))));
   sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ verifier, state, createdAt: Date.now() }));
   const url = new URL('/auth/v1/oauth/authorize', AUTH_ORIGIN);
-  for (const [key, value] of Object.entries({ client_id: clientId, redirect_uri: redirect, response_type: 'code', scope: 'openid', state, code_challenge: challenge, code_challenge_method: 'S256' })) url.searchParams.set(key, value);
+  for (const [key, value] of Object.entries({ client_id: clientId, redirect_uri: redirect, response_type: 'code', scope: 'email', state, code_challenge: challenge, code_challenge_method: 'S256' })) url.searchParams.set(key, value);
   window.location.assign(url.toString());
 }
 
