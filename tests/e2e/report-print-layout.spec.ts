@@ -212,3 +212,37 @@ test("@regression relatório respeita regras de impressão", async ({ page }) =>
 
   expect(coverFooterPlacement.bottomSpace).toBeGreaterThan(20);
 });
+
+test("@critical @regression pré-visualização não reserva o simulador para edição", async ({ page }) => {
+  await mockDashboardReport(page);
+
+  await page.route("**/api/dashboard/cases/*", async (route) => {
+    const readOnly = new URL(route.request().url()).searchParams.get("readOnly");
+    if (readOnly !== "1") {
+      await route.fulfill({
+        status: 423,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "Este simulador já está em revisão por outra consultora." }),
+      });
+      return;
+    }
+    await route.fallback();
+  });
+  await page.route("**/api/diagnostics/reviews*", async (route) => {
+    const readOnly = new URL(route.request().url()).searchParams.get("readOnly");
+    if (readOnly !== "1") {
+      await route.fulfill({
+        status: 423,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "Este simulador já está em revisão por outra consultora." }),
+      });
+      return;
+    }
+    await route.fallback();
+  });
+
+  await page.goto(`/dashboard/diagnosticos/${caseId}/relatorio`);
+
+  await expect(page.getByRole("button", { name: "Imprimir" })).toBeVisible();
+  await expect(page.getByText("Relatório indisponível")).toHaveCount(0);
+});

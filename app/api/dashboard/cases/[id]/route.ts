@@ -11,7 +11,16 @@ export async function GET(
   try {
     const { id } = await params;
     const { admin, user } = await requireConsultant(request);
-    const diagnosticCase = await claimCaseForReview(admin, id, user.id);
+    const readOnly = new URL(request.url).searchParams.get("readOnly") === "1";
+    const { data: readOnlyCase, error: readOnlyCaseError } = readOnly
+      ? await admin
+        .from("diagnostic_cases")
+        .select("id,case_number,status,objective,submitted_at,updated_at,assigned_consultant_id,client_id")
+        .eq("id", id)
+        .maybeSingle()
+      : { data: null, error: null };
+    if (readOnlyCaseError) throw readOnlyCaseError;
+    const diagnosticCase = readOnlyCase ?? await claimCaseForReview(admin, id, user.id);
     if (!diagnosticCase) throw new ApiError(404, "Simulador não encontrado.");
 
     const [client, { data: submission }, { data: assessment }, { data: review }, { data: history }] =

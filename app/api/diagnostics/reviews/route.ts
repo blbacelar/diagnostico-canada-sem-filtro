@@ -3,7 +3,7 @@ import { ApiError, handleApiError, json, parseJson, requireConsultant, writeAudi
 import { reviewSchema } from "../../../../lib/schemas";
 import { claimCaseForReview } from "../../../../lib/case-lock";
 import { isReviewImmutable } from "../../../../lib/case-lifecycle";
-export async function GET(request:Request){try{const{admin,user}=await requireConsultant(request);const caseId=new URL(request.url).searchParams.get("caseId");if(!caseId||!z.string().uuid().safeParse(caseId).success)return json({error:"Caso inválido."},{status:422});await claimCaseForReview(admin,caseId,user.id);const{data,error}=await admin.from("diagnostic_reviews").select("*").eq("case_id",caseId).order("version",{ascending:false}).limit(1).maybeSingle();if(error)throw error;return json({review:data});}catch(error){return handleApiError(error);}}
+export async function GET(request:Request){try{const{admin,user}=await requireConsultant(request);const url=new URL(request.url);const caseId=url.searchParams.get("caseId");if(!caseId||!z.string().uuid().safeParse(caseId).success)return json({error:"Caso inválido."},{status:422});if(url.searchParams.get("readOnly")!=="1")await claimCaseForReview(admin,caseId,user.id);const{data,error}=await admin.from("diagnostic_reviews").select("*").eq("case_id",caseId).order("version",{ascending:false}).limit(1).maybeSingle();if(error)throw error;return json({review:data});}catch(error){return handleApiError(error);}}
 export async function PUT(request: Request) {
   try {
     const payload = await parseJson(request, reviewSchema, 80_000);
