@@ -67,4 +67,32 @@ describe("detalhe de simulador enviado", () => {
       );
     });
   });
+
+  it("abre em modo de consulta quando outra consultora está editando", async () => {
+    const caseDetail = {
+      case: { id: "case-locked", case_number: "CSF-2026-0003", status: "approved", objective: "Trabalhar", submitted_at: "2026-08-03T10:00:00Z", updated_at: "2026-08-03T12:00:00Z", assigned_consultant_id: "consultant-2" },
+      client: { full_name: "Carla Milazzo", email_display: "carla@example.com" },
+      answers: { age: 43 },
+      assessment: null,
+      review: { id: "review-locked", version: 2, status: "approved", updated_at: "2026-08-03T11:00:00Z" },
+      history: [],
+    };
+    const fetchMock = vi.fn().mockImplementation((path: string) => {
+      if (!path.includes("readOnly=1")) {
+        return Promise.resolve(new Response(JSON.stringify({ error: "Este simulador já está em revisão por outra consultora." }), { status: 423 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify(caseDetail), { status: 200 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<DiagnosticDetailClient caseId="case-locked" />);
+
+    expect(await screen.findByText(/está em edição por outra consultora/)).toBeVisible();
+    expect(screen.getByRole("link", { name: "Ver parecer atual" })).toHaveAttribute("href", "/dashboard/diagnosticos/case-locked/relatorio");
+    expect(screen.queryByRole("link", { name: "Editar parecer" })).toBeNull();
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/dashboard/cases/case-locked?readOnly=1",
+      expect.objectContaining({ headers: { Authorization: "Bearer test-token" } }),
+    );
+  });
 });

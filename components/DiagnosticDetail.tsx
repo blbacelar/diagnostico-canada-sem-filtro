@@ -99,23 +99,46 @@ export async function detailFetch<T = any>(
 export function DiagnosticDetailClient({ caseId }: { caseId: string }) {
   const [data, setData] = useState<CaseDetailData | null>(null);
   const [error, setError] = useState("");
+  const [readOnly, setReadOnly] = useState(false);
   const [creating, setCreating] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [actionError, setActionError] = useState("");
 
-  useCaseLockLifecycle(caseId, data?.case.status !== "cancelled");
+  useCaseLockLifecycle(caseId, !readOnly && data?.case.status !== "cancelled");
 
   useEffect(() => {
-    detailFetch<CaseDetailData>(`/api/dashboard/cases/${caseId}`)
-      .then(setData)
-      .catch((fetchError) => {
-        setError(
-          fetchError instanceof Error
-            ? fetchError.message
-            : "Não foi possível abrir o simulador.",
-        );
-      });
+    let active = true;
+
+    async function loadCase() {
+      try {
+        const caseDetail = await detailFetch<CaseDetailData>(`/api/dashboard/cases/${caseId}`);
+        if (active) {
+          setData(caseDetail);
+          setReadOnly(false);
+        }
+      } catch (fetchError) {
+        const message = fetchError instanceof Error ? fetchError.message : "";
+        if (!message.includes("já está em revisão")) throw fetchError;
+
+        const caseDetail = await detailFetch<CaseDetailData>(`/api/dashboard/cases/${caseId}?readOnly=1`);
+        if (active) {
+          setData(caseDetail);
+          setReadOnly(true);
+        }
+      }
+    }
+
+    loadCase().catch((fetchError) => {
+      if (!active) return;
+      setError(
+        fetchError instanceof Error
+          ? fetchError.message
+          : "Não foi possível abrir o simulador.",
+      );
+    });
+
+    return () => { active = false; };
   }, [caseId]);
 
   if (error) {
@@ -190,8 +213,17 @@ export function DiagnosticDetailClient({ caseId }: { caseId: string }) {
         </div>
 
         <div className="detail-action-group">
+          {readOnly && (
+            <p className="detail-read-only-message" role="status">
+              Este simulador está em edição por outra consultora. Você pode consultar o conteúdo, mas não alterá-lo agora.
+            </p>
+          )}
           <div className="detail-actions">
-            {cancelled ? (
+            {readOnly ? (
+              <Link className="secondary-button" href={`/dashboard/diagnosticos/${caseId}/relatorio`}>
+                <Eye /> {delivered ? "Ver resultado enviado" : "Ver parecer atual"}
+              </Link>
+            ) : cancelled ? (
               <p className="detail-cancelled-message" role="status">
                 <Ban /> A entrega deste simulador foi cancelada.
               </p>
@@ -245,7 +277,7 @@ export function DiagnosticDetailClient({ caseId }: { caseId: string }) {
                 </Link>
               </>
             )}
-            {canCancel && (
+            {!readOnly && canCancel && (
               <Button
                 type="button"
                 variant="outline"
