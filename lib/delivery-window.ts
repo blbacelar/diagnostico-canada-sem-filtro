@@ -6,10 +6,17 @@ export const DELIVERY_BUSINESS_DAYS = simulatorSalesConfig.deliveryReleaseBusine
 export type DeliveryWindow = {
   submittedAt: string | null;
   deliveryReleaseAt: string | null;
+  deliveryRule: "standard" | "mentorship_consultation";
+  mentorshipConsultationScheduledAt: string | null;
   eligibleToSend: boolean;
   /** A consultant may waive only the delivery wait, never purchase validation. */
   canOverrideWaitPeriod: boolean;
   message: string;
+};
+
+export type DeliveryWindowOptions = {
+  deliveryRule?: DeliveryWindow["deliveryRule"];
+  mentorshipConsultationScheduledAt?: string | null;
 };
 
 function parseDate(value: string | null | undefined) {
@@ -59,11 +66,16 @@ export function buildDeliveryWindow(
   purchaseWindow: Pick<PurchaseWindow, "purchaseDate" | "purchaseEvent"> | null | undefined,
   submittedAt: string | null | undefined,
   now = new Date(),
+  options: DeliveryWindowOptions = {},
 ): DeliveryWindow {
+  const deliveryRule = options.deliveryRule ?? "standard";
+  const mentorshipConsultationScheduledAt = parseDate(options.mentorshipConsultationScheduledAt)?.toISOString() ?? null;
   if (!purchaseWindow?.purchaseDate || !purchaseWindow.purchaseEvent) {
     return {
       submittedAt: null,
       deliveryReleaseAt: null,
+      deliveryRule,
+      mentorshipConsultationScheduledAt,
       eligibleToSend: false,
       canOverrideWaitPeriod: false,
       message: "A entrega só é liberada após compra aprovada.",
@@ -75,9 +87,34 @@ export function buildDeliveryWindow(
     return {
       submittedAt: null,
       deliveryReleaseAt: null,
+      deliveryRule,
+      mentorshipConsultationScheduledAt,
       eligibleToSend: false,
       canOverrideWaitPeriod: false,
       message: "A entrega será liberada após o envio das respostas pelo cliente.",
+    };
+  }
+
+  if (deliveryRule === "mentorship_consultation") {
+    if (!mentorshipConsultationScheduledAt) {
+      return {
+        submittedAt: submitted.toISOString(),
+        deliveryReleaseAt: null,
+        deliveryRule,
+        mentorshipConsultationScheduledAt: null,
+        eligibleToSend: false,
+        canOverrideWaitPeriod: false,
+        message: "Cliente da Mentoria: o envio será liberado após a marcação da consulta one-on-one.",
+      };
+    }
+    return {
+      submittedAt: submitted.toISOString(),
+      deliveryReleaseAt: mentorshipConsultationScheduledAt,
+      deliveryRule,
+      mentorshipConsultationScheduledAt,
+      eligibleToSend: true,
+      canOverrideWaitPeriod: false,
+      message: "Consulta one-on-one marcada. O envio está liberado para este cliente da Mentoria.",
     };
   }
 
@@ -86,6 +123,8 @@ export function buildDeliveryWindow(
     return {
       submittedAt: submitted.toISOString(),
       deliveryReleaseAt: null,
+      deliveryRule,
+      mentorshipConsultationScheduledAt,
       eligibleToSend: false,
       canOverrideWaitPeriod: false,
       message: "Não foi possível calcular a data de liberação da entrega.",
@@ -99,6 +138,8 @@ export function buildDeliveryWindow(
   return {
     submittedAt: submitted.toISOString(),
     deliveryReleaseAt,
+    deliveryRule,
+    mentorshipConsultationScheduledAt,
     eligibleToSend,
     canOverrideWaitPeriod: !eligibleToSend,
     message: eligibleToSend

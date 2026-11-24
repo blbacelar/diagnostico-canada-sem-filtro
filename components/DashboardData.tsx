@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "./ui/select";
 
-type CaseRow = { id: string; case_number: string; status: string; objective: string | null; created_at: string; submitted_at: string | null; updated_at: string; purchase_date?: string | null; delivery_release_at?: string | null; assigned_consultant_id?: string | null; locked_by_other?: boolean; locked_by_name?: string | null; diagnostic_clients: { full_name: string; email_display: string } | null; diagnostic_ai_assessments?: Array<{ structured_result: { overallScore?: number; readinessLevel?: string; technicalAlerts?: string[] } }> };
+type CaseRow = { id: string; case_number: string; status: string; objective: string | null; created_at: string; submitted_at: string | null; updated_at: string; purchase_date?: string | null; delivery_release_at?: string | null; delivery_rule?: "standard" | "mentorship_consultation"; is_mentorship?: boolean; mentorship_consultation_scheduled_at?: string | null; assigned_consultant_id?: string | null; locked_by_other?: boolean; locked_by_name?: string | null; diagnostic_clients: { full_name: string; email_display: string } | null; diagnostic_ai_assessments?: Array<{ structured_result: { overallScore?: number; readinessLevel?: string; technicalAlerts?: string[] } }> };
 type Summary = { counts: Record<string, number>; recent: CaseRow[]; averageHours: number | null; reviewSlaHours: number };
 type CaseListResponse = {
   items: CaseRow[];
@@ -177,7 +177,7 @@ function DiagnosticTableRow({ item, onOpen }: { item: CaseRow; onOpen: (caseId: 
   const score = result?.overallScore;
   const technicalAlerts = result?.technicalAlerts ?? [];
   const alertsCount = technicalAlerts.length;
-  const deliveryDueToday = !["sent", "cancelled"].includes(item.status) && isToday(item.delivery_release_at);
+  const deliveryDueToday = item.delivery_rule !== "mentorship_consultation" && !["sent", "cancelled"].includes(item.status) && isToday(item.delivery_release_at);
 
   return <TableRow className={`${item.locked_by_other ? "bg-[rgba(23,34,43,.035)]" : "cursor-pointer"}${deliveryDueToday ? " diagnostic-table__row--delivery-due" : ""}`} aria-disabled={item.locked_by_other ? "true" : undefined} onClick={() => !item.locked_by_other && onOpen(item.id)}>
     <TableCell className="whitespace-nowrap">
@@ -186,6 +186,7 @@ function DiagnosticTableRow({ item, onOpen }: { item: CaseRow; onOpen: (caseId: 
         <div className="min-w-0">
           <strong className="block truncate text-[13px] font-semibold">{item.diagnostic_clients?.full_name}</strong>
           <small className="block truncate text-[11px] uppercase tracking-[.08em]">{item.case_number}</small>
+          {item.is_mentorship && <small className="block text-[10px] font-semibold uppercase tracking-[.1em] text-[var(--accent-deep)]">Mentoria{item.mentorship_consultation_scheduled_at ? " · consulta marcada" : " · aguarda consulta"}</small>}
           {item.locked_by_other && <small className="case-lock-label"><LockKeyhole /> Em revisão por {item.locked_by_name ?? "outra consultora"}</small>}
         </div>
       </div>
@@ -194,7 +195,7 @@ function DiagnosticTableRow({ item, onOpen }: { item: CaseRow; onOpen: (caseId: 
     <TableCell><span className={`status-pill status-${item.status}`}>{getCaseStatusLabel(item.status)}</span></TableCell>
     <TableCell><DateTableCell value={item.purchase_date} /></TableCell>
     <TableCell><DateTableCell value={item.submitted_at} /></TableCell>
-    <TableCell><DeliveryDateTableCell value={item.delivery_release_at} dueToday={deliveryDueToday} /></TableCell>
+    <TableCell>{item.delivery_rule === "mentorship_consultation" ? <span className="diagnostic-table__date">{item.mentorship_consultation_scheduled_at ? "Consulta marcada" : "Aguarda consulta"}</span> : <DeliveryDateTableCell value={item.delivery_release_at} dueToday={deliveryDueToday} />}</TableCell>
     <TableCell><span className="score">{score ?? "—"}<small>{typeof score === "number" ? "/100" : ""}</small></span></TableCell>
     <TableCell>
       {alertsCount > 0 ? <span className="alert-count alert-count--with-popover"><AlertTriangle />{alertsCount}<span className="alert-popover" role="tooltip" onClick={(event) => event.stopPropagation()}><strong>Alertas técnicos</strong><ul>{technicalAlerts.map((alert, index) => <li key={`${item.id}-alert-${index}`}>{alert}</li>)}</ul></span></span> : <span className="alert-count alert-count--empty">—</span>}

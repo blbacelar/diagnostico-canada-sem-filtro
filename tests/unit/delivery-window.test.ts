@@ -35,4 +35,28 @@ describe("janela de entrega do simulador", () => {
     expect(waiting.canOverrideWaitPeriod).toBe(true);
     expect(withoutPurchase.canOverrideWaitPeriod).toBe(false);
   });
+
+  it("retém a entrega da Mentoria até a consulta one-on-one ser marcada", () => {
+    const waiting = buildDeliveryWindow(
+      approvedPurchase,
+      "2026-11-04T12:00:00.000Z",
+      new Date("2026-11-20T12:00:00.000Z"),
+      { deliveryRule: "mentorship_consultation" },
+    );
+    const released = buildDeliveryWindow(
+      approvedPurchase,
+      "2026-11-04T12:00:00.000Z",
+      new Date("2026-11-20T12:00:00.000Z"),
+      {
+        deliveryRule: "mentorship_consultation",
+        mentorshipConsultationScheduledAt: "2026-11-20T12:00:00.000Z",
+      },
+    );
+
+    expect(waiting.eligibleToSend).toBe(false);
+    expect(waiting.canOverrideWaitPeriod).toBe(false);
+    expect(waiting.message).toContain("consulta one-on-one");
+    expect(released.eligibleToSend).toBe(true);
+    expect(released.canOverrideWaitPeriod).toBe(false);
+  });
 });

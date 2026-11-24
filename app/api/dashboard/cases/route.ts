@@ -3,7 +3,7 @@ import { handleApiError, json, requireConsultant } from "../../../../lib/api";
 import { decorateCaseLocks } from "../../../../lib/case-lock";
 import { getCentralClientsByIds, searchCentralClients } from "../../../../lib/central-client";
 import { buildDeliveryWindow } from "../../../../lib/delivery-window";
-import { getPurchaseWindowsForClients } from "../../../../lib/purchase-window";
+import { getMentorshipClientIds, getPurchaseWindowsForClients } from "../../../../lib/purchase-window";
 
 const DEFAULT_PAGE_SIZE = 10;
 const MAX_PAGE_SIZE = 50;
@@ -107,7 +107,7 @@ export async function GET(request: Request) {
       clientIds = clients.map((item) => item.id);
     }
 
-    const caseSelect = "id,case_number,status,objective,created_at,submitted_at,updated_at,assigned_consultant_id,client_id,diagnostic_ai_assessments(version,structured_result,status)";
+    const caseSelect = "id,case_number,status,objective,created_at,submitted_at,updated_at,assigned_consultant_id,client_id,mentorship_consultation_scheduled_at,diagnostic_ai_assessments(version,structured_result,status)";
     const dataQuery = applyFilters(
       admin
         .from("diagnostic_cases")
@@ -124,15 +124,25 @@ export async function GET(request: Request) {
     const data = allCandidates ?? [];
 
     const clientsById = await getCentralClientsByIds(admin, data.map((item: any) => item.client_id));
-    const purchaseWindowsByEmail = await getPurchaseWindowsForClients(admin, [...clientsById.values()]);
+    const [purchaseWindowsByEmail, mentorshipClientIds] = await Promise.all([
+      getPurchaseWindowsForClients(admin, [...clientsById.values()]),
+      getMentorshipClientIds(admin, data.map((item: any) => item.client_id)),
+    ]);
     const decorated = await decorateCaseLocks(admin, data.map((item: any) => {
       const client = clientsById.get(item.client_id);
       const purchaseWindow = client ? purchaseWindowsByEmail.get(client.email.toLowerCase()) : null;
-      const deliveryWindow = buildDeliveryWindow(purchaseWindow, item.submitted_at);
+      const isMentorship = mentorshipClientIds.has(item.client_id);
+      const deliveryWindow = buildDeliveryWindow(purchaseWindow, item.submitted_at, new Date(), {
+        deliveryRule: isMentorship ? "mentorship_consultation" : "standard",
+        mentorshipConsultationScheduledAt: item.mentorship_consultation_scheduled_at,
+      });
       return {
       ...item,
       purchase_date: purchaseWindow?.purchaseDate ?? null,
       delivery_release_at: deliveryWindow.deliveryReleaseAt,
+      delivery_rule: deliveryWindow.deliveryRule,
+      is_mentorship: isMentorship,
+      mentorship_consultation_scheduled_at: deliveryWindow.mentorshipConsultationScheduledAt,
       diagnostic_clients: client
         ? { full_name: client.name, email_display: client.email }
         : null,

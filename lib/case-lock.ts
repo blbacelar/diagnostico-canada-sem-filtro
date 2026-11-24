@@ -12,6 +12,7 @@ export type LockableCase = {
   updated_at?: string;
   assigned_consultant_id: string | null;
   client_id?: string;
+  mentorship_consultation_scheduled_at?: string | null;
   locked_at?: string | null;
   lock_expires_at?: string | null;
 };
@@ -31,7 +32,7 @@ const lockedStatuses = new Set([
 ]);
 
 const statusesThatStartReview = new Set(["submitted", "awaiting_triage", "processing_error"]);
-const baseCaseSelect = "id,case_number,status,objective,submitted_at,updated_at,assigned_consultant_id,client_id";
+const baseCaseSelect = "id,case_number,status,objective,submitted_at,updated_at,assigned_consultant_id,client_id,mentorship_consultation_scheduled_at";
 const lockAwareCaseSelect = `${baseCaseSelect},locked_at,lock_expires_at`;
 
 export function isCaseLockActive(status: string) {

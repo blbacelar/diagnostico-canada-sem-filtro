@@ -6,8 +6,7 @@ import { generateReportPdf, getReportData } from "../../../../lib/report";
 import { sendFinalDiagnosticWithPdf } from "../../../../lib/email";
 import { getOperationalConfig } from "../../../../lib/operational-config.server";
 import { claimCaseForReview } from "../../../../lib/case-lock";
-import { buildDeliveryWindow } from "../../../../lib/delivery-window";
-import { getPurchaseWindowForEmail } from "../../../../lib/purchase-window";
+import { getCaseDeliveryWindow } from "../../../../lib/case-delivery";
 
 function deliveryErrorCode(error: unknown) {
   if (error instanceof Error && error.name) return error.name;
@@ -71,8 +70,11 @@ export async function POST(request: Request) {
     }
 
     const [target, config] = await Promise.all([caseClient(admin, payload.caseId), getOperationalConfig(admin)]);
-    const purchaseWindow = await getPurchaseWindowForEmail(admin, target.client.email_normalized);
-    const deliveryWindow = buildDeliveryWindow(purchaseWindow, diagnosticCase.submitted_at);
+    const { deliveryWindow } = await getCaseDeliveryWindow(admin, {
+      client: { id: target.case.client_id, email: target.client.email_normalized },
+      submittedAt: diagnosticCase.submitted_at,
+      mentorshipConsultationScheduledAt: target.case.mentorship_consultation_scheduled_at,
+    });
     const waitPeriodOverridden = !deliveryWindow.eligibleToSend && payload.overrideDeliveryWait;
     if (!deliveryWindow.eligibleToSend && !(waitPeriodOverridden && deliveryWindow.canOverrideWaitPeriod)) {
       throw new ApiError(409, deliveryWindow.message, "DELIVERY_WAIT_PERIOD");

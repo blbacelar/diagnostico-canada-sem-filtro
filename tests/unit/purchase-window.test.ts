@@ -5,6 +5,7 @@ import {
   getDeliveryReleaseAt,
   isAllowedEmailAccessActive,
   isDiagnosticProductPurchase,
+  isMentorshipPurchase,
   mapPurchaseWindowsByEmail,
   shouldIncludeMapaOffer,
   type AllowedEmailEventRow,
@@ -214,6 +215,17 @@ describe("janela de compra para entrega", () => {
       product_name: "O Meu Mapa Canadá",
       status_hotmart: "PURCHASE_COMPLETE",
     })).toBe(true);
+  });
+
+  it("reconhece a Mentoria como acesso ao Simulador", () => {
+    const purchase = {
+      product_id: 9028579,
+      product_name: "Portal da Mentoria Canadá Sem Filtro",
+      status_hotmart: "PURCHASE_APPROVED",
+    };
+
+    expect(isMentorshipPurchase(purchase)).toBe(true);
+    expect(isDiagnosticProductPurchase(purchase)).toBe(true);
   });
 
   it("inclui a oferta do Meu Mapa somente para quem comprou apenas o Simulador", () => {

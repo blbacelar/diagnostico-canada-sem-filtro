@@ -4,7 +4,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Check, Eye, Mail, Send } from "lucide-react";
+import { ArrowLeft, CalendarCheck, Check, Eye, Mail, Send } from "lucide-react";
 
 import { getDeliveryStatusMessage } from "../lib/status-labels";
 import { detailFetch, type CaseDetailData } from "./DiagnosticDetail";
@@ -12,6 +12,15 @@ import { DashboardError } from "./DashboardData";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
 import { Label } from "./ui/label";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "./ui/alert-dialog";
 import { useCaseLockLifecycle } from "./useCaseLockLifecycle";
 
 const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
@@ -40,12 +49,16 @@ export function DeliveryComposer({ caseId }: { caseId: string }) {
   const [overrideDeliveryWait, setOverrideDeliveryWait] = useState(false);
   const [state, setState] = useState("");
   const [error, setError] = useState("");
+  const [consultationDialogOpen, setConsultationDialogOpen] = useState(false);
+  const [markingConsultation, setMarkingConsultation] = useState(false);
 
   const deliveryWindow = detail?.delivery_window;
   const deliveryUnlocked = deliveryWindow?.eligible_to_send ?? true;
   const canOverrideDeliveryWait =
     deliveryWindow?.can_override_wait_period ?? false;
   const canSend = deliveryUnlocked || (canOverrideDeliveryWait && overrideDeliveryWait);
+  const isMentorship = deliveryWindow?.delivery_rule === "mentorship_consultation";
+  const consultationScheduled = Boolean(deliveryWindow?.mentorship_consultation_scheduled_at);
 
   useCaseLockLifecycle(caseId, detail?.case.status !== "cancelled");
 
@@ -128,6 +141,22 @@ export function DeliveryComposer({ caseId }: { caseId: string }) {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao enviar.");
       setState("");
+    }
+  }
+
+  async function markConsultation() {
+    setMarkingConsultation(true);
+    setError("");
+    try {
+      await detailFetch(`/api/dashboard/cases/${caseId}/mentorship-consultation`, { method: "POST" });
+      const refreshed = await detailFetch<CaseDetailData>(`/api/dashboard/cases/${caseId}`);
+      setDetail(refreshed);
+      setConsultationDialogOpen(false);
+      setState("Consulta one-on-one registrada. A entrega foi liberada.");
+    } catch (markError) {
+      setError(markError instanceof Error ? markError.message : "Não foi possível registrar a consulta.");
+    } finally {
+      setMarkingConsultation(false);
     }
   }
 
@@ -231,7 +260,7 @@ export function DeliveryComposer({ caseId }: { caseId: string }) {
 
           {deliveryWindow?.delivery_release_at ? (
             <label>
-              <span>Envio liberado a partir de</span>
+              <span>{isMentorship ? "Consulta one-on-one registrada em" : "Envio liberado a partir de"}</span>
               <input
                 value={dateFormatter.format(
                   new Date(deliveryWindow.delivery_release_at),
@@ -328,6 +357,19 @@ export function DeliveryComposer({ caseId }: { caseId: string }) {
                   </div>
                 </div>
               )}
+
+              {isMentorship && !consultationScheduled && (
+                <div className="delivery-wait-override">
+                  <CalendarCheck aria-hidden="true" />
+                  <div>
+                    <strong>Cliente da Mentoria</strong>
+                    <p>A entrega do Simulador será liberada somente após a consulta one-on-one ser marcada.</p>
+                    <Button type="button" variant="outline" onClick={() => setConsultationDialogOpen(true)}>
+                      <CalendarCheck /> Marcar consulta one-on-one
+                    </Button>
+                  </div>
+                </div>
+              )}
             </>
           )}
 
@@ -363,6 +405,26 @@ export function DeliveryComposer({ caseId }: { caseId: string }) {
           </div>
         </aside>
       </div>
+
+      <AlertDialog open={consultationDialogOpen} onOpenChange={(open) => !markingConsultation && setConsultationDialogOpen(open)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <p className="eyebrow"><CalendarCheck /> Mentoria</p>
+            <AlertDialogTitle>Confirmar consulta one-on-one?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta confirmação libera o envio do Simulador para este cliente da Mentoria. Registre apenas depois de a consulta ter sido marcada.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel asChild>
+              <Button type="button" variant="outline" disabled={markingConsultation}>Voltar</Button>
+            </AlertDialogCancel>
+            <Button type="button" onClick={markConsultation} disabled={markingConsultation}>
+              <CalendarCheck /> {markingConsultation ? "Registrando…" : "Confirmar consulta"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

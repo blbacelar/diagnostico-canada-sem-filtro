@@ -1,7 +1,6 @@
 import { ApiError, handleApiError, json, requireConsultant, writeAudit } from "../../../../../lib/api";
 import { claimCaseForReview } from "../../../../../lib/case-lock";
-import { buildDeliveryWindow } from "../../../../../lib/delivery-window";
-import { getPurchaseWindowForEmail } from "../../../../../lib/purchase-window";
+import { getCaseDeliveryWindow } from "../../../../../lib/case-delivery";
 import { getCentralClientById } from "../../../../../lib/central-client";
 
 export async function GET(
@@ -15,7 +14,7 @@ export async function GET(
     const { data: readOnlyCase, error: readOnlyCaseError } = readOnly
       ? await admin
         .from("diagnostic_cases")
-        .select("id,case_number,status,objective,submitted_at,updated_at,assigned_consultant_id,client_id")
+        .select("id,case_number,status,objective,submitted_at,updated_at,assigned_consultant_id,client_id,mentorship_consultation_scheduled_at")
         .eq("id", id)
         .maybeSingle()
       : { data: null, error: null };
@@ -65,18 +64,15 @@ export async function GET(
       answers = Object.fromEntries((rows ?? []).map((row) => [row.question_key, row.answer]));
     }
 
-    const purchaseWindow = client?.email
-      ? await getPurchaseWindowForEmail(admin, client.email)
-      : {
-          purchaseDate: null,
-          purchaseEvent: null,
-          daysSincePurchase: null,
-          daysRemaining: null,
-          eligibleToSend: false,
-          canOverrideWaitPeriod: false,
-          message: "A entrega só é liberada após compra aprovada.",
-        };
-    const deliveryWindow = buildDeliveryWindow(purchaseWindow, diagnosticCase.submitted_at);
+    const deliveryData = client?.email
+      ? await getCaseDeliveryWindow(admin, {
+          client: { id: diagnosticCase.client_id, email: client.email },
+          submittedAt: diagnosticCase.submitted_at,
+          mentorshipConsultationScheduledAt: diagnosticCase.mentorship_consultation_scheduled_at,
+        })
+      : null;
+    const deliveryWindow = deliveryData?.deliveryWindow ?? null;
+    const purchaseWindow = deliveryData?.purchaseWindow ?? null;
 
     await writeAudit(admin, {
       caseId: id,
@@ -96,13 +92,15 @@ export async function GET(
       review: review ?? null,
       history: history ?? [],
       delivery_window: {
-        purchase_date: purchaseWindow.purchaseDate,
-        purchase_event: purchaseWindow.purchaseEvent,
-        submitted_at: deliveryWindow.submittedAt,
-        delivery_release_at: deliveryWindow.deliveryReleaseAt,
-        eligible_to_send: deliveryWindow.eligibleToSend,
-        can_override_wait_period: deliveryWindow.canOverrideWaitPeriod,
-        message: deliveryWindow.message,
+        purchase_date: purchaseWindow?.purchaseDate ?? null,
+        purchase_event: purchaseWindow?.purchaseEvent ?? null,
+        submitted_at: deliveryWindow?.submittedAt ?? null,
+        delivery_release_at: deliveryWindow?.deliveryReleaseAt ?? null,
+        delivery_rule: deliveryWindow?.deliveryRule ?? "standard",
+        mentorship_consultation_scheduled_at: deliveryWindow?.mentorshipConsultationScheduledAt ?? null,
+        eligible_to_send: deliveryWindow?.eligibleToSend ?? false,
+        can_override_wait_period: deliveryWindow?.canOverrideWaitPeriod ?? false,
+        message: deliveryWindow?.message ?? "A entrega só é liberada após compra aprovada.",
       },
     });
   } catch (error) {

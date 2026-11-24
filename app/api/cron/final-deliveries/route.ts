@@ -5,8 +5,7 @@ import { caseClient } from "../../../../lib/cases";
 import { sendFinalDiagnosticWithPdf } from "../../../../lib/email";
 import { generateReportPdf, getReportData } from "../../../../lib/report";
 import { getOperationalConfig } from "../../../../lib/operational-config.server";
-import { buildDeliveryWindow } from "../../../../lib/delivery-window";
-import { getPurchaseWindowForEmail } from "../../../../lib/purchase-window";
+import { getCaseDeliveryWindow } from "../../../../lib/case-delivery";
 import { getAdminSupabase } from "../../../../lib/supabase";
 import { constantTimeEqual, createFormToken, hashFormToken } from "../../../../lib/tokens";
 
@@ -62,8 +61,11 @@ async function deliverCase(caseId: string, template: FinalDeliveryTemplate) {
     caseClient(admin, caseId),
     getOperationalConfig(admin),
   ]);
-  const purchaseWindow = await getPurchaseWindowForEmail(admin, target.client.email_normalized);
-  const deliveryWindow = buildDeliveryWindow(purchaseWindow, target.case.submitted_at);
+  const { deliveryWindow } = await getCaseDeliveryWindow(admin, {
+    client: { id: target.case.client_id, email: target.client.email_normalized },
+    submittedAt: target.case.submitted_at,
+    mentorshipConsultationScheduledAt: target.case.mentorship_consultation_scheduled_at,
+  });
   if (!deliveryWindow.eligibleToSend) return { outcome: "skipped" as const, reason: "delivery_window" };
 
   const { data: review, error: reviewError } = await admin

@@ -9,11 +9,13 @@ const purchaseEvents = new Set<string>(approvedPurchaseEvents);
 const annualBundleProductId = 8575181;
 const simulatorProductId = 8259553;
 const mapaCanadaProductId = 7957233;
+export const mentorshipProductId = 9028579;
 const dayInMs = 24 * 60 * 60 * 1000;
 const diagnosticProductNames = [
   "7 aulas + e-book + app + diagnostico - o canada e pra voce?",
   "simulador canada sem filtro",
 ];
+const mentorshipProductName = "portal da mentoria canada sem filtro";
 const nonDiagnosticProductKeywords = [
   "masterclass",
   "aula gratuita",
@@ -85,6 +87,9 @@ export function isDiagnosticProductPurchase(
   now = new Date(),
 ) {
   if (!purchase || !isApprovedPurchaseStatus(purchase.status_hotmart)) return false;
+  // A Mentoria includes the Simulador. Its delivery timing is handled
+  // separately, after the one-on-one consultation is scheduled.
+  if (isMentorshipPurchase(purchase)) return true;
   if (purchase.product_id === simulatorProductId) return true;
   // O Meu Mapa Canadá é o pacote completo e inclui o acesso ao Simulador.
   if (purchase.product_id === mapaCanadaProductId) return true;
@@ -98,6 +103,14 @@ export function isDiagnosticProductPurchase(
     return false;
   }
   return diagnosticProductNames.some((allowedProduct) => productName === searchableText(allowedProduct));
+}
+
+export function isMentorshipPurchase(
+  purchase: Pick<PurchaseRecordRow, "product_name" | "product_id" | "status_hotmart"> | null | undefined,
+) {
+  if (!purchase || !isApprovedPurchaseStatus(purchase.status_hotmart)) return false;
+  return purchase.product_id === mentorshipProductId
+    || searchableText(purchase.product_name) === mentorshipProductName;
 }
 
 function isMapaCanadaOrBundlePurchase(
@@ -308,7 +321,55 @@ export async function getPurchaseWindowsForClients(
     return attachPurchaseRecord(row, purchase, now);
   });
 
+  // Mentoria purchases may be authorized directly from the Hotmart purchase
+  // record, without an older allowed_emails row. Keep dashboard delivery
+  // visibility aligned with the access and delivery endpoints in that case.
+  const existingEmails = new Set(rowsWithPurchaseData.map((row) => emailKey(row.email)));
+  for (const client of uniqueClients) {
+    if (existingEmails.has(client.email)) continue;
+    const purchase = diagnosticPurchaseByClientId.get(client.id);
+    if (!purchase) continue;
+    rowsWithPurchaseData.push(attachPurchaseRecord({
+      email: client.email,
+      active: true,
+      last_event: purchase.status_hotmart,
+      created_at: purchase.created_at,
+      updated_at: purchase.created_at,
+      last_event_at: purchase.purchase_date ?? purchase.created_at,
+      source: "hotmart",
+    }, purchase, now));
+  }
+
   return mapPurchaseWindowsByEmail(rowsWithPurchaseData, now);
+}
+
+export async function getMentorshipClientIds(
+  admin: ReturnType<typeof getAdminSupabase>,
+  clientIds: string[],
+) {
+  const uniqueClientIds = [...new Set(clientIds.filter(Boolean))];
+  if (!uniqueClientIds.length) return new Set<string>();
+
+  const { data, error } = await admin
+    .from("purchases")
+    .select("client_id,product_name,product_id,status_hotmart")
+    .in("client_id", uniqueClientIds)
+    .in("status_hotmart", [...approvedPurchaseEvents])
+    .limit(Math.max(100, uniqueClientIds.length * 3));
+  if (error && !isMissingPurchaseRelationError(error)) throw error;
+
+  return new Set((data ?? [])
+    .filter((purchase) => purchase.client_id && isMentorshipPurchase(purchase))
+    .map((purchase) => purchase.client_id as string));
+}
+
+export async function isMentorshipClient(
+  admin: ReturnType<typeof getAdminSupabase>,
+  clientId: string | null | undefined,
+) {
+  if (!clientId) return false;
+  const ids = await getMentorshipClientIds(admin, [clientId]);
+  return ids.has(clientId);
 }
 
 export function mapPurchaseWindowsByEmail(rows: AllowedEmailEventRow[], now = new Date()) {
@@ -518,6 +579,53 @@ export async function getPurchaseWindowForEmail(
 
   return buildPurchaseWindow(
     allowedEmailRow ? attachPurchaseRecord(allowedEmailRow, purchaseRecord, now) : null,
+    now,
+  );
+}
+
+export async function getPurchaseWindowForClient(
+  admin: ReturnType<typeof getAdminSupabase>,
+  client: PurchaseWindowClient,
+  now = new Date(),
+) {
+  const normalized = emailKey(client.email);
+  const { data, error } = await admin
+    .from("allowed_emails")
+    .select("email,last_event,created_at,updated_at,last_event_at,external_reference,source,notes,active,access_product_id,access_expires_at")
+    .eq("email", normalized)
+    .eq("active", true)
+    .order("last_event_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+
+  const allowedEmailRow = (data ?? null) as AllowedEmailEventRow | null;
+  let purchaseRecord = allowedEmailRow ? await fetchPurchaseRecordForAllowedEmail(admin, allowedEmailRow) : null;
+  if (!isDiagnosticProductPurchase(purchaseRecord, now)) {
+    const { data: purchases, error: purchasesError } = await admin
+      .from("purchases")
+      .select("client_id,transaction_code,product_name,product_id,status_hotmart,purchase_date,created_at,access_expires_at")
+      .eq("client_id", client.id)
+      .in("status_hotmart", [...approvedPurchaseEvents])
+      .order("purchase_date", { ascending: true })
+      .limit(20);
+    if (purchasesError && !isMissingPurchaseRelationError(purchasesError)) throw purchasesError;
+    purchaseRecord = ((purchases ?? []) as PurchaseRecordRow[])
+      .find((purchase) => isDiagnosticProductPurchase(purchase, now)) ?? purchaseRecord;
+  }
+
+  const effectiveRow = allowedEmailRow ?? (purchaseRecord ? {
+    email: normalized,
+    active: true,
+    last_event: purchaseRecord.status_hotmart,
+    created_at: purchaseRecord.created_at,
+    updated_at: purchaseRecord.created_at,
+    last_event_at: purchaseRecord.purchase_date ?? purchaseRecord.created_at,
+    source: "hotmart",
+  } satisfies AllowedEmailEventRow : null);
+
+  return buildPurchaseWindow(
+    effectiveRow ? attachPurchaseRecord(effectiveRow, purchaseRecord, now) : null,
     now,
   );
 }

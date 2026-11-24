@@ -49,6 +49,7 @@ export type CaseDetailData = {
     submitted_at: string | null;
     updated_at: string;
     assigned_consultant_id: string | null;
+    mentorship_consultation_scheduled_at?: string | null;
   };
   client: { full_name: string; email_display: string };
   answers: FormAnswers;
@@ -71,6 +72,8 @@ export type CaseDetailData = {
     purchase_event: string | null;
     submitted_at: string | null;
     delivery_release_at: string | null;
+    delivery_rule: "standard" | "mentorship_consultation";
+    mentorship_consultation_scheduled_at: string | null;
     eligible_to_send: boolean;
     can_override_wait_period: boolean;
     message: string;
