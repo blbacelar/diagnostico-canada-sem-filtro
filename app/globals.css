@@ -476,8 +476,26 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .dashboard-check span { width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--paper-edge); border-top-color: var(--accent); animation: spin .8s linear infinite; }
 .dashboard-check p { color: var(--ink-mute); font: 500 9px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .12em; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.dashboard-shell { display: grid; grid-template-columns: 250px minmax(0,1fr); align-items: start; background: #fff; }
-.dashboard-sidebar { position: sticky; top: 0; height: 100vh; padding: 34px 22px 20px; display: flex; flex-direction: column; border-right: 1px solid var(--paper-edge); background: var(--paper-shade); }
+.dashboard-shell {
+  --paper: #eef3f5;
+  --paper-shade: #e1eaed;
+  --paper-light: #fbfcfc;
+  --paper-edge: #b7c6cb;
+  --ink: #1f2c33;
+  --ink-soft: #3c4b52;
+  --ink-mute: #64747b;
+  --rule: rgba(31, 44, 51, .16);
+  --rule-strong: rgba(31, 44, 51, .3);
+  --dashboard-canvas: #e8eff1;
+  --dashboard-surface: #f7fafb;
+  --dashboard-sidebar: #dfe9ec;
+  display: grid;
+  grid-template-columns: 250px minmax(0,1fr);
+  min-height: 100dvh;
+  align-items: stretch;
+  background: var(--dashboard-canvas);
+}
+.dashboard-sidebar { position: sticky; top: 0; height: 100vh; padding: 34px 22px 20px; display: flex; flex-direction: column; border-right: 1px solid var(--paper-edge); background: var(--dashboard-sidebar); }
 .dashboard-sidebar .brand-mark { margin: 0 12px 44px; }
 .dashboard-sidebar nav { display: grid; gap: 3px; }
 .dashboard-sidebar nav a { min-height: 44px; padding: 10px 12px; display: flex; align-items: center; gap: 11px; border-left: 2px solid transparent; color: var(--ink-mute); font-size: 12px; }
@@ -491,7 +509,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .consultant-card small { color: var(--ink-mute); font: 500 7px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .1em; }
 .consultant-card button { border: 0; background: none; color: var(--ink-mute); cursor: pointer; }
 .consultant-card button svg { width: 15px; }
-.dashboard-main { min-width: 0; padding: 48px clamp(30px,5vw,72px) 32px; background: #fff; }
+.dashboard-main { min-width: 0; padding: 48px clamp(30px,5vw,72px) 32px; background: var(--dashboard-surface); }
 .dashboard-header { display: flex; align-items: end; justify-content: space-between; gap: 28px; padding-bottom: 34px; border-bottom: 1px solid var(--rule); }
 .dashboard-header h1 { margin: 0; font: 400 clamp(48px,5vw,72px)/.95 var(--font-display), serif; }
 .dashboard-header > div > p:not(.eyebrow) { margin: 17px 0 0; color: var(--ink-soft); font: 400 16px/1.6 var(--font-body), serif; }
