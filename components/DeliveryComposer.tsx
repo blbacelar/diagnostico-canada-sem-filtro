@@ -407,7 +407,7 @@ export function DeliveryComposer({ caseId }: { caseId: string }) {
       </div>
 
       <AlertDialog open={consultationDialogOpen} onOpenChange={(open) => !markingConsultation && setConsultationDialogOpen(open)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="dashboard-dialog-content">
           <AlertDialogHeader>
             <p className="eyebrow"><CalendarCheck /> Mentoria</p>
             <AlertDialogTitle>Confirmar consulta one-on-one?</AlertDialogTitle>

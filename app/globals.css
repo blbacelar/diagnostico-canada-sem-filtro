@@ -510,6 +510,26 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .consultant-card button { border: 0; background: none; color: var(--ink-mute); cursor: pointer; }
 .consultant-card button svg { width: 15px; }
 .dashboard-main { min-width: 0; padding: 48px clamp(30px,5vw,72px) 32px; background: var(--dashboard-surface); }
+.dashboard-select-content,
+.dashboard-dialog-content {
+  --paper-light: #fbfcfc;
+  --paper-edge: #b7c6cb;
+  --ink: #1f2c33;
+  --ink-soft: #3c4b52;
+  --ink-mute: #64747b;
+}
+.dashboard-select-content {
+  border-color: #b7c6cb;
+  background: #fbfcfc;
+  color: #1f2c33;
+  box-shadow: 0 14px 32px rgba(31, 44, 51, .16);
+}
+.dashboard-select-content [data-slot="select-item"]:focus,
+.dashboard-select-content [data-slot="select-item"][data-highlighted],
+.dashboard-select-content [data-slot="select-item"][data-state="checked"] {
+  background: #e1eaed;
+  color: #1f2c33;
+}
 .dashboard-header { display: flex; align-items: end; justify-content: space-between; gap: 28px; padding-bottom: 34px; border-bottom: 1px solid var(--rule); }
 .dashboard-header h1 { margin: 0; font: 400 clamp(48px,5vw,72px)/.95 var(--font-display), serif; }
 .dashboard-header > div > p:not(.eyebrow) { margin: 17px 0 0; color: var(--ink-soft); font: 400 16px/1.6 var(--font-body), serif; }

@@ -309,7 +309,7 @@ export function DiagnosticDetailClient({ caseId }: { caseId: string }) {
           if (!cancelling) setCancelDialogOpen(open);
         }}
       >
-        <AlertDialogContent>
+        <AlertDialogContent className="dashboard-dialog-content">
           <AlertDialogHeader>
             <p className="eyebrow"><Ban /> Cancelamento</p>
             <AlertDialogTitle>Cancelar este simulador?</AlertDialogTitle>
