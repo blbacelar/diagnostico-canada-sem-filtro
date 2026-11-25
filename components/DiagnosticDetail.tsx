@@ -158,6 +158,7 @@ export function DiagnosticDetailClient({ caseId }: { caseId: string }) {
   const sending = data.case.status === "sending";
   const cancelled = data.case.status === "cancelled";
   const canCancel = !["sent", "sending", "cancelled", "archived"].includes(data.case.status);
+  const isMentorship = data.delivery_window?.delivery_rule === "mentorship_consultation";
 
   async function createReassessment() {
     setCreating(true);
@@ -213,6 +214,7 @@ export function DiagnosticDetailClient({ caseId }: { caseId: string }) {
           <p>
             {data.client.email_display} · {data.case.objective ?? "Objetivo não definido"}
           </p>
+          {isMentorship && <span className="detail-mentorship-badge">Cliente da Mentoria</span>}
         </div>
 
         <div className="detail-action-group">
@@ -495,6 +497,14 @@ export function DiagnosticDetailClient({ caseId }: { caseId: string }) {
                     : "Não iniciado"}
                 </dd>
               </div>
+              {isMentorship && (
+                <div>
+                  <dt>
+                    <Sparkles /> Produto
+                  </dt>
+                  <dd>Mentoria</dd>
+                </div>
+              )}
             </dl>
           </section>
 

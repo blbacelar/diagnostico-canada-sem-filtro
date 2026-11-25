@@ -870,6 +870,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .detail-heading { padding: 28px 0 34px; display: flex; justify-content: space-between; align-items: end; gap: 28px; border-bottom: 1px solid var(--rule); }
 .detail-heading h1, .review-editor-header > header h1 { margin: 0; font: 400 clamp(50px,5.5vw,76px)/.95 var(--font-display), serif; }
 .detail-heading > div > p:not(.eyebrow), .review-editor-header > header > div > p:not(.eyebrow) { margin: 12px 0 0; color: var(--ink-mute); font-size: 12px; }
+.detail-mentorship-badge { display: inline-flex; align-items: center; min-height: 25px; margin-top: 13px; padding: 6px 9px; border: 1px solid rgba(183,28,61,.28); border-radius: 999px; background: rgba(183,28,61,.07); color: var(--accent-deep); font: 600 8px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .1em; }
 .detail-actions { display: flex; gap: 10px; align-items: center; }
 .detail-action-group { display: grid; justify-items: end; gap: 8px; }
 .detail-cancel-button { border-color: rgba(183,28,61,.45); color: var(--accent); }
