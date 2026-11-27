@@ -4,7 +4,7 @@ import { getAdminSupabase } from "../../../../lib/supabase";
 import { createFormToken, hashFormToken } from "../../../../lib/tokens";
 import { sendContinuationEmail } from "../../../../lib/email";
 import { getOperationalConfig } from "../../../../lib/operational-config.server";
-import { hasPurchasedAccessForEmail } from "../../../../lib/purchase-window";
+import { hasDiagnosticFormAccessForEmail } from "../../../../lib/purchase-window";
 import { getCentralClientByEmail } from "../../../../lib/central-client";
 
 const neutralMessage = "Se encontrarmos um simulador em andamento para este e-mail, você receberá um link para continuar.";
@@ -16,8 +16,8 @@ export async function POST(request: Request) {
     const payload = await parseJson(request, resumeLinkSchema, 10_000);
     if (payload.website) return json({ message: neutralMessage });
     const admin = getAdminSupabase();
-    const hasPurchase = await hasPurchasedAccessForEmail(admin, payload.email);
-    if (!hasPurchase) return json({ error: purchaseRequiredMessage, code: "PURCHASE_REQUIRED" }, { status: 403 });
+    const hasAccess = await hasDiagnosticFormAccessForEmail(admin, payload.email);
+    if (!hasAccess) return json({ error: purchaseRequiredMessage, code: "PURCHASE_REQUIRED" }, { status: 403 });
     const client = await getCentralClientByEmail(admin, payload.email);
     if (!client) return json({ message: neutralMessage });
     const { data: diagnosticCase } = await admin.from("diagnostic_cases").select("id,case_number,status").eq("client_id", client.id).eq("status", "client_draft").order("created_at", { ascending: false }).limit(1).maybeSingle();

@@ -7,7 +7,7 @@ vi.mock('../../lib/api', () => ({
   json: (value: unknown) => Response.json(value), parseJson: async (request: Request) => request.json(), requestIp: () => 'test', handleApiError: () => new Response(null, { status: 500 }),
 }));
 vi.mock('../../lib/central-client', () => ({ getCentralClientByEmail: async () => ({ id: 'client-1', email: 'aluno@example.invalid', name: 'Existente' }), upsertCentralClient: mocks.upsert }));
-vi.mock('../../lib/purchase-window', () => ({ hasPurchasedAccessForEmail: async () => true }));
+vi.mock('../../lib/purchase-window', () => ({ hasDiagnosticFormAccessForEmail: async () => true }));
 vi.mock('../../lib/operational-config.server', () => ({ getOperationalConfig: async () => ({ formLinkDays: 7 }) }));
 vi.mock('../../lib/email', () => ({ sendContinuationEmail: async () => ({ data: { id: 'test' }, error: null }) }));
 vi.mock('../../lib/tokens', () => ({ createFormToken: () => 'fake-token', hashFormToken: () => 'fake-hash' }));

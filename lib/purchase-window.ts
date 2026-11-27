@@ -151,6 +151,8 @@ export function isAllowedEmailAccessActive(
   now = new Date(),
 ) {
   if (!row?.active) return false;
+  // Test records can begin a form but never represent a confirmed purchase.
+  if (row.source === "test_access") return false;
   if (row.access_product_id === annualBundleProductId && !row.access_expires_at) return false;
   if (row.access_expires_at && (parseDate(row.access_expires_at)?.getTime() ?? 0) <= now.getTime()) return false;
   if (hasNonDiagnosticProductSignal(row.source) || hasNonDiagnosticProductSignal(row.notes)) return false;
@@ -513,6 +515,33 @@ export async function hasPurchasedAccessForEmail(
 
   if (error && !isMissingPurchaseRelationError(error)) throw error;
   return (purchases ?? []).some((purchase) => isDiagnosticProductPurchase(purchase));
+}
+
+/**
+ * Test access is deliberately limited to the public form flow. It does not
+ * count as a purchase and must never unlock report delivery or other products.
+ *
+ * A dedicated `source` value keeps this exception in the existing
+ * `allowed_emails` registry, where it can be disabled without a deployment.
+ */
+export async function hasDiagnosticFormAccessForEmail(
+  admin: ReturnType<typeof getAdminSupabase>,
+  email: string,
+) {
+  const normalized = emailKey(email);
+  const { data, error } = await admin
+    .from("allowed_emails")
+    .select("email")
+    .eq("email", normalized)
+    .eq("active", true)
+    .eq("source", "test_access")
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (data) return true;
+
+  return hasPurchasedAccessForEmail(admin, normalized);
 }
 
 async function fetchPurchaseRecordForAllowedEmail(

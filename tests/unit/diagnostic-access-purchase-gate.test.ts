@@ -6,7 +6,7 @@ const {
   enforceRateLimit,
   getAdminSupabase,
   getOperationalConfig,
-  hasPurchasedAccessForEmail,
+  hasDiagnosticFormAccessForEmail,
   sendContinuationEmail,
   upsertCentralClient,
   writeAudit,
@@ -20,7 +20,7 @@ const {
   enforceRateLimit: vi.fn(),
   getAdminSupabase: vi.fn(),
   getOperationalConfig: vi.fn(),
-  hasPurchasedAccessForEmail: vi.fn(),
+  hasDiagnosticFormAccessForEmail: vi.fn(),
   sendContinuationEmail: vi.fn(),
   upsertCentralClient: vi.fn(),
   writeAudit: vi.fn(),
@@ -37,7 +37,7 @@ vi.mock("../../lib/api", () => ({
 }));
 
 vi.mock("../../lib/supabase", () => ({ getAdminSupabase }));
-vi.mock("../../lib/purchase-window", () => ({ hasPurchasedAccessForEmail }));
+vi.mock("../../lib/purchase-window", () => ({ hasDiagnosticFormAccessForEmail }));
 vi.mock("../../lib/central-client", () => ({ upsertCentralClient }));
 vi.mock("../../lib/operational-config.server", () => ({ getOperationalConfig }));
 vi.mock("../../lib/email", () => ({ sendContinuationEmail }));
@@ -78,7 +78,7 @@ beforeEach(() => {
 
 describe("validação de compra para acesso ao simulador", () => {
   it("não cria caso nem envia link quando o e-mail não tem compra confirmada", async () => {
-    hasPurchasedAccessForEmail.mockResolvedValue(false);
+    hasDiagnosticFormAccessForEmail.mockResolvedValue(false);
 
     const response = await startDiagnostic(request("/api/diagnostics/start", validStartPayload));
     const body = await response.json() as { code: string; error: string };
@@ -86,19 +86,19 @@ describe("validação de compra para acesso ao simulador", () => {
     expect(response.status).toBe(403);
     expect(body.code).toBe("PURCHASE_REQUIRED");
     expect(body.error).toContain("compra confirmada");
-    expect(hasPurchasedAccessForEmail).toHaveBeenCalledWith(admin, "cliente@example.com");
+    expect(hasDiagnosticFormAccessForEmail).toHaveBeenCalledWith(admin, "cliente@example.com");
     expect(upsertCentralClient).not.toHaveBeenCalled();
     expect(sendContinuationEmail).not.toHaveBeenCalled();
     expect(admin.from).not.toHaveBeenCalledWith("diagnostic_cases");
     expect(writeAudit).toHaveBeenCalledWith(admin, expect.objectContaining({
       actorType: "system",
       action: "diagnostic.start_denied_without_purchase",
-      metadata: { reason: "purchase_not_found" },
+      metadata: { reason: "purchase_or_test_access_not_found" },
     }));
   });
 
   it("não reenvia link de continuação quando o e-mail não tem compra confirmada", async () => {
-    hasPurchasedAccessForEmail.mockResolvedValue(false);
+    hasDiagnosticFormAccessForEmail.mockResolvedValue(false);
 
     const response = await resumeLink(request("/api/diagnostics/resume-link", { email: "cliente@example.com" }));
     const body = await response.json() as { code: string; error: string };
@@ -106,7 +106,7 @@ describe("validação de compra para acesso ao simulador", () => {
     expect(response.status).toBe(403);
     expect(body.code).toBe("PURCHASE_REQUIRED");
     expect(body.error).toContain("compra confirmada");
-    expect(hasPurchasedAccessForEmail).toHaveBeenCalledWith(admin, "cliente@example.com");
+    expect(hasDiagnosticFormAccessForEmail).toHaveBeenCalledWith(admin, "cliente@example.com");
     expect(sendContinuationEmail).not.toHaveBeenCalled();
     expect(admin.from).not.toHaveBeenCalledWith("clients");
   });

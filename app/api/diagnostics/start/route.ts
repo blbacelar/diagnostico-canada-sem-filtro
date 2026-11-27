@@ -6,7 +6,7 @@ import { sendContinuationEmail } from "../../../../lib/email";
 import { newCaseNumber } from "../../../../lib/cases";
 import { getOperationalConfig } from "../../../../lib/operational-config.server";
 import { getCentralClientByEmail, upsertCentralClient } from "../../../../lib/central-client";
-import { hasPurchasedAccessForEmail } from "../../../../lib/purchase-window";
+import { hasDiagnosticFormAccessForEmail } from "../../../../lib/purchase-window";
 
 const neutralMessage = "Se os dados puderem ser processados, você receberá um link pessoal para continuar. Confira também a pasta de spam.";
 const purchaseRequiredMessage = "Não encontramos uma compra confirmada do produto do simulador para este e-mail.";
@@ -17,12 +17,12 @@ export async function POST(request: Request) {
     const payload = await parseJson(request, startDiagnosticSchema, 20_000);
     if (payload.website) return json({ message: neutralMessage });
     const admin = getAdminSupabase();
-    const hasPurchase = await hasPurchasedAccessForEmail(admin, payload.email);
-    if (!hasPurchase) {
+    const hasAccess = await hasDiagnosticFormAccessForEmail(admin, payload.email);
+    if (!hasAccess) {
       await writeAudit(admin, {
         actorType: "system",
         action: "diagnostic.start_denied_without_purchase",
-        metadata: { reason: "purchase_not_found" },
+        metadata: { reason: "purchase_or_test_access_not_found" },
       });
       return json({ error: purchaseRequiredMessage, code: "PURCHASE_REQUIRED" }, { status: 403 });
     }

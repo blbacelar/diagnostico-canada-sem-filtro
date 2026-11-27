@@ -5,7 +5,7 @@ const {
   formTokenFromRequest,
   getAdminSupabase,
   getCentralClientById,
-  hasPurchasedAccessForEmail,
+  hasDiagnosticFormAccessForEmail,
   hashFormToken,
   auditInsert,
   tokenUpdate,
@@ -14,7 +14,7 @@ const {
   formTokenFromRequest: vi.fn(),
   getAdminSupabase: vi.fn(),
   getCentralClientById: vi.fn(),
-  hasPurchasedAccessForEmail: vi.fn(),
+  hasDiagnosticFormAccessForEmail: vi.fn(),
   hashFormToken: vi.fn(),
   auditInsert: vi.fn(),
   tokenUpdate: vi.fn(),
@@ -31,7 +31,7 @@ vi.mock("../../lib/tokens", () => ({
   hashIp: vi.fn(() => "ip-hash"),
 }));
 
-vi.mock("../../lib/purchase-window", () => ({ hasPurchasedAccessForEmail }));
+vi.mock("../../lib/purchase-window", () => ({ hasDiagnosticFormAccessForEmail }));
 vi.mock("../../lib/central-client", () => ({ getCentralClientById }));
 
 import { ApiError, requireFormCase } from "../../lib/api";
@@ -58,7 +58,7 @@ beforeEach(() => {
   hashFormToken.mockReturnValue("a".repeat(64));
   getAdminSupabase.mockReturnValue(admin);
   getCentralClientById.mockResolvedValue({ id: "client-1", name: "Lead Teste", email: "lead@example.com" });
-  hasPurchasedAccessForEmail.mockResolvedValue(true);
+  hasDiagnosticFormAccessForEmail.mockResolvedValue(true);
   tokenUpdate.mockReturnValue(tokenUpdateQuery);
   auditInsert.mockResolvedValue({ error: null });
   tokenQueryResult.maybeSingle.mockResolvedValue({
@@ -106,20 +106,20 @@ beforeEach(() => {
 
 describe("validação do token do formulário", () => {
   it("revoga token aparentemente válido quando o cliente não tem compra confirmada", async () => {
-    hasPurchasedAccessForEmail.mockResolvedValue(false);
+    hasDiagnosticFormAccessForEmail.mockResolvedValue(false);
 
     await expect(requireFormCase(new Request("http://localhost/api/diagnostics/form-session"))).rejects.toMatchObject({
       status: 401,
       code: "INVALID_FORM_TOKEN",
     } satisfies Partial<ApiError>);
 
-    expect(hasPurchasedAccessForEmail).toHaveBeenCalledWith(admin, "lead@example.com");
+    expect(hasDiagnosticFormAccessForEmail).toHaveBeenCalledWith(admin, "lead@example.com");
     expect(tokenUpdate).toHaveBeenCalledWith(expect.objectContaining({ revoked_at: expect.any(String) }));
     expect(auditInsert).toHaveBeenCalledWith(expect.objectContaining({
       case_id: "case-1",
       actor_type: "system",
       action: "diagnostic.form_access_denied_without_purchase",
-      metadata: { reason: "purchase_not_found" },
+      metadata: { reason: "purchase_or_test_access_not_found" },
     }));
   });
 });

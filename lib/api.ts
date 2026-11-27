@@ -1,7 +1,7 @@
 import { ZodError, type ZodType } from "zod";
 import { getAdminSupabase, getSupabaseForAccessToken } from "./supabase";
 import { formTokenFromRequest, hashFormToken, hashIp } from "./tokens";
-import { hasPurchasedAccessForEmail } from "./purchase-window";
+import { hasDiagnosticFormAccessForEmail } from "./purchase-window";
 import { getCentralClientById } from "./central-client";
 import { portalTokenFromCookie, verifiedPortalStudent } from "./portal-student";
 
@@ -116,8 +116,8 @@ export async function requireFormCase(request: Request) {
   const portalAccess = Boolean(client?.email && portalStudent && client.email.trim().toLowerCase() === portalStudent.email);
   const metadata = caseRow.source_metadata as { source?: unknown } | null;
   const portalCase = metadata?.source === 'portal_mentoria';
-  const hasPurchase = portalCase ? portalAccess : portalAccess || (client?.email ? await hasPurchasedAccessForEmail(admin, client.email) : false);
-  if (!hasPurchase) {
+  const hasFormAccess = portalCase ? portalAccess : portalAccess || (client?.email ? await hasDiagnosticFormAccessForEmail(admin, client.email) : false);
+  if (!hasFormAccess) {
     // O aluno pode retornar pelo portal e renovar sua sessão sem perder o formulário.
     if (portalCase) throw new ApiError(401, "Sua sessão expirou. Abra o simulador novamente pelo portal.", "PORTAL_SESSION_EXPIRED");
     await admin.from("diagnostic_access_tokens").update({ revoked_at: new Date().toISOString() }).eq("id", data.id).is("revoked_at", null);
@@ -125,7 +125,7 @@ export async function requireFormCase(request: Request) {
       caseId: caseRow.id,
       actorType: "system",
       action: "diagnostic.form_access_denied_without_purchase",
-      metadata: { reason: "purchase_not_found" },
+      metadata: { reason: "purchase_or_test_access_not_found" },
     });
     throw new ApiError(401, "O link é inválido, expirou ou foi revogado.", "INVALID_FORM_TOKEN");
   }
